@@ -155,6 +155,37 @@ ${styleGuide[videoStyle] || styleGuide["시공일지형"]}
     if (action === "render") {
       const scenesData = script?.scenes || [];
 
+      // Upload base64 photos to Supabase Storage to get public URLs
+      const uploadedUrls: Record<number, string> = {};
+      if (photos && photos.length > 0) {
+        for (let i = 0; i < photos.length; i++) {
+          const photoData = photos[i];
+          const dataUrl = photoData.dataUrl || photoData;
+          if (typeof dataUrl === "string" && dataUrl.startsWith("data:")) {
+            const base64Match = dataUrl.match(/^data:image\/([^;]+);base64,(.+)$/);
+            if (base64Match) {
+              const ext = base64Match[1] === "jpeg" ? "jpg" : base64Match[1];
+              const rawBase64 = base64Match[2];
+              const binaryStr = atob(rawBase64);
+              const bytes = new Uint8Array(binaryStr.length);
+              for (let j = 0; j < binaryStr.length; j++) {
+                bytes[j] = binaryStr.charCodeAt(j);
+              }
+              const filePath = `render/${crypto.randomUUID()}.${ext}`;
+              const { error: uploadError } = await supabase.storage
+                .from("shorts-videos")
+                .upload(filePath, bytes, { contentType: `image/${base64Match[1]}`, upsert: true });
+              if (!uploadError) {
+                const { data: urlData } = supabase.storage.from("shorts-videos").getPublicUrl(filePath);
+                uploadedUrls[i] = urlData.publicUrl;
+              }
+            }
+          } else if (typeof dataUrl === "string" && (dataUrl.startsWith("http://") || dataUrl.startsWith("https://"))) {
+            uploadedUrls[i] = dataUrl;
+          }
+        }
+      }
+
       // Build Shotstack timeline
       const tracks: any[] = [];
       let offset = 0;
@@ -166,13 +197,11 @@ ${styleGuide[videoStyle] || styleGuide["시공일지형"]}
       for (const scene of scenesData) {
         const dur = scene.duration || 4;
 
-        if (scene.photo_id !== null && photos && photos[scene.photo_id - 1]) {
-          // Photo clip with Ken Burns effect
-          const photoData = photos[scene.photo_id - 1];
+        if (scene.photo_id !== null && uploadedUrls[scene.photo_id - 1]) {
           photoClips.push({
             asset: {
               type: "image",
-              src: photoData.dataUrl,
+              src: uploadedUrls[scene.photo_id - 1],
             },
             start: offset,
             length: dur,
