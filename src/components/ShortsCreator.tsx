@@ -136,8 +136,11 @@ function VoiceCard({
 }
 
 export function ShortsCreator({ onClose }: { onClose: () => void }) {
-  const { photos, settings, subscription } = useAppStore();
+  const { photos, settings, subscription, addPhoto, removePhoto } = useAppStore();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const styleRef = useRef<HTMLDivElement>(null);
 
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("시공일지형");
   const [bgm, setBgm] = useState<BgmType>("upbeat");
@@ -152,6 +155,26 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const videoLimit = PLAN_LIMITS[subscription.plan] || 5;
   const [videoUsed] = useState(2);
   const quotaExceeded = videoUsed >= videoLimit;
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach((file) => {
+      if (photos.length >= 10) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        addPhoto({ id: crypto.randomUUID(), dataUrl: ev.target?.result as string });
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+    // Auto-scroll to style section when enough photos
+    setTimeout(() => {
+      if (photos.length >= 1 && styleRef.current) {
+        styleRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 300);
+  };
 
   // Preload voices
   useEffect(() => {
