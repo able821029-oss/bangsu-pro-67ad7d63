@@ -331,13 +331,43 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           <button onClick={onClose}><X className="w-6 h-6 text-muted-foreground" /></button>
         </div>
 
-        {photos.length < 2 && (
-          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
-            ⚠️ 사진이 2장 이상 필요합니다 (현재 {photos.length}장)
-          </div>
-        )}
-
+        {/* Photo upload area */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
+          <p className="text-sm font-semibold">📷 사진 추가하기</p>
+          {photos.length < 2 && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
+              ⚠️ 사진이 2장 이상 필요합니다 (현재 {photos.length}장)
+            </div>
+          )}
+
+          {photos.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {photos.map((photo) => (
+                <div key={photo.id} className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border">
+                  <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
+                  <button onClick={() => removePhoto(photo.id)} className="absolute top-0.5 right-0.5 bg-destructive rounded-full p-0.5">
+                    <X className="w-3 h-3 text-destructive-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" size="sm" className="w-full" onClick={() => fileInputRef.current?.click()}>
+              <ImagePlus className="w-4 h-4" /> 갤러리에서 선택
+            </Button>
+            <Button variant="secondary" size="sm" className="w-full" onClick={() => cameraInputRef.current?.click()}>
+              <Camera className="w-4 h-4" /> 카메라로 촬영
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground text-center">최대 10장, 최소 2장</p>
+        </div>
+
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
+
+        <div ref={styleRef} className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold">🎥 영상 스타일</p>
           <div className="space-y-2">
             {videoStyles.map(s => (
