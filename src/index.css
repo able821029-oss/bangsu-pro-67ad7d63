@@ -6,51 +6,58 @@
 
 @layer base {
   :root {
-    --background: 220 20% 10%;
-    --foreground: 30 10% 95%;
+    --background: 216 43% 95%;
+    --foreground: 216 48% 20%;
 
-    --card: 220 18% 14%;
-    --card-foreground: 30 10% 95%;
+    --card: 0 0% 100%;
+    --card-foreground: 216 48% 20%;
 
-    --popover: 220 18% 14%;
-    --popover-foreground: 30 10% 95%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 48% 20%;
 
-    --primary: 25 95% 55%;
+    --primary: 25 95% 53%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 20%;
-    --secondary-foreground: 30 10% 90%;
+    --secondary: 216 30% 90%;
+    --secondary-foreground: 216 48% 25%;
 
-    --muted: 220 15% 18%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 216 25% 92%;
+    --muted-foreground: 216 18% 51%;
 
-    --accent: 25 95% 55%;
+    --accent: 25 95% 53%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 22%;
-    --input: 220 15% 22%;
-    --ring: 25 95% 55%;
+    --border: 216 20% 88%;
+    --input: 216 20% 88%;
+    --ring: 25 95% 53%;
 
-    --radius: 0.75rem;
+    --radius: 1.125rem;
 
-    --success: 145 65% 42%;
+    --success: 153 97% 33%;
     --success-foreground: 0 0% 100%;
     --warning: 40 95% 55%;
     --warning-foreground: 0 0% 10%;
-    --info: 210 80% 55%;
+    --info: 217 94% 68%;
     --info-foreground: 0 0% 100%;
 
-    --sidebar-background: 220 20% 10%;
-    --sidebar-foreground: 30 10% 95%;
-    --sidebar-primary: 25 95% 55%;
+    --naver: 153 97% 39%;
+    --naver-foreground: 0 0% 100%;
+
+    --nav-background: 218 48% 13%;
+    --nav-foreground: 216 18% 51%;
+    --nav-active: 217 94% 68%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 216 48% 20%;
+    --sidebar-primary: 25 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 20%;
-    --sidebar-accent-foreground: 30 10% 90%;
-    --sidebar-border: 220 15% 22%;
-    --sidebar-ring: 25 95% 55%;
+    --sidebar-accent: 216 30% 90%;
+    --sidebar-accent-foreground: 216 48% 25%;
+    --sidebar-border: 216 20% 88%;
+    --sidebar-ring: 25 95% 53%;
   }
 }
 
@@ -64,6 +71,7 @@
     font-family: 'Noto Sans KR', sans-serif;
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
+    font-size: 13px;
   }
 }
 
