@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 // Production Shotstack API
-const SHOTSTACK_BASE = "https://api.shotstack.io/v1";
+const SHOTSTACK_BASE = "https://api.shotstack.io/stage";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
