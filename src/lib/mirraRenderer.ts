@@ -367,19 +367,26 @@ export async function renderMirraVideo(
     const isEnding = si === scenes.length - 1 && !scene.photo;
     const photoImg = scene.photo ? imageMap[scene.photo] : null;
 
-    // If narration exists, extend scene to match audio duration (min scene.duration)
+    // Pre-rendered audio narration (ElevenLabs path)
     const narrationBuffer = narrationBuffers[si] || null;
     if (narrationBuffer && audioCtx) {
-      const audioFrames = Math.ceil(narrationBuffer.duration * FPS) + 15; // +0.6s padding
+      const audioFrames = Math.ceil(narrationBuffer.duration * FPS) + 15;
       totalFrames = Math.max(totalFrames, audioFrames);
-
-      // Play narration audio into the recording stream
       try {
         const source = audioCtx.createBufferSource();
         source.buffer = narrationBuffer;
         if (audioDest) source.connect(audioDest);
         source.start();
       } catch { /* audio playback error */ }
+    }
+
+    // Web Speech API narration (browser TTS path)
+    if (!narrationBuffer && narrationEnabled && voiceConfig && scene.narration) {
+      // Fire and forget — speech plays in background while frames render
+      speakNarration(scene.narration, voiceConfig);
+      // Extend scene to give time for speech (~5 chars/sec for Korean)
+      const estimatedSpeechFrames = Math.ceil((scene.narration.length / 5) * FPS) + 15;
+      totalFrames = Math.max(totalFrames, estimatedSpeechFrames);
     }
 
     onProgress(si, scenes.length);
