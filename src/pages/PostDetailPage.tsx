@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { ArrowLeft, Edit3, Hash, Camera, Copy, ExternalLink, RefreshCw, Save, Sparkles } from "lucide-react";
+import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAppStore, BlogPost, Platform } from "@/stores/appStore";
+import { useAppStore, BlogPost, Platform, ContentBlock } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const platformLabels: Record<Platform, string> = {
   naver: "네이버 블로그",
@@ -22,43 +23,75 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
   const { updatePost } = useAppStore();
   const { toast } = useToast();
   const [title, setTitle] = useState(post.title);
-  const [blocks, setBlocks] = useState(post.blocks);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [blocks, setBlocks] = useState<ContentBlock[]>(post.blocks);
   const [hashtags, setHashtags] = useState(post.hashtags);
   const [editingBlockIdx, setEditingBlockIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [editingHashtags, setEditingHashtags] = useState(false);
-  const [hashtagText, setHashtagText] = useState(post.hashtags.join(", "));
+  const [newTagInput, setNewTagInput] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSaveEdit = () => {
+  const saveToDb = async (updates: Record<string, any>) => {
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.from("posts").update(updates).eq("id", post.id);
+      if (error) console.error("DB update error:", error);
+    } catch (e) {
+      console.error("DB save error:", e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveTitle = async () => {
+    setIsEditingTitle(false);
+    updatePost(post.id, { title });
+    await saveToDb({ title });
+    toast({ title: "✅ 제목이 수정되었습니다." });
+  };
+
+  const handleSaveEdit = async () => {
     if (editingBlockIdx === null) return;
     const newBlocks = blocks.map((b, i) => (i === editingBlockIdx ? { ...b, content: editText } : b));
     setBlocks(newBlocks);
     setEditingBlockIdx(null);
     updatePost(post.id, { blocks: newBlocks });
+    await saveToDb({ blocks: newBlocks });
     toast({ title: "✅ 본문이 수정되었습니다." });
   };
 
-  const handleSaveTitle = () => {
-    updatePost(post.id, { title });
-    toast({ title: "✅ 제목이 수정되었습니다." });
-  };
-
-  const handleSaveHashtags = () => {
-    const newTags = hashtagText.split(",").map(t => t.trim()).filter(Boolean);
+  const handleRemoveTag = (idx: number) => {
+    const newTags = hashtags.filter((_, i) => i !== idx);
     setHashtags(newTags);
-    setEditingHashtags(false);
     updatePost(post.id, { hashtags: newTags });
-    toast({ title: "✅ 해시태그가 수정되었습니다." });
+    saveToDb({ hashtags: newTags });
   };
 
-  const handleTempSave = () => {
+  const handleAddTag = () => {
+    const tag = newTagInput.trim().replace(/^#/, "");
+    if (!tag || hashtags.includes(tag)) return;
+    const newTags = [...hashtags, tag];
+    setHashtags(newTags);
+    setNewTagInput("");
+    updatePost(post.id, { hashtags: newTags });
+    saveToDb({ hashtags: newTags });
+  };
+
+  const handleFinishHashtags = () => {
+    setEditingHashtags(false);
+    toast({ title: "✅ 해시태그가 저장되었습니다." });
+  };
+
+  const handleTempSave = async () => {
     updatePost(post.id, { title, blocks, hashtags, status: "작성중" });
+    await saveToDb({ title, blocks, hashtags, status: "작성중" });
     toast({ title: "✅ 임시저장 되었습니다." });
   };
 
   const handleRegenerate = () => {
     toast({ title: "🔄 같은 설정으로 AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
-    // TODO: actual AI regeneration via backend
+    // TODO: re-invoke generate-blog edge function
   };
 
   const getClipboardText = () => {
@@ -92,15 +125,28 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
         <Badge variant={statusColor[post.status] || "default"}>{post.status}</Badge>
       </div>
 
-      {/* Title */}
+      {/* Title — tap to edit */}
       <div className="bg-card rounded-[--radius] border border-border p-4">
         <label className="text-xs text-muted-foreground mb-1 block">제목</label>
-        <input
-          className="w-full bg-transparent text-lg font-bold outline-none text-foreground"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={handleSaveTitle}
-        />
+        {isEditingTitle ? (
+          <div className="space-y-2">
+            <input
+              className="w-full bg-secondary rounded-lg px-3 py-2 text-lg font-bold outline-none text-foreground"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSaveTitle}>저장</Button>
+              <Button size="sm" variant="outline" onClick={() => { setIsEditingTitle(false); setTitle(post.title); }}>취소</Button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setIsEditingTitle(true)} className="w-full text-left group relative">
+            <p className="text-lg font-bold">{title}</p>
+            <Edit3 className="w-4 h-4 text-muted-foreground absolute top-0 right-0 opacity-60" />
+          </button>
+        )}
       </div>
 
       {/* Photos */}
@@ -118,69 +164,78 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
       )}
 
       {/* Content Blocks */}
-      {blocks.length > 0 ? (
-        <div className="space-y-3">
-          {blocks.map((block, idx) =>
-            block.type === "text" ? (
-              <div key={idx} className="bg-card rounded-[--radius] border border-border p-4 relative group">
-                {editingBlockIdx === idx ? (
-                  <div className="space-y-2">
-                    <textarea
-                      className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[100px] text-foreground resize-none"
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={handleSaveEdit}>저장</Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingBlockIdx(null)}>취소</Button>
-                    </div>
+      <div className="space-y-3">
+        {blocks.map((block, idx) =>
+          block.type === "text" ? (
+            <div key={idx} className="bg-card rounded-[--radius] border border-border p-4 relative group">
+              {editingBlockIdx === idx ? (
+                <div className="space-y-2">
+                  <textarea
+                    className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[100px] text-foreground resize-none"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveEdit}>저장</Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingBlockIdx(null)}>취소</Button>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => { setEditingBlockIdx(idx); setEditText(block.content); }}
-                    className="w-full text-left"
-                  >
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{block.content}</p>
-                    <Edit3 className="w-4 h-4 text-muted-foreground absolute top-2 right-2 opacity-60" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div key={idx} className="bg-primary/10 border-2 border-dashed border-primary/30 rounded-[--radius] p-4 flex items-center gap-3">
-                <Camera className="w-6 h-6 text-primary" />
-                <div className="flex-1">
-                  <p className="font-semibold text-sm text-primary">📸 사진{idx + 1} 여기 업로드 ▲</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{block.caption}</p>
                 </div>
+              ) : (
+                <button
+                  onClick={() => { setEditingBlockIdx(idx); setEditText(block.content); }}
+                  className="w-full text-left"
+                >
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{block.content}</p>
+                  <Edit3 className="w-4 h-4 text-muted-foreground absolute top-2 right-2 opacity-60" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div key={idx} className="bg-primary/10 border-2 border-dashed border-primary/30 rounded-[--radius] p-4 flex items-center gap-3">
+              <Camera className="w-6 h-6 text-primary" />
+              <div className="flex-1">
+                <p className="font-semibold text-sm text-primary">📸 사진{idx + 1} 여기 업로드 ▲</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{block.caption}</p>
               </div>
-            )
-          )}
-        </div>
-      ) : (
-        <div className="bg-card rounded-[--radius] border border-border p-6 text-center text-muted-foreground text-sm">
-          아직 본문이 생성되지 않았습니다.
-        </div>
-      )}
+            </div>
+          )
+        )}
+      </div>
 
       {/* Hashtags */}
       <div className="bg-card rounded-[--radius] border border-border p-4">
         <div className="flex items-center gap-2 mb-2">
           <Hash className="w-4 h-4 text-primary" />
           <p className="text-sm font-semibold flex-1">해시태그</p>
-          <button onClick={() => { setEditingHashtags(!editingHashtags); setHashtagText(hashtags.join(", ")); }}
-            className="text-xs text-primary font-medium">
-            {editingHashtags ? "취소" : "수정"}
+          <button onClick={() => setEditingHashtags(!editingHashtags)} className="text-xs text-primary font-medium">
+            {editingHashtags ? "완료" : "수정"}
           </button>
         </div>
         {editingHashtags ? (
-          <div className="space-y-2">
-            <input
-              className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
-              value={hashtagText}
-              onChange={(e) => setHashtagText(e.target.value)}
-              placeholder="쉼표로 구분 (예: 옥상방수, 방수공사)"
-            />
-            <Button size="sm" onClick={handleSaveHashtags}>저장</Button>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {hashtags.map((tag, i) => (
+                <Badge key={i} variant="secondary" className="text-sm gap-1 pr-1">
+                  #{tag}
+                  <button onClick={() => handleRemoveTag(i)} className="ml-1 p-0.5 hover:bg-destructive/20 rounded-full">
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
+                value={newTagInput}
+                onChange={(e) => setNewTagInput(e.target.value)}
+                placeholder="새 태그 입력"
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTag(); } }}
+              />
+              <Button size="sm" variant="outline" onClick={handleAddTag}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            <Button size="sm" onClick={handleFinishHashtags} className="w-full">완료</Button>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -210,7 +265,6 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
           <Copy className="w-5 h-5" />
           복사 후 네이버 앱 열기
         </Button>
-        {/* Semi-auto guidance */}
         <div className="bg-primary/10 border border-primary/20 rounded-[--radius] px-4 py-3 text-center">
           <p className="text-xs text-primary font-medium leading-relaxed">
             📋 앱이 글을 복사하고 네이버를 열어드립니다.<br />

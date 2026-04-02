@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore, WorkType, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const workTypes: WorkType[] = ["옥상방수", "외벽방수", "지하방수", "균열보수", "욕실방수", "기타"];
 
@@ -22,7 +23,7 @@ const personas: { id: Persona; label: string; desc: string }[] = [
 
 const buildingTypes = ["아파트", "상가", "단독주택", "기타"] as const;
 
-type GeneratingStep = "analyzing" | "writing" | "done";
+type GeneratingStep = "analyzing" | "writing" | "done" | "error";
 
 export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) => void; onViewPost: (post: BlogPost) => void }) {
   const {
@@ -56,7 +57,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     e.target.value = "";
   };
 
-  const handleStartAI = () => {
+  const handleStartAI = async () => {
     if (photos.length === 0) {
       toast({ title: "사진을 먼저 촬영해주세요", variant: "destructive" });
       return;
@@ -74,43 +75,80 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     setGenStep("analyzing");
     setProgress(0);
 
+    // Progress animation
     const interval = setInterval(() => {
       setProgress((p) => {
-        if (p < 35) { setGenStep("analyzing"); return p + 3; }
-        else if (p < 85) { setGenStep("writing"); return p + 2; }
-        else if (p >= 100) { clearInterval(interval); setGenStep("done"); return 100; }
-        return p + 1;
+        if (p < 30) return p + 2;
+        if (p < 80) return p + 0.5;
+        if (p < 95) return p + 0.2;
+        return p;
       });
-    }, 80);
+    }, 200);
 
-    setTimeout(() => {
+    try {
+      setGenStep("analyzing");
+      
+      // Use the first selected platform for generation
+      const primaryPlatform = selectedPlatforms[0];
+
+      const { data, error } = await supabase.functions.invoke("generate-blog", {
+        body: {
+          photos: photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
+          workType: selectedWorkType,
+          persona: selectedPersona,
+          platform: primaryPlatform,
+          location,
+          buildingType,
+          constructionDate,
+          companyName: settings.companyName,
+          phoneNumber: settings.phoneNumber,
+        },
+      });
+
       clearInterval(interval);
+
+      if (error || data?.error) {
+        setGenStep("error");
+        setProgress(0);
+        toast({ title: "AI 글 생성 실패", description: data?.error || error?.message || "다시 시도해주세요", variant: "destructive" });
+        setTimeout(() => setIsGenerating(false), 1500);
+        return;
+      }
+
       setProgress(100);
       setGenStep("done");
 
-      const wt = selectedWorkType || "옥상방수";
-      const loc = location || "서울";
-      const dateStr = constructionDate;
-      const companyName = settings.companyName || "방수PRO";
+      const aiResult = data as { title: string; blocks: ContentBlock[]; hashtags: string[] };
 
-      const title = `[${loc}] ${buildingType} ${wt} 전문 시공 완료 - ${companyName}`;
-      const mockBlocks: ContentBlock[] = [
-        { type: "text", content: `안녕하세요, ${companyName}입니다.\n\n${dateStr} ${loc} ${buildingType}에서 ${wt} 시공을 완료했습니다.\n기존 방수층의 노후화로 인한 누수 문제를 해결하기 위해 전면 재시공을 진행했습니다.` },
-        { type: "photo", content: photos[0]?.id || "photo-1", caption: "시공 전 현장 상태 확인" },
-        { type: "text", content: "기존 방수층을 완전히 제거하고, 바탕면 정리 작업을 실시했습니다. 프라이머 도포 후 충분한 건조 시간을 거쳤습니다." },
-        { type: "photo", content: photos[1]?.id || "photo-2", caption: "프라이머 도포 및 방수 시공 진행" },
-        { type: "text", content: `우레탄 방수 2차 도포까지 완료 후 마감 작업을 진행했습니다.\n\n📞 ${wt} 관련 문의는 언제든 연락 주세요!\n${settings.phoneNumber || ""}` },
-      ];
-      const hashtags = ["방수공사", wt, `${loc}방수`, `${buildingType}방수`, companyName, "누수해결"];
+      // Save to Supabase DB
+      const { data: dbPost, error: dbError } = await supabase.from("posts").insert({
+        title: aiResult.title,
+        blocks: aiResult.blocks as any,
+        hashtags: aiResult.hashtags,
+        photos: photos.map(p => ({ id: p.id, dataUrl: p.dataUrl })) as any,
+        work_type: selectedWorkType,
+        style: "시공일지형",
+        persona: selectedPersona,
+        platforms: [...selectedPlatforms],
+        status: "완료",
+        location,
+        building_type: buildingType,
+        work_date: constructionDate,
+      }).select().single();
+
+      if (dbError) {
+        console.error("DB save error:", dbError);
+        toast({ title: "DB 저장 실패", description: dbError.message, variant: "destructive" });
+      }
 
       const newPost: BlogPost = {
-        id: crypto.randomUUID(),
-        title,
+        id: dbPost?.id || crypto.randomUUID(),
+        title: aiResult.title,
         photos: [...photos],
-        workType: wt,
+        workType: selectedWorkType,
         style: "시공일지형",
-        blocks: mockBlocks,
-        hashtags,
+        blocks: aiResult.blocks,
+        hashtags: aiResult.hashtags,
         status: "완료",
         createdAt: new Date().toISOString().slice(0, 10),
         platforms: [...selectedPlatforms],
@@ -119,7 +157,13 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
 
       addPost(newPost);
       setTimeout(() => { setIsGenerating(false); onViewPost(newPost); }, 800);
-    }, 4000);
+    } catch (err: any) {
+      clearInterval(interval);
+      setGenStep("error");
+      setProgress(0);
+      toast({ title: "오류 발생", description: err.message || "네트워크 오류", variant: "destructive" });
+      setTimeout(() => setIsGenerating(false), 1500);
+    }
   };
 
   if (isGenerating) {
@@ -128,7 +172,9 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
           <Sparkles className="w-10 h-10 text-primary animate-pulse" />
         </div>
-        <h2 className="text-xl font-bold text-center">AI가 글을 작성하고 있습니다</h2>
+        <h2 className="text-xl font-bold text-center">
+          {genStep === "error" ? "생성 실패" : "AI가 글을 작성하고 있습니다"}
+        </h2>
         <div className="w-full max-w-xs">
           <div className="w-full bg-secondary rounded-full h-3">
             <div className="bg-primary rounded-full h-3 transition-all duration-300" style={{ width: `${progress}%` }} />
@@ -139,6 +185,9 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
           <StepItem label="글 생성 중" active={genStep === "writing"} done={genStep === "done"} />
           <StepItem label="완료" active={false} done={genStep === "done"} />
         </div>
+        {genStep === "error" && (
+          <Button variant="outline" onClick={() => setIsGenerating(false)}>돌아가기</Button>
+        )}
       </div>
     );
   }
@@ -147,7 +196,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
       <h1 className="text-xl font-bold">📷 현장 촬영</h1>
 
-      {/* 1. Site Info Fields (FIRST) */}
+      {/* 1. Site Info Fields */}
       <div className="bg-card rounded-[--radius] border border-border p-4 space-y-4">
         <p className="text-sm font-semibold">📍 현장 정보</p>
         <div className="space-y-1">
