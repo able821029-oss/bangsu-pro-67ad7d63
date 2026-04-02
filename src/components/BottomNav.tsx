@@ -1,18 +1,17 @@
-import { Home, Camera, FileText, Upload, Settings } from "lucide-react";
+import { Home, Camera, Send, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type TabId = "home" | "camera" | "writer" | "upload" | "settings";
+export type TabId = "home" | "camera" | "publish" | "settings";
 
 interface BottomNavProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
 }
 
-const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
+const tabs: { id: TabId; label: string; icon: React.ElementType; isCenter?: boolean }[] = [
   { id: "home", label: "홈", icon: Home },
   { id: "camera", label: "촬영", icon: Camera },
-  { id: "writer", label: "AI글쓰기", icon: FileText },
-  { id: "upload", label: "업로드", icon: Upload },
+  { id: "publish", label: "게시", icon: Send, isCenter: true },
   { id: "settings", label: "설정", icon: Settings },
 ];
 
@@ -23,6 +22,36 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+
+          if (tab.isCenter) {
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className="relative -mt-6 flex flex-col items-center"
+              >
+                <div
+                  className={cn(
+                    "w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all",
+                    isActive
+                      ? "bg-primary shadow-primary/40"
+                      : "bg-primary/80 shadow-primary/20"
+                  )}
+                >
+                  <Icon className="w-6 h-6 text-primary-foreground" />
+                </div>
+                <span
+                  className={cn(
+                    "text-xs font-medium mt-1",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )}
+                >
+                  {tab.label}
+                </span>
+              </button>
+            );
+          }
+
           return (
             <button
               key={tab.id}

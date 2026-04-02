@@ -1,0 +1,93 @@
+import { useState } from "react";
+import { ArrowLeft, Check, Crown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAppStore } from "@/stores/appStore";
+import { CancelDialog } from "@/components/CancelDialog";
+
+const plans = [
+  { name: "무료", price: "₩0", monthly: "5건", platforms: "네이버만", persona: "1종", photos: "2장", highlight: false },
+  { name: "베이직", price: "₩9,900", monthly: "50건", platforms: "3개", persona: "3종", photos: "5장", highlight: false },
+  { name: "프로", price: "₩19,900", monthly: "150건", platforms: "전체", persona: "전체", photos: "10장", highlight: true },
+  { name: "무제한", price: "₩39,900", monthly: "무제한", platforms: "전체", persona: "전체", photos: "10장", highlight: false },
+] as const;
+
+export function PricingPlan({ onBack }: { onBack: () => void }) {
+  const subscription = useAppStore((s) => s.subscription);
+  const [showCancel, setShowCancel] = useState(false);
+
+  return (
+    <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-secondary">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <h1 className="text-xl font-bold">요금제·결제</h1>
+      </div>
+
+      {/* Current Plan */}
+      <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">현재 플랜</p>
+          <p className="text-lg font-bold text-primary">{subscription.plan}</p>
+          <p className="text-xs text-muted-foreground">{subscription.expiresAt} 만료</p>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold">{subscription.usedCount}/{subscription.maxCount}</p>
+          <p className="text-xs text-muted-foreground">이번달 사용량</p>
+        </div>
+      </div>
+
+      {/* Annual Discount Badge */}
+      <div className="bg-success/10 border border-success/30 rounded-xl px-4 py-3 text-center">
+        <p className="text-sm font-semibold text-success">🎉 연간 결제 시 2개월 무료!</p>
+      </div>
+
+      {/* Plan Cards */}
+      <div className="space-y-3">
+        {plans.map((plan) => (
+          <div
+            key={plan.name}
+            className={`rounded-xl border-2 p-4 transition-all ${
+              plan.highlight
+                ? "border-primary bg-primary/5"
+                : subscription.plan === plan.name
+                ? "border-primary/50 bg-card"
+                : "border-border bg-card"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                {plan.highlight && <Crown className="w-5 h-5 text-primary" />}
+                <span className="font-bold text-lg">{plan.name}</span>
+                {plan.highlight && <Badge variant="default" className="text-xs">추천</Badge>}
+                {subscription.plan === plan.name && <Badge variant="info" className="text-xs">현재</Badge>}
+              </div>
+              <span className="text-xl font-bold">{plan.price}<span className="text-sm font-normal text-muted-foreground">/월</span></span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1"><Check className="w-3 h-3 text-success" /> 월 {plan.monthly}</div>
+              <div className="flex items-center gap-1"><Check className="w-3 h-3 text-success" /> 플랫폼 {plan.platforms}</div>
+              <div className="flex items-center gap-1"><Check className="w-3 h-3 text-success" /> 페르소나 {plan.persona}</div>
+              <div className="flex items-center gap-1"><Check className="w-3 h-3 text-success" /> 사진 {plan.photos}</div>
+            </div>
+            {subscription.plan !== plan.name && (
+              <Button size="sm" variant={plan.highlight ? "default" : "outline"} className="w-full mt-3">
+                {plan.price === "₩0" ? "무료로 시작" : "업그레이드"}
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Cancel Button */}
+      {subscription.plan !== "무료" && (
+        <button onClick={() => setShowCancel(true)} className="w-full text-center text-sm text-muted-foreground underline py-2">
+          구독 해지
+        </button>
+      )}
+
+      <CancelDialog open={showCancel} onOpenChange={setShowCancel} />
+    </div>
+  );
+}
