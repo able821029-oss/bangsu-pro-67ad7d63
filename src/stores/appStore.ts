@@ -94,6 +94,7 @@ interface AppState {
   setCurrentPost: (post: BlogPost | null) => void;
   addPost: (post: BlogPost) => void;
   updatePostStatus: (id: string, status: PostStatus) => void;
+  updatePost: (id: string, updates: Partial<BlogPost>) => void;
   updateSettings: (settings: Partial<Settings>) => void;
   addCoupon: (coupon: Coupon) => void;
   addInquiry: (inquiry: Inquiry) => void;
