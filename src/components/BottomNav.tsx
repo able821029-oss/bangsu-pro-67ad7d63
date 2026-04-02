@@ -11,7 +11,7 @@ interface BottomNavProps {
 const tabs: { id: TabId; label: string; icon: React.ElementType; isCenter?: boolean }[] = [
   { id: "home", label: "홈", icon: Home },
   { id: "camera", label: "촬영", icon: Camera },
-  { id: "publish", label: "게시", icon: Upload, isCenter: true },
+  { id: "publish", label: "발행현황", icon: Upload, isCenter: true },
   { id: "settings", label: "설정", icon: Settings },
 ];
 
