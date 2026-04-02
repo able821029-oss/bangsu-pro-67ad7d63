@@ -158,14 +158,14 @@ JSON 형식으로만 응답해주세요.`,
         title: `${location || "현장"} ${buildingType || ""} ${detectedType} 시공 완료`,
         detectedWorkType: detectedType,
         blocks: [
-          { type: "text", content: `안녕하세요, ${companyName || "SMS"}입니다.\n${constructionDate || "오늘"} ${location || "현장"}에서 ${workType} 시공을 진행했습니다.` },
+          { type: "text", content: `안녕하세요, ${companyName || "SMS"}입니다.\n${constructionDate || "오늘"} ${location || "현장"}에서 ${detectedType} 시공을 진행했습니다.` },
           ...photoBlocks,
         ],
         hashtags: platform === "instagram"
-          ? ["방수공사", "옥상방수", workType, "시공후기", "방수전문", "인테리어", "집수리", "리모델링", "방수업체", "방수시공", ...(location ? [location.replace(/\s/g, ""), location + "방수"] : []), "SMS", "시공완료", "건물방수", "누수차단", "우레탄방수", "방수전문업체", "시공브이로그"]
+          ? ["시공후기", detectedType, "인테리어", "집수리", "리모델링", "시공완료", ...(location ? [location.replace(/\s/g, ""), location + "시공"] : []), "SMS", "건물시공", "시공브이로그"]
           : platform === "tiktok"
-          ? ["방수공사", "시공브이로그", "집수리", workType, "방수전문"]
-          : ["방수공사", workType, "방수업체추천", ...(location ? [location + "방수공사"] : []), "시공후기", "방수전문", companyName || "SMS", "시공완료", "누수", "방수"],
+          ? ["시공브이로그", "집수리", detectedType, "시공전문"]
+          : [detectedType, "시공업체추천", ...(location ? [location + "시공"] : []), "시공후기", companyName || "SMS", "시공완료"],
         isMock: true,
       };
 
