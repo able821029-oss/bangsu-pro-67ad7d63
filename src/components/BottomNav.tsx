@@ -64,7 +64,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                   isActive ? "text-[#237FFF]" : "text-[#6B7E99]"
                 )}
               >
-                <Icon className={cn("w-6 h-6", isActive && "drop-shadow-[0_0_8px_hsl(217,94%,68%)]")} />
+                <Icon className={cn("w-6 h-6", isActive && "drop-shadow-[0_0_8px_#237FFF]")} />
                 <span className="text-xs font-medium">{tab.label}</span>
               </button>
             );
