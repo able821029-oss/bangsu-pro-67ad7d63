@@ -287,16 +287,6 @@ export async function renderMirraVideo(
 
     onProgress(si, scenes.length);
 
-    // Start narration if enabled
-    if (narrationEnabled && scene.narration) {
-      try {
-        const u = new SpeechSynthesisUtterance(scene.narration);
-        u.lang = "ko-KR";
-        u.rate = 0.9;
-        u.pitch = 1.0;
-        speechSynthesis.speak(u);
-      } catch { /* ignore */ }
-    }
 
     for (let f = 0; f < totalFrames; f++) {
       const t = f / totalFrames; // 0..1
