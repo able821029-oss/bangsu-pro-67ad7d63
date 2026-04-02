@@ -81,4 +81,7 @@
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+  .bg-brand-gradient {
+    background: linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%);
+  }
 }
