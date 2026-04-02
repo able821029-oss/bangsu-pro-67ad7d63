@@ -117,17 +117,21 @@ export function PublishTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId
         <div className="space-y-2">
           <p className="text-sm font-semibold text-muted-foreground">작성 중인 글</p>
           {inProgressPosts.map((post) => (
-            <button
-              key={post.id}
-              onClick={() => onViewPost(post)}
-              className="w-full flex items-center gap-3 bg-card rounded-[--radius] border border-border p-3 text-left hover:bg-secondary transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">{post.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{post.createdAt}</p>
-              </div>
-              <Badge variant={statusColor[post.status]}>{post.status}</Badge>
-            </button>
+            <div key={post.id} className="bg-card rounded-[--radius] border border-border p-3 space-y-2">
+              <button
+                onClick={() => onViewPost(post)}
+                className="w-full flex items-center gap-3 text-left"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{post.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{post.createdAt}</p>
+                </div>
+                <Badge variant={statusColor[post.status]}>{post.status}</Badge>
+              </button>
+              <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => onViewPost(post)}>
+                이어서 작성하기
+              </Button>
+            </div>
           ))}
         </div>
       )}

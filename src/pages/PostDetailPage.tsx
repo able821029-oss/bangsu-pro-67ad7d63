@@ -86,7 +86,7 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
   const handleTempSave = async () => {
     updatePost(post.id, { title, blocks, hashtags, status: "작성중" });
     await saveToDb({ title, blocks, hashtags, status: "작성중" });
-    toast({ title: "✅ 임시저장 되었습니다." });
+    toast({ title: "✅ 임시저장 완료", duration: 2000 });
   };
 
   const handleRegenerate = () => {
