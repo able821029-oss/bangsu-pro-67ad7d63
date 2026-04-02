@@ -18,15 +18,9 @@ const videoStyles: { id: VideoStyle; label: string; desc: string; emoji: string 
   { id: "Before/After형", label: "Before/After형", desc: "전후 비교 중심", emoji: "🔄" },
 ];
 
-const narrationTypes: { id: NarrationType; label: string; emoji: string }[] = [
-  { id: "남성", label: "남성 (기본)", emoji: "🎙️" },
-  { id: "여성", label: "여성", emoji: "🎤" },
-  { id: "없음", label: "없음 (BGM만)", emoji: "🎵" },
-];
-
 const bgmOptions: { id: BgmType; label: string; emoji: string }[] = [
-  { id: "upbeat", label: "업비트", emoji: "🎶" },
-  { id: "calm", label: "잔잔한", emoji: "🎵" },
+  { id: "upbeat", label: "경쾌한", emoji: "🎵" },
+  { id: "calm", label: "잔잔한", emoji: "🎶" },
   { id: "none", label: "없음", emoji: "🔇" },
 ];
 
