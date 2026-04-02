@@ -304,7 +304,10 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         </div>
       </div>
 
-      {/* 6. Start AI */}
+      {/* 6. Before/After */}
+      <BeforeAfterComparator />
+
+      {/* 7. Start AI */}
       <Button variant="hero" size="xl" className="w-full" onClick={handleStartAI}>
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
