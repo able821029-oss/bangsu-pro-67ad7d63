@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BottomNav, TabId } from "@/components/BottomNav";
+import { InstallBanner } from "@/components/InstallBanner";
 import { HomeTab } from "@/pages/HomeTab";
 import { CameraTab } from "@/pages/CameraTab";
 import { PublishTab } from "@/pages/PublishTab";
