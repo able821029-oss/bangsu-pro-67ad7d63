@@ -115,7 +115,6 @@ ${platformText}
       type: "text",
       text: `다음 정보로 ${platform === "naver" ? "네이버 블로그" : platform === "instagram" ? "인스타그램" : "틱톡"} 글을 작성해주세요.
 
-- 공사 유형: ${workType}
 - 시공 위치: ${location || "미입력"}
 - 건물 유형: ${buildingType || "미입력"}
 - 시공 일자: ${constructionDate || "오늘"}
@@ -123,6 +122,7 @@ ${platformText}
 - 연락처: ${phoneNumber || ""}
 - 첨부 사진: ${photoSlice.length}장
 
+사진을 분석하여 업종과 공사 유형을 자동 판단한 뒤 글을 작성해주세요.
 JSON 형식으로만 응답해주세요.`,
     });
 
