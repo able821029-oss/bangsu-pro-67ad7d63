@@ -63,10 +63,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       toast({ title: "사진을 먼저 촬영해주세요", variant: "destructive" });
       return;
     }
-    if (!selectedWorkType) {
-      toast({ title: "공사 유형을 선택해주세요", variant: "destructive" });
-      return;
-    }
     if (selectedPlatforms.length === 0) {
       toast({ title: "게시 플랫폼을 선택해주세요", variant: "destructive" });
       return;
