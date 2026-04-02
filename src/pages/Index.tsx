@@ -2,8 +2,7 @@ import { useState } from "react";
 import { BottomNav, TabId } from "@/components/BottomNav";
 import { HomeTab } from "@/pages/HomeTab";
 import { CameraTab } from "@/pages/CameraTab";
-import { WriterTab } from "@/pages/WriterTab";
-import { UploadTab } from "@/pages/UploadTab";
+import { PublishTab } from "@/pages/PublishTab";
 import { SettingsTab } from "@/pages/SettingsTab";
 
 const Index = () => {
@@ -15,10 +14,8 @@ const Index = () => {
         return <HomeTab onNavigate={setActiveTab} />;
       case "camera":
         return <CameraTab onNavigate={setActiveTab} />;
-      case "writer":
-        return <WriterTab onNavigate={setActiveTab} />;
-      case "upload":
-        return <UploadTab />;
+      case "publish":
+        return <PublishTab onNavigate={setActiveTab} />;
       case "settings":
         return <SettingsTab />;
     }
