@@ -212,7 +212,9 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground flex items-center gap-1">
-            <Building2 className="w-3 h-3" /> 건물 유형
+            <Building2 className="w-3 h-3" /> 건물 종류
+          </label>
+          <p className="text-xs text-muted-foreground">어떤 건물인지 (아파트·상가 등)</p>
           </label>
           <div className="flex flex-wrap gap-2">
             {buildingTypes.map((bt) => (
