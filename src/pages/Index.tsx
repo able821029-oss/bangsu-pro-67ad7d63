@@ -58,7 +58,7 @@ const Index = () => {
   if (viewingPost) {
     return (
       <div className="min-h-screen bg-background">
-        <PostDetailPage post={viewingPost} onBack={handleBackFromPost} />
+        <PostDetailPage post={viewingPost} onBack={handleBackFromPost} onNavigate={setActiveTab} />
       </div>
     );
   }
