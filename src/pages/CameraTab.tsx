@@ -4,12 +4,10 @@ import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { ShortsCreator } from "@/components/ShortsCreator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAppStore, WorkType, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
+import { useAppStore, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-const workTypes: WorkType[] = ["옥상방수", "외벽방수", "지하방수", "균열보수", "욕실방수", "기타"];
 
 const platforms: { id: Platform; label: string; emoji: string }[] = [
   { id: "naver", label: "네이버 블로그", emoji: "📗" },
