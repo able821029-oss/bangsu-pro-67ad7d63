@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Camera, ImagePlus, X, Sparkles, MapPin, Building2, CalendarDays, CheckCircle2, Loader2 } from "lucide-react";
+import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, WorkType, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
