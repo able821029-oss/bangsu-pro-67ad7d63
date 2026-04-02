@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const announcements = [
   { id: "1", title: "방수PRO v2.0 업데이트 안내", date: "2026-04-01", content: "인스타그램·틱톡 지원, 페르소나 선택 기능이 추가되었습니다." },
@@ -16,14 +17,22 @@ export function AnnouncementsPage({ onBack }: { onBack: () => void }) {
         <h1 className="text-xl font-bold">📢 공지사항</h1>
       </div>
 
-      <div className="space-y-3">
-        {announcements.map((ann) => (
-          <div key={ann.id} className="bg-card rounded-xl border border-border p-4">
-            <p className="font-semibold text-sm">{ann.title}</p>
-            <p className="text-xs text-muted-foreground mt-1">{ann.date}</p>
-            <p className="text-sm text-muted-foreground mt-2">{ann.content}</p>
-          </div>
-        ))}
+      <div className="bg-card rounded-[--radius] border border-border overflow-hidden">
+        <Accordion type="single" collapsible>
+          {announcements.map((ann) => (
+            <AccordionItem key={ann.id} value={ann.id} className="border-border">
+              <AccordionTrigger className="px-4 text-sm text-left hover:no-underline">
+                <div>
+                  <p className="font-semibold">{ann.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{ann.date}</p>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-4 text-sm text-muted-foreground">
+                {ann.content}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </div>
     </div>
   );

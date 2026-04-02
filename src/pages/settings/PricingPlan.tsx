@@ -1,16 +1,35 @@
 import { useState } from "react";
-import { ArrowLeft, Check, Crown } from "lucide-react";
+import { ArrowLeft, Check, X, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { CancelDialog } from "@/components/CancelDialog";
 
 const plans = [
-  { name: "무료", price: "₩0", monthly: "5건", platforms: "네이버만", persona: "1종", photos: "2장", highlight: false },
-  { name: "베이직", price: "₩9,900", monthly: "50건", platforms: "3개", persona: "3종", photos: "5장", highlight: false },
-  { name: "프로", price: "₩19,900", monthly: "150건", platforms: "전체", persona: "전체", photos: "10장", highlight: true },
-  { name: "무제한", price: "₩39,900", monthly: "무제한", platforms: "전체", persona: "전체", photos: "10장", highlight: false },
+  {
+    name: "무료", price: "₩0", monthly: "5건", platforms: "네이버만", persona: "1종", photos: "2장", highlight: false,
+    features: { seo: false, photoAuto: false, persona3: false, admin: false },
+  },
+  {
+    name: "베이직", price: "₩9,900", monthly: "50건", platforms: "3개", persona: "3종", photos: "5장", highlight: false,
+    features: { seo: true, photoAuto: false, persona3: true, admin: false },
+  },
+  {
+    name: "프로", price: "₩19,900", monthly: "150건", platforms: "전체", persona: "전체", photos: "10장", highlight: true,
+    features: { seo: true, photoAuto: true, persona3: true, admin: false },
+  },
+  {
+    name: "무제한", price: "₩39,900", monthly: "무제한", platforms: "전체", persona: "전체", photos: "10장", highlight: false,
+    features: { seo: true, photoAuto: true, persona3: true, admin: true },
+  },
 ] as const;
+
+const featureLabels = [
+  { key: "seo" as const, label: "자동 SEO 키워드 삽입" },
+  { key: "photoAuto" as const, label: "사진 배치 자동화" },
+  { key: "persona3" as const, label: "페르소나 3종" },
+  { key: "admin" as const, label: "관리자 모드" },
+];
 
 export function PricingPlan({ onBack }: { onBack: () => void }) {
   const subscription = useAppStore((s) => s.subscription);
@@ -26,7 +45,7 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Current Plan */}
-      <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 flex items-center justify-between">
+      <div className="bg-primary/10 border border-primary/30 rounded-[--radius] p-4 flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">현재 플랜</p>
           <p className="text-lg font-bold text-primary">{subscription.plan}</p>
@@ -39,7 +58,7 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Annual Discount Badge */}
-      <div className="bg-success/10 border border-success/30 rounded-xl px-4 py-3 text-center">
+      <div className="bg-success/10 border border-success/30 rounded-[--radius] px-4 py-3 text-center">
         <p className="text-sm font-semibold text-success">🎉 연간 결제 시 2개월 무료!</p>
       </div>
 
@@ -48,7 +67,7 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
         {plans.map((plan) => (
           <div
             key={plan.name}
-            className={`rounded-xl border-2 p-4 transition-all ${
+            className={`rounded-[--radius] border-2 p-4 transition-all ${
               plan.highlight
                 ? "border-primary bg-primary/5"
                 : subscription.plan === plan.name
@@ -65,12 +84,31 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
               </div>
               <span className="text-xl font-bold">{plan.price}<span className="text-sm font-normal text-muted-foreground">/월</span></span>
             </div>
+
+            {/* Basic features */}
             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
               <div className="flex items-center gap-1"><Check className="w-3 h-3 text-success" /> 월 {plan.monthly}</div>
               <div className="flex items-center gap-1"><Check className="w-3 h-3 text-success" /> 플랫폼 {plan.platforms}</div>
               <div className="flex items-center gap-1"><Check className="w-3 h-3 text-success" /> 페르소나 {plan.persona}</div>
               <div className="flex items-center gap-1"><Check className="w-3 h-3 text-success" /> 사진 {plan.photos}</div>
             </div>
+
+            {/* Detailed feature checklist */}
+            <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+              {featureLabels.map((f) => (
+                <div key={f.key} className="flex items-center gap-2 text-xs">
+                  {plan.features[f.key] ? (
+                    <Check className="w-3.5 h-3.5 text-success" />
+                  ) : (
+                    <X className="w-3.5 h-3.5 text-muted-foreground/40" />
+                  )}
+                  <span className={plan.features[f.key] ? "text-foreground" : "text-muted-foreground/50"}>
+                    {f.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+
             {subscription.plan !== plan.name && (
               <Button size="sm" variant={plan.highlight ? "default" : "outline"} className="w-full mt-3">
                 {plan.price === "₩0" ? "무료로 시작" : "업그레이드"}

@@ -94,6 +94,7 @@ interface AppState {
   setCurrentPost: (post: BlogPost | null) => void;
   addPost: (post: BlogPost) => void;
   updatePostStatus: (id: string, status: PostStatus) => void;
+  updatePost: (id: string, updates: Partial<BlogPost>) => void;
   updateSettings: (settings: Partial<Settings>) => void;
   addCoupon: (coupon: Coupon) => void;
   addInquiry: (inquiry: Inquiry) => void;
@@ -204,6 +205,10 @@ export const useAppStore = create<AppState>((set) => ({
   updatePostStatus: (id, status) =>
     set((state) => ({
       posts: state.posts.map((p) => (p.id === id ? { ...p, status } : p)),
+    })),
+  updatePost: (id, updates) =>
+    set((state) => ({
+      posts: state.posts.map((p) => (p.id === id ? { ...p, ...updates } : p)),
     })),
   updateSettings: (newSettings) =>
     set((state) => ({
