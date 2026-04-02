@@ -266,10 +266,13 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       <div>
         <p className="text-sm font-semibold mb-2">게시 플랫폼 (중복 가능)</p>
         <div className="flex flex-wrap gap-2">
-          {platforms.map((p) => (
-            <Badge key={p.id} variant={selectedPlatforms.includes(p.id) ? "chipActive" : "chip"} className="text-base px-4 py-2 cursor-pointer" onClick={() => togglePlatform(p.id)}>
-              {p.emoji} {p.label}
-            </Badge>
+          {platformIds.map((id) => (
+            <PlatformChip
+              key={id}
+              platform={id}
+              selected={selectedPlatforms.includes(id)}
+              onClick={() => togglePlatform(id)}
+            />
           ))}
         </div>
       </div>
