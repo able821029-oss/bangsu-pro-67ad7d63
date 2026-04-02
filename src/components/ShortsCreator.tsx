@@ -118,7 +118,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         scenes,
         settings.companyName,
         settings.phoneNumber,
-        narration !== "없음",
+        false,
         (current, total) => {
           const pct = 25 + Math.round((current / total) * 70);
           setProgressPct(pct);
