@@ -65,7 +65,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
           {settings.logoUrl ? (
             <img src={settings.logoUrl} alt="로고" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-primary font-black text-lg">방</span>
+            <span className="text-primary font-black text-lg">S</span>
           )}
         </div>
         <div>
