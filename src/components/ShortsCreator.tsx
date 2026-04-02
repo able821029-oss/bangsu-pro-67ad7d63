@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { renderMirraVideo, type MirraScene } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
-type NarrationType = "남성" | "여성" | "없음";
+
 type BgmType = "upbeat" | "calm" | "none";
 type ShortsStep = "config" | "generating" | "done" | "error";
 
