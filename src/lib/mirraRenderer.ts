@@ -132,7 +132,7 @@ function drawSubtitleTyping(
   if (!visible) return;
 
   ctx.save();
-  ctx.font = '32px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.font = '38px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
   ctx.fillStyle = accentColor;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
