@@ -206,6 +206,10 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({
       posts: state.posts.map((p) => (p.id === id ? { ...p, status } : p)),
     })),
+  updatePost: (id, updates) =>
+    set((state) => ({
+      posts: state.posts.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+    })),
   updateSettings: (newSettings) =>
     set((state) => ({
       settings: { ...state.settings, ...newSettings },
