@@ -215,7 +215,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
             <Building2 className="w-3 h-3" /> 건물 종류
           </label>
           <p className="text-xs text-muted-foreground">어떤 건물인지 (아파트·상가 등)</p>
-          </label>
           <div className="flex flex-wrap gap-2">
             {buildingTypes.map((bt) => (
               <Badge key={bt} variant={buildingType === bt ? "chipActive" : "chip"} className="text-sm px-3 py-1.5 cursor-pointer" onClick={() => setBuildingType(bt)}>
