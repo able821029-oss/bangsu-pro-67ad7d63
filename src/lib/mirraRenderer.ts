@@ -256,6 +256,7 @@ export async function renderMirraVideo(
   phoneNumber: string,
   _narrationEnabled: boolean,
   onProgress: (current: number, total: number) => void,
+  narrationAudios?: (string | null)[],
 ): Promise<Blob> {
   // Pre-flight checks
   if (!isRecordingSupported()) {
@@ -310,12 +311,42 @@ export async function renderMirraVideo(
   // Start with timeslice for iOS compatibility
   recorder.start(100);
 
+  // Decode narration audio buffers
+  const narrationBuffers: (AudioBuffer | null)[] = [];
+  if (narrationAudios && audioCtx) {
+    for (const base64 of narrationAudios) {
+      if (!base64) { narrationBuffers.push(null); continue; }
+      try {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const buffer = await audioCtx.decodeAudioData(bytes.buffer);
+        narrationBuffers.push(buffer);
+      } catch { narrationBuffers.push(null); }
+    }
+  }
+
   // Render each scene
   for (let si = 0; si < scenes.length; si++) {
     const scene = scenes[si];
-    const totalFrames = scene.duration || 90;
+    let totalFrames = scene.duration || 90;
     const isEnding = si === scenes.length - 1 && !scene.photo;
     const photoImg = scene.photo ? imageMap[scene.photo] : null;
+
+    // If narration exists, extend scene to match audio duration (min scene.duration)
+    const narrationBuffer = narrationBuffers[si] || null;
+    if (narrationBuffer && audioCtx) {
+      const audioFrames = Math.ceil(narrationBuffer.duration * FPS) + 15; // +0.6s padding
+      totalFrames = Math.max(totalFrames, audioFrames);
+
+      // Play narration audio into the recording stream
+      try {
+        const source = audioCtx.createBufferSource();
+        source.buffer = narrationBuffer;
+        if (audioDest) source.connect(audioDest);
+        source.start();
+      } catch { /* audio playback error */ }
+    }
 
     onProgress(si, scenes.length);
 

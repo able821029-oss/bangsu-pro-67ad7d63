@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Film, CheckCircle2, Download, RotateCcw, X } from "lucide-react";
+import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
@@ -8,9 +8,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { renderMirraVideo, isRecordingSupported, isIOSDevice, type MirraScene } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
-
 type BgmType = "upbeat" | "calm" | "none";
 type ShortsStep = "config" | "generating" | "done" | "error";
+
+interface VoiceOption {
+  id: string;
+  voiceId: string;
+  label: string;
+  desc: string;
+  gender: "male" | "female";
+}
+
+const VOICES: VoiceOption[] = [
+  { id: "male_calm", voiceId: "pNInz6obpgDQGcFmaJgB", label: "남성 — 차분한", desc: "낮고 안정적", gender: "male" },
+  { id: "male_pro", voiceId: "TxGEqnHWrfWFTfGW9XjX", label: "남성 — 전문적", desc: "신뢰감 있는", gender: "male" },
+  { id: "male_strong", voiceId: "VR6AewLTigWG4xSOukaG", label: "남성 — 힘있는", desc: "에너지 넘치는", gender: "male" },
+  { id: "female_friendly", voiceId: "EXAVITQu4vr4xnSDxMaL", label: "여성 — 친근한", desc: "따뜻하고 밝은", gender: "female" },
+  { id: "female_pro", voiceId: "AZnzlk1XvdvUeBnXmlld", label: "여성 — 전문적", desc: "자신감 있는", gender: "female" },
+  { id: "female_bright", voiceId: "21m00Tcm4TlvDq8ikWAM", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female" },
+];
 
 const videoStyles: { id: VideoStyle; label: string; desc: string; emoji: string }[] = [
   { id: "시공일지형", label: "시공일지형", desc: "시공 전→중→후 순서", emoji: "📋" },
@@ -27,6 +43,8 @@ const bgmOptions: { id: BgmType; label: string; emoji: string }[] = [
 const PLAN_LIMITS: Record<string, number> = {
   "무료": 0, "베이직": 5, "프로": 20, "비즈니스": 50, "무제한": 999,
 };
+
+const PREVIEW_TEXT = "안녕하세요. 방수 전문 시공업체입니다.";
 
 function UsageMeter({ used, max, plan }: { used: number; max: number; plan: string }) {
   const ratio = max > 0 ? used / max : 1;
@@ -60,22 +78,112 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
   );
 }
 
+function VoiceCard({
+  voice, selected, onSelect, onPreview, isPlaying, isLoading,
+}: {
+  voice: VoiceOption; selected: boolean; onSelect: () => void;
+  onPreview: () => void; isPlaying: boolean; isLoading: boolean;
+}) {
+  const genderEmoji = voice.gender === "male" ? "👨" : "👩";
+
+  return (
+    <button
+      onClick={onSelect}
+      className="relative w-full text-left p-3 rounded-xl transition-all"
+      style={{
+        border: selected ? "2px solid #237FFF" : "0.5px solid #E5E7EB",
+        backgroundColor: selected ? "#EFF6FF" : "white",
+      }}
+    >
+      {selected && (
+        <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "#237FFF" }}>
+          <Check className="w-3 h-3 text-white" />
+        </div>
+      )}
+      <p className="text-sm font-semibold text-foreground">{genderEmoji} {voice.label}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">{voice.desc}</p>
+      <button
+        onClick={(e) => { e.stopPropagation(); onPreview(); }}
+        disabled={isLoading}
+        className="mt-2 flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors"
+        style={{
+          backgroundColor: isPlaying ? "#237FFF" : "#F3F4F6",
+          color: isPlaying ? "white" : "#6B7280",
+        }}
+      >
+        {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+        {isLoading ? "로딩..." : isPlaying ? "재생 중" : "미리 듣기"}
+      </button>
+    </button>
+  );
+}
+
 export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const { photos, settings, subscription } = useAppStore();
   const { toast } = useToast();
 
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("시공일지형");
-  
   const [bgm, setBgm] = useState<BgmType>("upbeat");
+  const [selectedVoice, setSelectedVoice] = useState<string | null>("male_calm");
   const [step, setStep] = useState<ShortsStep>("config");
   const [progressText, setProgressText] = useState("");
   const [progressPct, setProgressPct] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
   const videoLimit = PLAN_LIMITS[subscription.plan] || 5;
   const [videoUsed] = useState(2);
   const quotaExceeded = videoUsed >= videoLimit;
+
+  const handlePreviewVoice = useCallback(async (voice: VoiceOption) => {
+    // Stop current playback
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      setCurrentAudio(null);
+      setPlayingVoice(null);
+    }
+
+    if (playingVoice === voice.id) return; // Was playing, just stop
+
+    setPreviewingVoice(voice.id);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text: PREVIEW_TEXT, voiceId: voice.voiceId, mode: "preview" }),
+        }
+      );
+
+      if (!response.ok) throw new Error("TTS 요청 실패");
+
+      const data = await response.json();
+      const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
+      const audio = new Audio(audioUrl);
+
+      audio.onended = () => { setPlayingVoice(null); setCurrentAudio(null); };
+      audio.onerror = () => { setPlayingVoice(null); setCurrentAudio(null); };
+
+      setCurrentAudio(audio);
+      setPlayingVoice(voice.id);
+      setPreviewingVoice(null);
+      await audio.play();
+    } catch (err) {
+      console.error("Voice preview error:", err);
+      setPreviewingVoice(null);
+      toast({ title: "미리 듣기 실패", description: "다시 시도해 주세요", variant: "destructive" });
+    }
+  }, [currentAudio, playingVoice, toast]);
 
   const handleGenerate = useCallback(async () => {
     if (photos.length < 2) {
@@ -89,25 +197,28 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
     }
 
     if (isIOSDevice()) {
-      toast({
-        title: "📱 아이폰 안내",
-        description: "아이폰에서는 영상 자동 저장이 제한됩니다.\n제어센터 → 화면 기록 버튼으로 저장해 주세요.",
-      });
+      toast({ title: "📱 아이폰 안내", description: "아이폰에서는 영상 자동 저장이 제한됩니다.\n제어센터 → 화면 기록 버튼으로 저장해 주세요." });
     }
+
+    // Stop any playing preview
+    if (currentAudio) { currentAudio.pause(); setCurrentAudio(null); setPlayingVoice(null); }
 
     setStep("generating");
     setProgressText("🎬 AI 스크립트 생성 중...");
     setProgressPct(10);
     setErrorMsg("");
 
+    const narrationEnabled = selectedVoice !== null;
+    const voice = VOICES.find(v => v.id === selectedVoice);
+
     try {
-      // 1. Get AI script (new mirra-style format)
+      // 1. Get AI script
       const { data: scriptData, error: scriptErr } = await supabase.functions.invoke("generate-shorts", {
         body: {
           photos: photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
           workType: "자동판단",
           videoStyle,
-          narrationType: "없음",
+          narrationType: narrationEnabled ? "있음" : "없음",
           location: "",
           buildingType: "",
           constructionDate: new Date().toISOString().slice(0, 10),
@@ -121,21 +232,53 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       const scenes: MirraScene[] = scriptData?.scenes || [];
       if (scenes.length === 0) throw new Error("스크립트 생성 실패");
 
-      setProgressText("🎥 텍스트 애니메이션 렌더링 중...");
-      setProgressPct(25);
+      // 2. Generate narration audio for each scene (if enabled)
+      let narrationAudios: (string | null)[] = [];
+      if (narrationEnabled && voice) {
+        setProgressText("🎙️ 나레이션 음성 생성 중...");
+        setProgressPct(20);
 
-      // 2. Render with mirra-style Canvas engine
+        narrationAudios = await Promise.all(
+          scenes.map(async (scene, idx) => {
+            if (!scene.narration) return null;
+            try {
+              const response = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                    Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+                  },
+                  body: JSON.stringify({ text: scene.narration, voiceId: voice.voiceId, mode: "narration" }),
+                }
+              );
+              if (!response.ok) return null;
+              const data = await response.json();
+              setProgressPct(20 + Math.round((idx / scenes.length) * 15));
+              return data.audioContent as string; // base64
+            } catch { return null; }
+          })
+        );
+      }
+
+      setProgressText("🎥 텍스트 애니메이션 렌더링 중...");
+      setProgressPct(35);
+
+      // 3. Render with Canvas engine
       const blob = await renderMirraVideo(
         photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
         scenes,
         settings.companyName,
         settings.phoneNumber,
-        false,
+        narrationEnabled,
         (current, total) => {
-          const pct = 25 + Math.round((current / total) * 70);
+          const pct = 35 + Math.round((current / total) * 60);
           setProgressPct(pct);
           setProgressText(`🎥 장면 렌더링 중... (${current}/${total})`);
         },
+        narrationAudios.length > 0 ? narrationAudios : undefined,
       );
 
       const url = URL.createObjectURL(blob);
@@ -153,7 +296,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         setErrorMsg(err.message || "다시 시도해 주세요");
       }
     }
-  }, [photos, videoStyle, settings, toast]);
+  }, [photos, videoStyle, selectedVoice, settings, toast, currentAudio]);
 
   const handleDownload = () => {
     if (videoUrl) {
@@ -195,6 +338,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
+        {/* Video Style */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold">🎥 영상 스타일</p>
           <div className="space-y-2">
@@ -208,6 +352,36 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
+        {/* Voice Selection */}
+        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
+          <p className="text-sm font-semibold">🎙️ 나레이션 목소리</p>
+          <div className="grid grid-cols-2 gap-2">
+            {VOICES.map(v => (
+              <VoiceCard
+                key={v.id}
+                voice={v}
+                selected={selectedVoice === v.id}
+                onSelect={() => setSelectedVoice(v.id)}
+                onPreview={() => handlePreviewVoice(v)}
+                isPlaying={playingVoice === v.id}
+                isLoading={previewingVoice === v.id}
+              />
+            ))}
+          </div>
+          <button
+            onClick={() => { setSelectedVoice(null); if (currentAudio) { currentAudio.pause(); setCurrentAudio(null); setPlayingVoice(null); } }}
+            className="w-full text-center py-2.5 rounded-xl text-sm font-medium transition-all"
+            style={{
+              border: selectedVoice === null ? "2px solid #237FFF" : "0.5px solid #E5E7EB",
+              backgroundColor: selectedVoice === null ? "#EFF6FF" : "white",
+              color: selectedVoice === null ? "#237FFF" : "#6B7280",
+            }}
+          >
+            🔇 나레이션 없음 — BGM만
+          </button>
+        </div>
+
+        {/* BGM */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold">🎵 배경 음악</p>
           <div className="flex flex-wrap gap-2">
@@ -244,7 +418,9 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
             <div className="bg-primary rounded-full h-3 transition-all duration-300" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">약 15~30초 소요됩니다</p>
+        <p className="text-xs text-muted-foreground">
+          {selectedVoice ? "나레이션 생성 포함 약 30~60초 소요됩니다" : "약 15~30초 소요됩니다"}
+        </p>
       </div>
     );
   }
