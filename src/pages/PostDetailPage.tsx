@@ -331,3 +331,11 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
     </div>
   );
 }
+
+function PlatformHint({ text }: { text: string }) {
+  return (
+    <div className="bg-primary/10 border border-primary/20 rounded-[--radius] px-4 py-2 text-center">
+      <p className="text-xs text-primary font-medium leading-relaxed">📋 {text}</p>
+    </div>
+  );
+}
