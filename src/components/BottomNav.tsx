@@ -38,13 +38,11 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 >
                   <div
                     className={cn(
-                      "w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all",
-                      isActive
-                        ? "bg-primary shadow-primary/40"
-                        : "bg-primary/80 shadow-primary/20"
+                      "w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all bg-brand-gradient",
+                      isActive ? "shadow-primary/40" : "shadow-primary/20 opacity-90"
                     )}
                   >
-                    <Icon className="w-6 h-6 text-primary-foreground" />
+                    <Icon className="w-6 h-6 text-white" />
                   </div>
                   <span
                     className={cn(
