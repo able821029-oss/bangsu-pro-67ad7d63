@@ -127,7 +127,7 @@ function drawSubtitleTyping(
   y: number, typingProgress: number,
 ) {
   if (!text) return;
-  const visibleLen = Math.floor(text.length * Math.min(typingProgress, 1));
+  const visibleLen = Math.floor(text.length * Math.min(typingProgress * 0.7, 1));
   const visible = text.slice(0, visibleLen);
   if (!visible) return;
 
