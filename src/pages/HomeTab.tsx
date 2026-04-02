@@ -61,18 +61,23 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-[--radius] bg-primary/20 border border-primary/30 flex items-center justify-center overflow-hidden">
-          {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt="로고" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-primary font-black text-lg">S</span>
-          )}
+        <div className="w-10 h-10 flex items-center justify-center shrink-0">
+          <svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg" className="w-10 h-7">
+            <defs>
+              <linearGradient id="smsGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style={{ stopColor: '#237FFF' }} />
+                <stop offset="100%" style={{ stopColor: '#AB5EBE' }} />
+              </linearGradient>
+            </defs>
+            <path d="M20,20 C20,13 13,8 8,12 C3,16 3,24 8,28 C13,32 20,27 20,20 C20,13 27,8 32,8 C40,8 45,14 45,20 C45,26 40,32 32,32 C27,32 20,27 20,20 Z" fill="none" stroke="url(#smsGrad)" strokeWidth="4" strokeLinecap="round"/>
+            <path d="M42,14 L46,18 L42,22" fill="none" stroke="url(#smsGrad)" strokeWidth="3" strokeLinecap="round"/>
+          </svg>
         </div>
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight">
+          <h1 className="text-xl font-extrabold tracking-tight" style={{ color: '#001130' }}>
             {settings.companyName || "SMS"}
           </h1>
-          <p className="text-muted-foreground text-xs">셀프마케팅서비스</p>
+          <p className="text-xs font-medium" style={{ color: '#237FFF' }}>Self Marketing Service</p>
         </div>
       </div>
 

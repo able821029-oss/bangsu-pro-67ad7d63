@@ -63,7 +63,7 @@ export function SettingsTab() {
         })}
       </div>
 
-      <p className="text-center text-xs text-muted-foreground mt-6">SMS v1.0 | 셀프마케팅서비스</p>
+      <p className="text-center text-xs text-muted-foreground mt-6">SMS v1.0 | Self Marketing Service</p>
     </div>
   );
 }
