@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square } from "lucide-react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
@@ -136,8 +136,11 @@ function VoiceCard({
 }
 
 export function ShortsCreator({ onClose }: { onClose: () => void }) {
-  const { photos, settings, subscription } = useAppStore();
+  const { photos, settings, subscription, addPhoto, removePhoto } = useAppStore();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const styleRef = useRef<HTMLDivElement>(null);
 
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("시공일지형");
   const [bgm, setBgm] = useState<BgmType>("upbeat");
@@ -152,6 +155,26 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const videoLimit = PLAN_LIMITS[subscription.plan] || 5;
   const [videoUsed] = useState(2);
   const quotaExceeded = videoUsed >= videoLimit;
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach((file) => {
+      if (photos.length >= 10) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        addPhoto({ id: crypto.randomUUID(), dataUrl: ev.target?.result as string });
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+    // Auto-scroll to style section when enough photos
+    setTimeout(() => {
+      if (photos.length >= 1 && styleRef.current) {
+        styleRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 300);
+  };
 
   // Preload voices
   useEffect(() => {
@@ -308,13 +331,43 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           <button onClick={onClose}><X className="w-6 h-6 text-muted-foreground" /></button>
         </div>
 
-        {photos.length < 2 && (
-          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
-            ⚠️ 사진이 2장 이상 필요합니다 (현재 {photos.length}장)
-          </div>
-        )}
-
+        {/* Photo upload area */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
+          <p className="text-sm font-semibold">📷 사진 추가하기</p>
+          {photos.length < 2 && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
+              ⚠️ 사진이 2장 이상 필요합니다 (현재 {photos.length}장)
+            </div>
+          )}
+
+          {photos.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {photos.map((photo) => (
+                <div key={photo.id} className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border">
+                  <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
+                  <button onClick={() => removePhoto(photo.id)} className="absolute top-0.5 right-0.5 bg-destructive rounded-full p-0.5">
+                    <X className="w-3 h-3 text-destructive-foreground" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" size="sm" className="w-full" onClick={() => fileInputRef.current?.click()}>
+              <ImagePlus className="w-4 h-4" /> 갤러리에서 선택
+            </Button>
+            <Button variant="secondary" size="sm" className="w-full" onClick={() => cameraInputRef.current?.click()}>
+              <Camera className="w-4 h-4" /> 카메라로 촬영
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground text-center">최대 10장, 최소 2장</p>
+        </div>
+
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
+
+        <div ref={styleRef} className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold">🎥 영상 스타일</p>
           <div className="space-y-2">
             {videoStyles.map(s => (
