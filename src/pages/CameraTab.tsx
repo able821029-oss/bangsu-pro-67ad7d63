@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
-import { Camera, ImagePlus, X, Sparkles, MapPin, Building2, CalendarDays, CheckCircle2, Loader2 } from "lucide-react";
+import { Camera, ImagePlus, X, Sparkles, MapPin, Building2, CalendarDays, CheckCircle2, Loader2, Film } from "lucide-react";
 import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
+import { ShortsCreator } from "@/components/ShortsCreator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, WorkType, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
@@ -43,6 +44,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
   const [progress, setProgress] = useState(0);
+  const [showShorts, setShowShorts] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -166,6 +168,10 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       setTimeout(() => setIsGenerating(false), 1500);
     }
   };
+
+  if (showShorts) {
+    return <ShortsCreator onClose={() => setShowShorts(false)} />;
+  }
 
   if (isGenerating) {
     return (
@@ -311,6 +317,12 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       <Button variant="hero" size="xl" className="w-full" onClick={handleStartAI}>
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
+      </Button>
+
+      {/* 8. Shorts Video */}
+      <Button variant="outline" size="xl" className="w-full" onClick={() => setShowShorts(true)}>
+        <Film className="w-6 h-6" />
+        쇼츠 영상 만들기
       </Button>
     </div>
   );
