@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Camera, ImagePlus, X, Sparkles, MapPin, Building2, CalendarDays, CheckCircle2, Loader2 } from "lucide-react";
+import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, WorkType, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
@@ -303,7 +304,10 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         </div>
       </div>
 
-      {/* 6. Start AI */}
+      {/* 6. Before/After */}
+      <BeforeAfterComparator />
+
+      {/* 7. Start AI */}
       <Button variant="hero" size="xl" className="w-full" onClick={handleStartAI}>
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
