@@ -193,18 +193,6 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">🎤 나레이션 목소리</p>
-          <div className="flex flex-wrap gap-2">
-            {narrationTypes.map(n => (
-              <Badge key={n.id} variant={narration === n.id ? "chipActive" : "chip"}
-                className="text-sm px-4 py-2 cursor-pointer" onClick={() => setNarration(n.id)}>
-                {n.emoji} {n.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold">🎵 배경 음악</p>
           <div className="flex flex-wrap gap-2">
             {bgmOptions.map(b => (

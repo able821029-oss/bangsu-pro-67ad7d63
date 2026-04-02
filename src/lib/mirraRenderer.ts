@@ -336,7 +336,6 @@ export async function renderMirraVideo(
   }
 
   onProgress(scenes.length, scenes.length);
-  speechSynthesis.cancel();
   recorder.stop();
   if (audioCtx) audioCtx.close();
   return recordingDone;
