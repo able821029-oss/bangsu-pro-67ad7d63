@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Camera, ImagePlus, X, Sparkles, MapPin, Building2, CalendarDays, CheckCircle2, Loader2, Film } from "lucide-react";
 import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { ShortsCreator } from "@/components/ShortsCreator";
+import { PlatformChip } from "@/components/PlatformChip";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
@@ -9,11 +10,7 @@ import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-const platforms: { id: Platform; label: string; emoji: string }[] = [
-  { id: "naver", label: "네이버 블로그", emoji: "📗" },
-  { id: "instagram", label: "인스타그램", emoji: "📷" },
-  { id: "tiktok", label: "틱톡", emoji: "🎵" },
-];
+const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
 const personas: { id: Persona; label: string; desc: string }[] = [
   { id: "장인형", label: "🔨 장인형", desc: "30년 경력의 장인 느낌" },
@@ -269,10 +266,13 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       <div>
         <p className="text-sm font-semibold mb-2">게시 플랫폼 (중복 가능)</p>
         <div className="flex flex-wrap gap-2">
-          {platforms.map((p) => (
-            <Badge key={p.id} variant={selectedPlatforms.includes(p.id) ? "chipActive" : "chip"} className="text-base px-4 py-2 cursor-pointer" onClick={() => togglePlatform(p.id)}>
-              {p.emoji} {p.label}
-            </Badge>
+          {platformIds.map((id) => (
+            <PlatformChip
+              key={id}
+              platform={id}
+              selected={selectedPlatforms.includes(id)}
+              onClick={() => togglePlatform(id)}
+            />
           ))}
         </div>
       </div>

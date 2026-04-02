@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus } from "lucide-react";
+import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, BlogPost, Platform, ContentBlock } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { TabId } from "@/components/BottomNav";
 
 const platformLabels: Record<Platform, string> = {
   naver: "네이버 블로그",
@@ -19,7 +20,7 @@ const statusColor: Record<string, "success" | "warning" | "info" | "default"> = 
   "AI생성중": "warning",
 };
 
-export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () => void }) {
+export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; onBack: () => void; onNavigate?: (tab: TabId) => void }) {
   const { updatePost } = useAppStore();
   const { toast } = useToast();
   const [title, setTitle] = useState(post.title);
@@ -276,7 +277,26 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
       </div>
 
       {/* Action Buttons */}
-      <div className="space-y-2">
+      <div className="space-y-3">
+        {/* Shorts Button */}
+        <div>
+          <button
+            onClick={() => {
+              toast({ title: "🎬 이 글 기반으로 영상을 생성합니다" });
+              onBack();
+              onNavigate?.("camera");
+            }}
+            className="w-full flex items-center justify-center gap-2 text-white font-bold rounded-[14px] px-4 py-4"
+            style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)" }}
+          >
+            <Film className="w-5 h-5" />
+            🎬 이 글로 쇼츠 영상 만들기
+          </button>
+          <p className="text-[11px] text-center mt-1.5" style={{ color: "#6B7280" }}>
+            현장 사진 + AI 글로 30초 쇼츠 자동 완성
+          </p>
+        </div>
+
         <Button variant="outline" className="w-full gap-2" onClick={handleRegenerate}>
           <RefreshCw className="w-4 h-4" />
           AI 재생성
