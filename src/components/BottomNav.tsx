@@ -17,7 +17,7 @@ const tabs: { id: TabId; label: string; icon: React.ElementType; isCenter?: bool
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 safe-bottom" style={{ backgroundColor: 'hsl(218 48% 13%)' }}>
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -43,7 +43,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 <span
                   className={cn(
                     "text-xs font-medium mt-1",
-                    isActive ? "text-primary" : "text-muted-foreground"
+                    isActive ? "text-[hsl(217,94%,68%)]" : "text-[hsl(216,18%,51%)]"
                   )}
                 >
                   {tab.label}
@@ -58,10 +58,10 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               onClick={() => onTabChange(tab.id)}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground"
+                isActive ? "text-[hsl(217,94%,68%)]" : "text-[hsl(216,18%,51%)]"
               )}
             >
-              <Icon className={cn("w-6 h-6", isActive && "drop-shadow-[0_0_8px_hsl(25,95%,55%)]")} />
+              <Icon className={cn("w-6 h-6", isActive && "drop-shadow-[0_0_8px_hsl(217,94%,68%)]")} />
               <span className="text-xs font-medium">{tab.label}</span>
             </button>
           );

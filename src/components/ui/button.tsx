@@ -19,11 +19,11 @@ const buttonVariants = cva(
         success: "bg-success text-success-foreground hover:bg-success/90",
       },
       size: {
-        default: "h-12 px-5 py-3 text-base",
+        default: "h-14 px-5 py-3 text-base",
         sm: "h-10 rounded-lg px-4 text-sm",
         lg: "h-14 rounded-xl px-8 text-lg",
         xl: "h-16 rounded-xl px-10 text-xl",
-        icon: "h-12 w-12",
+        icon: "h-14 w-14",
       },
     },
     defaultVariants: {
