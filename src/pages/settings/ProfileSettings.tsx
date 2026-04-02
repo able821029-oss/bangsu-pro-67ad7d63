@@ -23,6 +23,13 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
     toast({ title: "✅ 프로필이 저장되었습니다." });
   };
 
+  const handleConnect = (platform: string) => {
+    toast({
+      title: `${platform} 연동 준비 중`,
+      description: "현재 준비 중입니다. 반자동 방식으로 이용 가능합니다.",
+    });
+  };
+
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
       <div className="flex items-center gap-3">
@@ -33,12 +40,12 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Logo Upload */}
-      <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+      <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
         <p className="text-sm font-semibold">업체 로고</p>
         <div className="flex items-center gap-4">
           <div
             onClick={() => logoInputRef.current?.click()}
-            className="w-20 h-20 rounded-xl bg-secondary border-2 border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors"
+            className="w-20 h-20 rounded-[--radius] bg-secondary border-2 border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden hover:border-primary transition-colors"
           >
             {settings.logoUrl ? (
               <img src={settings.logoUrl} alt="로고" className="w-full h-full object-cover" />
@@ -55,7 +62,7 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* Company Info */}
-      <div className="bg-card rounded-xl border border-border p-4 space-y-4">
+      <div className="bg-card rounded-[--radius] border border-border p-4 space-y-4">
         <p className="text-sm font-semibold">업체 정보</p>
         <Field icon={Building2} label="업체명" placeholder="예) 대한방수" value={settings.companyName} onChange={(v) => updateSettings({ companyName: v })} />
         <Field icon={Phone} label="대표 전화번호" placeholder="예) 010-1234-5678" value={settings.phoneNumber} onChange={(v) => updateSettings({ phoneNumber: v })} />
@@ -63,15 +70,15 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
       </div>
 
       {/* SNS Connection Status */}
-      <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+      <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
         <p className="text-sm font-semibold">SNS 연동 상태</p>
         <ConnStatus label="네이버 블로그" connected={settings.naverConnected} />
-        <ConnStatus label="인스타그램" connected={settings.instagramConnected} />
-        <ConnStatus label="틱톡" connected={settings.tiktokConnected} />
+        <ConnStatus label="인스타그램" connected={settings.instagramConnected} onConnect={() => handleConnect("인스타그램")} />
+        <ConnStatus label="틱톡" connected={settings.tiktokConnected} onConnect={() => handleConnect("틱톡")} />
       </div>
 
       {/* Toggles */}
-      <div className="bg-card rounded-xl border border-border p-4 space-y-4">
+      <div className="bg-card rounded-[--radius] border border-border p-4 space-y-4">
         <p className="text-sm font-semibold">자동 삽입 설정</p>
         <ToggleRow label="업체명·전화번호 본문 자동삽입" checked={settings.autoInsertCompany} onChange={(v) => updateSettings({ autoInsertCompany: v })} />
         <ToggleRow label="SEO 키워드 자동삽입" checked={settings.autoInsertSeo} onChange={(v) => updateSettings({ autoInsertSeo: v })} />
@@ -98,13 +105,23 @@ function Field({ icon: Icon, label, placeholder, value, onChange }: { icon: Reac
   );
 }
 
-function ConnStatus({ label, connected }: { label: string; connected: boolean }) {
+function ConnStatus({ label, connected, onConnect }: { label: string; connected: boolean; onConnect?: () => void }) {
   return (
     <div className="flex items-center justify-between">
       <p className="text-sm">{label}</p>
-      <div className={`flex items-center gap-1 ${connected ? "text-success" : "text-muted-foreground"}`}>
-        {connected ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-        <span className="text-xs font-semibold">{connected ? "연동됨" : "미연동"}</span>
+      <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-1 ${connected ? "text-success" : "text-muted-foreground"}`}>
+          {connected ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+          <span className="text-xs font-semibold">{connected ? "연동됨" : "미연동"}</span>
+        </div>
+        {!connected && onConnect && (
+          <button
+            onClick={onConnect}
+            className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-lg hover:bg-primary/20 transition-colors"
+          >
+            연결하기
+          </button>
+        )}
       </div>
     </div>
   );

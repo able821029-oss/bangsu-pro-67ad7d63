@@ -1,8 +1,8 @@
-import { useRef } from "react";
-import { Camera, ImagePlus, X, Sparkles } from "lucide-react";
+import { useRef, useState } from "react";
+import { Camera, ImagePlus, X, Sparkles, MapPin, Building2, CalendarDays, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAppStore, WorkType, Platform, Persona } from "@/stores/appStore";
+import { useAppStore, WorkType, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,14 +20,29 @@ const personas: { id: Persona; label: string; desc: string }[] = [
   { id: "전문기업형", label: "🏢 전문기업형", desc: "체계적인 전문 기업 이미지" },
 ];
 
-export function CameraTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
+const buildingTypes = ["아파트", "상가", "단독주택", "기타"] as const;
+
+type GeneratingStep = "analyzing" | "writing" | "done";
+
+export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) => void; onViewPost: (post: BlogPost) => void }) {
   const {
     photos, selectedWorkType, selectedPlatforms, selectedPersona,
     addPhoto, removePhoto, setWorkType, togglePlatform, setSelectedPersona,
+    addPost, settings,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Site info fields
+  const [location, setLocation] = useState("");
+  const [buildingType, setBuildingType] = useState<string>("아파트");
+  const [constructionDate, setConstructionDate] = useState(new Date().toISOString().slice(0, 10));
+
+  // AI generation state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
+  const [progress, setProgress] = useState(0);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -36,10 +51,7 @@ export function CameraTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) 
       if (photos.length >= 10) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
-        addPhoto({
-          id: crypto.randomUUID(),
-          dataUrl: ev.target?.result as string,
-        });
+        addPhoto({ id: crypto.randomUUID(), dataUrl: ev.target?.result as string });
       };
       reader.readAsDataURL(file);
     });
@@ -59,8 +71,98 @@ export function CameraTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) 
       toast({ title: "게시 플랫폼을 선택해주세요", variant: "destructive" });
       return;
     }
-    onNavigate("publish");
+
+    setIsGenerating(true);
+    setGenStep("analyzing");
+    setProgress(0);
+
+    const interval = setInterval(() => {
+      setProgress((p) => {
+        if (p < 35) {
+          setGenStep("analyzing");
+          return p + 3;
+        } else if (p < 85) {
+          setGenStep("writing");
+          return p + 2;
+        } else if (p >= 100) {
+          clearInterval(interval);
+          setGenStep("done");
+          return 100;
+        }
+        return p + 1;
+      });
+    }, 80);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      setProgress(100);
+      setGenStep("done");
+
+      // Generate mock post
+      const wt = selectedWorkType || "옥상방수";
+      const loc = location || "서울";
+      const dateStr = constructionDate;
+      const companyName = settings.companyName || "방수PRO";
+
+      const title = `[${loc}] ${buildingType} ${wt} 전문 시공 완료 - ${companyName}`;
+      const mockBlocks: ContentBlock[] = [
+        { type: "text", content: `안녕하세요, ${companyName}입니다.\n\n${dateStr} ${loc} ${buildingType}에서 ${wt} 시공을 완료했습니다.\n기존 방수층의 노후화로 인한 누수 문제를 해결하기 위해 전면 재시공을 진행했습니다.` },
+        { type: "photo", content: photos[0]?.id || "photo-1", caption: "시공 전 현장 상태 확인" },
+        { type: "text", content: "기존 방수층을 완전히 제거하고, 바탕면 정리 작업을 실시했습니다. 프라이머 도포 후 충분한 건조 시간을 거쳤습니다." },
+        { type: "photo", content: photos[1]?.id || "photo-2", caption: "프라이머 도포 및 방수 시공 진행" },
+        { type: "text", content: `우레탄 방수 2차 도포까지 완료 후 마감 작업을 진행했습니다.\n\n📞 ${wt} 관련 문의는 언제든 연락 주세요!\n${settings.phoneNumber || ""}` },
+      ];
+      const hashtags = ["방수공사", wt, `${loc}방수`, `${buildingType}방수`, companyName, "누수해결"];
+
+      const newPost: BlogPost = {
+        id: crypto.randomUUID(),
+        title,
+        photos: [...photos],
+        workType: wt,
+        style: "시공일지형",
+        blocks: mockBlocks,
+        hashtags,
+        status: "완료",
+        createdAt: new Date().toISOString().slice(0, 10),
+        platforms: [...selectedPlatforms],
+        persona: selectedPersona,
+      };
+
+      addPost(newPost);
+
+      // After short delay, navigate to post detail
+      setTimeout(() => {
+        setIsGenerating(false);
+        onViewPost(newPost);
+      }, 800);
+    }, 4000);
   };
+
+  // Show loading screen while generating
+  if (isGenerating) {
+    return (
+      <div className="px-4 pt-6 pb-24 space-y-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+          <Sparkles className="w-10 h-10 text-primary animate-pulse" />
+        </div>
+        <h2 className="text-xl font-bold text-center">AI가 글을 작성하고 있습니다</h2>
+
+        {/* Progress bar */}
+        <div className="w-full max-w-xs">
+          <div className="w-full bg-secondary rounded-full h-3">
+            <div className="bg-primary rounded-full h-3 transition-all duration-300" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div className="space-y-3 w-full max-w-xs">
+          <StepItem label="사진 분석 중" active={genStep === "analyzing"} done={genStep === "writing" || genStep === "done"} />
+          <StepItem label="글 생성 중" active={genStep === "writing"} done={genStep === "done"} />
+          <StepItem label="완료" active={false} done={genStep === "done"} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
@@ -98,6 +200,50 @@ export function CameraTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) 
               <Camera className="w-6 h-6 text-muted-foreground" />
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Site Info Fields */}
+      <div className="bg-card rounded-[--radius] border border-border p-4 space-y-4">
+        <p className="text-sm font-semibold">📍 현장 정보</p>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground flex items-center gap-1">
+            <MapPin className="w-3 h-3" /> 시공 위치
+          </label>
+          <input
+            className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
+            placeholder="예) 강남구 역삼동"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground flex items-center gap-1">
+            <Building2 className="w-3 h-3" /> 건물 유형
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {buildingTypes.map((bt) => (
+              <Badge
+                key={bt}
+                variant={buildingType === bt ? "chipActive" : "chip"}
+                className="text-sm px-3 py-1.5 cursor-pointer"
+                onClick={() => setBuildingType(bt)}
+              >
+                {bt}
+              </Badge>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground flex items-center gap-1">
+            <CalendarDays className="w-3 h-3" /> 시공 일자
+          </label>
+          <input
+            type="date"
+            className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
+            value={constructionDate}
+            onChange={(e) => setConstructionDate(e.target.value)}
+          />
         </div>
       </div>
 
@@ -143,7 +289,7 @@ export function CameraTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) 
             <button
               key={p.id}
               onClick={() => setSelectedPersona(p.id)}
-              className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all ${
+              className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${
                 selectedPersona === p.id
                   ? "border-primary bg-primary/10"
                   : "border-border bg-card"
@@ -161,6 +307,23 @@ export function CameraTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) 
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
       </Button>
+    </div>
+  );
+}
+
+function StepItem({ label, active, done }: { label: string; active: boolean; done: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      {done ? (
+        <CheckCircle2 className="w-6 h-6 text-success shrink-0" />
+      ) : active ? (
+        <Loader2 className="w-6 h-6 text-primary animate-spin shrink-0" />
+      ) : (
+        <div className="w-6 h-6 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+      )}
+      <p className={`text-sm font-medium ${done ? "text-success" : active ? "text-foreground" : "text-muted-foreground"}`}>
+        {label}
+      </p>
     </div>
   );
 }
