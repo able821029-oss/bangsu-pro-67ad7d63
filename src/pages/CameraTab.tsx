@@ -169,6 +169,10 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     }
   };
 
+  if (showShorts) {
+    return <ShortsCreator onClose={() => setShowShorts(false)} />;
+  }
+
   if (isGenerating) {
     return (
       <div className="px-4 pt-6 pb-24 space-y-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
