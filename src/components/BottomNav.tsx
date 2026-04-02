@@ -61,7 +61,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 onClick={() => onTabChange(tab.id)}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
-                  isActive ? "text-[hsl(217,94%,68%)]" : "text-[hsl(216,18%,51%)]"
+                  isActive ? "text-[#237FFF]" : "text-[#6B7E99]"
                 )}
               >
                 <Icon className={cn("w-6 h-6", isActive && "drop-shadow-[0_0_8px_hsl(217,94%,68%)]")} />
