@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { renderMirraVideo, type MirraScene } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
-type NarrationType = "남성" | "여성" | "없음";
+
 type BgmType = "upbeat" | "calm" | "none";
 type ShortsStep = "config" | "generating" | "done" | "error";
 
@@ -18,15 +18,9 @@ const videoStyles: { id: VideoStyle; label: string; desc: string; emoji: string 
   { id: "Before/After형", label: "Before/After형", desc: "전후 비교 중심", emoji: "🔄" },
 ];
 
-const narrationTypes: { id: NarrationType; label: string; emoji: string }[] = [
-  { id: "남성", label: "남성 (기본)", emoji: "🎙️" },
-  { id: "여성", label: "여성", emoji: "🎤" },
-  { id: "없음", label: "없음 (BGM만)", emoji: "🎵" },
-];
-
 const bgmOptions: { id: BgmType; label: string; emoji: string }[] = [
-  { id: "upbeat", label: "업비트", emoji: "🎶" },
-  { id: "calm", label: "잔잔한", emoji: "🎵" },
+  { id: "upbeat", label: "경쾌한", emoji: "🎵" },
+  { id: "calm", label: "잔잔한", emoji: "🎶" },
   { id: "none", label: "없음", emoji: "🔇" },
 ];
 
@@ -71,7 +65,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
 
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("시공일지형");
-  const [narration, setNarration] = useState<NarrationType>("남성");
+  
   const [bgm, setBgm] = useState<BgmType>("upbeat");
   const [step, setStep] = useState<ShortsStep>("config");
   const [progressText, setProgressText] = useState("");
@@ -101,7 +95,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           photos: photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
           workType: "자동판단",
           videoStyle,
-          narrationType: narration,
+          narrationType: "없음",
           location: "",
           buildingType: "",
           constructionDate: new Date().toISOString().slice(0, 10),
@@ -124,7 +118,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         scenes,
         settings.companyName,
         settings.phoneNumber,
-        narration !== "없음",
+        false,
         (current, total) => {
           const pct = 25 + Math.round((current / total) * 70);
           setProgressPct(pct);
@@ -143,7 +137,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       setStep("error");
       setErrorMsg(err.message || "다시 시도해 주세요");
     }
-  }, [photos, videoStyle, narration, settings, toast]);
+  }, [photos, videoStyle, settings, toast]);
 
   const handleDownload = () => {
     if (videoUrl) {
@@ -194,18 +188,6 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
                 <p className="font-semibold text-sm">{s.emoji} {s.label}</p>
                 <p className="text-xs text-muted-foreground">{s.desc}</p>
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">🎤 나레이션 목소리</p>
-          <div className="flex flex-wrap gap-2">
-            {narrationTypes.map(n => (
-              <Badge key={n.id} variant={narration === n.id ? "chipActive" : "chip"}
-                className="text-sm px-4 py-2 cursor-pointer" onClick={() => setNarration(n.id)}>
-                {n.emoji} {n.label}
-              </Badge>
             ))}
           </div>
         </div>

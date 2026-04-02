@@ -88,7 +88,7 @@ function drawTitle(
   const p = easeOut(Math.min(progress * 1.5, 1));
   ctx.save();
   ctx.globalAlpha = p;
-  ctx.font = 'bold 56px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.font = 'bold 64px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
   ctx.fillStyle = "#FFFFFF";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -127,12 +127,12 @@ function drawSubtitleTyping(
   y: number, typingProgress: number,
 ) {
   if (!text) return;
-  const visibleLen = Math.floor(text.length * Math.min(typingProgress, 1));
+  const visibleLen = Math.floor(text.length * Math.min(typingProgress * 0.7, 1));
   const visible = text.slice(0, visibleLen);
   if (!visible) return;
 
   ctx.save();
-  ctx.font = '32px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.font = '38px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
   ctx.fillStyle = accentColor;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -287,16 +287,6 @@ export async function renderMirraVideo(
 
     onProgress(si, scenes.length);
 
-    // Start narration if enabled
-    if (narrationEnabled && scene.narration) {
-      try {
-        const u = new SpeechSynthesisUtterance(scene.narration);
-        u.lang = "ko-KR";
-        u.rate = 0.9;
-        u.pitch = 1.0;
-        speechSynthesis.speak(u);
-      } catch { /* ignore */ }
-    }
 
     for (let f = 0; f < totalFrames; f++) {
       const t = f / totalFrames; // 0..1
@@ -346,7 +336,6 @@ export async function renderMirraVideo(
   }
 
   onProgress(scenes.length, scenes.length);
-  speechSynthesis.cancel();
   recorder.stop();
   if (audioCtx) audioCtx.close();
   return recordingDone;
