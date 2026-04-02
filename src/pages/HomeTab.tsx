@@ -152,12 +152,13 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
             <p className="text-xs text-muted-foreground">게시 완료</p>
           </div>
           <div className="text-center">
+            <ExternalLink className="w-4 h-4 text-[#03C75A] mx-auto mb-1" />
+            <p className="text-2xl font-bold">0</p>
             <button
               onClick={() => { window.location.href = "naver://blog"; }}
-              className="flex flex-col items-center w-full"
+              className="text-xs text-[#03C75A] font-semibold mt-0.5"
             >
-              <ExternalLink className="w-4 h-4 text-[#03C75A] mx-auto mb-1" />
-              <p className="text-sm font-semibold text-[#03C75A]">네이버에서<br/>확인 →</p>
+              네이버에서 확인 →
             </button>
           </div>
         </div>

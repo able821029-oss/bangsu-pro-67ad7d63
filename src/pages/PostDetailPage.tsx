@@ -94,25 +94,45 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
     // TODO: re-invoke generate-blog edge function
   };
 
-  const getClipboardText = () => {
+  const getClipboardText = (platform: Platform) => {
+    if (platform === "instagram") {
+      // 150자 캡션 + 해시태그 20개
+      const textContent = blocks.filter(b => b.type === "text").map(b => b.content).join(" ");
+      const caption = textContent.slice(0, 150);
+      const tags = hashtags.slice(0, 20).map(t => `#${t}`).join(" ");
+      return caption + "\n\n" + tags;
+    }
+    if (platform === "tiktok") {
+      // 3줄 자막 + 해시태그 5개
+      const textContent = blocks.filter(b => b.type === "text").map(b => b.content).join("\n");
+      const lines = textContent.split(/\n+/).filter(Boolean).slice(0, 3);
+      const tags = hashtags.slice(0, 5).map(t => `#${t}`).join(" ");
+      return lines.join("\n") + "\n\n" + tags;
+    }
+    // naver: 제목 + 본문 + 해시태그 10개
     let text = title + "\n\n";
     blocks.forEach((block, idx) => {
       if (block.type === "text") text += block.content + "\n\n";
       else text += `[📸 사진${idx + 1} 여기에 첨부]\n\n`;
     });
-    text += hashtags.map((t) => `#${t}`).join(" ");
+    text += hashtags.slice(0, 10).map(t => `#${t}`).join(" ");
     return text;
   };
 
-  const handleCopyAndOpenNaver = async () => {
+  const deeplinks: Record<Platform, string> = {
+    naver: "naver://blog/write",
+    instagram: "instagram://",
+    tiktok: "snssdk1233://",
+  };
+
+  const handleCopyAndOpen = async (platform: Platform) => {
     try {
-      await navigator.clipboard.writeText(getClipboardText());
-      toast({ title: "✅ 글이 복사되었습니다! 네이버 앱에서 붙여넣기 해주세요." });
+      await navigator.clipboard.writeText(getClipboardText(platform));
+      toast({ title: `✅ ${platformLabels[platform]}용 글이 복사되었습니다!` });
     } catch {
       toast({ title: "클립보드 복사 실패", variant: "destructive" });
     }
-    window.location.href = "naver://blog/write";
-    setTimeout(() => window.open("https://blog.naver.com/", "_blank"), 2000);
+    window.location.href = deeplinks[platform];
   };
 
   return (
@@ -261,21 +281,61 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
           <RefreshCw className="w-4 h-4" />
           AI 재생성
         </Button>
-        <Button variant="hero" size="lg" className="w-full gap-2" onClick={handleCopyAndOpenNaver}>
-          <Copy className="w-5 h-5" />
-          복사 후 네이버 앱 열기
-        </Button>
-        <div className="bg-primary/10 border border-primary/20 rounded-[--radius] px-4 py-3 text-center">
-          <p className="text-xs text-primary font-medium leading-relaxed">
-            📋 앱이 글을 복사하고 네이버를 열어드립니다.<br />
-            붙여넣기 → 사진 첨부 → 발행 (3번 탭)
-          </p>
-        </div>
+
+        {/* Platform-specific upload buttons */}
+        {post.platforms.includes("naver") && (
+          <>
+            <Button
+              size="lg"
+              className="w-full gap-2 bg-[#03C75A] hover:bg-[#03C75A]/90 text-white"
+              onClick={() => handleCopyAndOpen("naver")}
+            >
+              <Copy className="w-5 h-5" />
+              복사 후 네이버 블로그 열기
+            </Button>
+            <PlatformHint text="붙여넣기 → 사진 첨부 → 발행 (3번 탭)" />
+          </>
+        )}
+        {post.platforms.includes("instagram") && (
+          <>
+            <Button
+              size="lg"
+              className="w-full gap-2 bg-[#E1306C] hover:bg-[#E1306C]/90 text-white"
+              onClick={() => handleCopyAndOpen("instagram")}
+            >
+              <Copy className="w-5 h-5" />
+              복사 후 인스타그램 열기
+            </Button>
+            <PlatformHint text="인스타 앱에서 붙여넣기 → 사진 선택 → 게시" />
+          </>
+        )}
+        {post.platforms.includes("tiktok") && (
+          <>
+            <Button
+              size="lg"
+              className="w-full gap-2 bg-black hover:bg-black/90 text-white"
+              onClick={() => handleCopyAndOpen("tiktok")}
+            >
+              <Copy className="w-5 h-5" />
+              복사 후 틱톡 열기
+            </Button>
+            <PlatformHint text="틱톡 앱에서 붙여넣기 → 영상/사진 → 게시" />
+          </>
+        )}
+
         <Button variant="outline" className="w-full gap-2" onClick={handleTempSave}>
           <Save className="w-4 h-4" />
           임시저장
         </Button>
       </div>
+    </div>
+  );
+}
+
+function PlatformHint({ text }: { text: string }) {
+  return (
+    <div className="bg-primary/10 border border-primary/20 rounded-[--radius] px-4 py-2 text-center">
+      <p className="text-xs text-primary font-medium leading-relaxed">📋 {text}</p>
     </div>
   );
 }

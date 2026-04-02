@@ -212,8 +212,9 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground flex items-center gap-1">
-            <Building2 className="w-3 h-3" /> 건물 유형
+            <Building2 className="w-3 h-3" /> 건물 종류
           </label>
+          <p className="text-xs text-muted-foreground">어떤 건물인지 (아파트·상가 등)</p>
           <div className="flex flex-wrap gap-2">
             {buildingTypes.map((bt) => (
               <Badge key={bt} variant={buildingType === bt ? "chipActive" : "chip"} className="text-sm px-3 py-1.5 cursor-pointer" onClick={() => setBuildingType(bt)}>
@@ -266,7 +267,8 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
 
       {/* 3. Work Type */}
       <div>
-        <p className="text-sm font-semibold mb-2">공사 유형 선택</p>
+        <p className="text-sm font-semibold mb-1">공사 종류 선택</p>
+        <p className="text-xs text-muted-foreground mb-2">어떤 공사인지 (옥상방수·균열보수 등)</p>
         <div className="flex flex-wrap gap-2">
           {workTypes.map((type) => (
             <Badge key={type} variant={selectedWorkType === type ? "chipActive" : "chip"} className="text-base px-4 py-2 cursor-pointer" onClick={() => setWorkType(type)}>
