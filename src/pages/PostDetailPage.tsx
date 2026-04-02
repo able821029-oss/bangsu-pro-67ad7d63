@@ -261,16 +261,48 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
           <RefreshCw className="w-4 h-4" />
           AI 재생성
         </Button>
-        <Button variant="hero" size="lg" className="w-full gap-2" onClick={handleCopyAndOpenNaver}>
-          <Copy className="w-5 h-5" />
-          복사 후 네이버 앱 열기
-        </Button>
-        <div className="bg-primary/10 border border-primary/20 rounded-[--radius] px-4 py-3 text-center">
-          <p className="text-xs text-primary font-medium leading-relaxed">
-            📋 앱이 글을 복사하고 네이버를 열어드립니다.<br />
-            붙여넣기 → 사진 첨부 → 발행 (3번 탭)
-          </p>
-        </div>
+
+        {/* Platform-specific upload buttons */}
+        {post.platforms.includes("naver") && (
+          <>
+            <Button
+              size="lg"
+              className="w-full gap-2 bg-[#03C75A] hover:bg-[#03C75A]/90 text-white"
+              onClick={() => handleCopyAndOpen("naver")}
+            >
+              <Copy className="w-5 h-5" />
+              복사 후 네이버 블로그 열기
+            </Button>
+            <PlatformHint text="붙여넣기 → 사진 첨부 → 발행 (3번 탭)" />
+          </>
+        )}
+        {post.platforms.includes("instagram") && (
+          <>
+            <Button
+              size="lg"
+              className="w-full gap-2 bg-[#E1306C] hover:bg-[#E1306C]/90 text-white"
+              onClick={() => handleCopyAndOpen("instagram")}
+            >
+              <Copy className="w-5 h-5" />
+              복사 후 인스타그램 열기
+            </Button>
+            <PlatformHint text="인스타 앱에서 붙여넣기 → 사진 선택 → 게시" />
+          </>
+        )}
+        {post.platforms.includes("tiktok") && (
+          <>
+            <Button
+              size="lg"
+              className="w-full gap-2 bg-black hover:bg-black/90 text-white"
+              onClick={() => handleCopyAndOpen("tiktok")}
+            >
+              <Copy className="w-5 h-5" />
+              복사 후 틱톡 열기
+            </Button>
+            <PlatformHint text="틱톡 앱에서 붙여넣기 → 영상/사진 → 게시" />
+          </>
+        )}
+
         <Button variant="outline" className="w-full gap-2" onClick={handleTempSave}>
           <Save className="w-4 h-4" />
           임시저장

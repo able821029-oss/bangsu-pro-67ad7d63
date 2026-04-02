@@ -268,7 +268,8 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
 
       {/* 3. Work Type */}
       <div>
-        <p className="text-sm font-semibold mb-2">공사 유형 선택</p>
+        <p className="text-sm font-semibold mb-1">공사 종류 선택</p>
+        <p className="text-xs text-muted-foreground mb-2">어떤 공사인지 (옥상방수·균열보수 등)</p>
         <div className="flex flex-wrap gap-2">
           {workTypes.map((type) => (
             <Badge key={type} variant={selectedWorkType === type ? "chipActive" : "chip"} className="text-base px-4 py-2 cursor-pointer" onClick={() => setWorkType(type)}>
