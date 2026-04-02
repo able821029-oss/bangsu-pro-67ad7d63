@@ -1,0 +1,21 @@
+{
+  "name": "방수PRO",
+  "short_name": "방수PRO",
+  "description": "현장 사진 → AI 블로그 → 반자동 업로드",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EEF2F8",
+  "theme_color": "#F97316",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

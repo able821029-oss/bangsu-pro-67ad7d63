@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Camera, Send, TrendingUp, Eye, FileCheck, Award, Upload } from "lucide-react";
+import { Camera, Send, TrendingUp, FileCheck, Award, Upload, PenTool, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -118,19 +118,19 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         <p className="text-sm font-semibold text-muted-foreground mb-3">📊 이달의 성과</p>
         <div className="grid grid-cols-3 gap-3">
           <div className="text-center">
-            <FileCheck className="w-4 h-4 text-primary mx-auto mb-1" />
+            <PenTool className="w-4 h-4 text-primary mx-auto mb-1" />
             <p className="text-2xl font-bold">{completed}</p>
-            <p className="text-xs text-muted-foreground">작성 완료</p>
+            <p className="text-xs text-muted-foreground">AI 글 작성</p>
           </div>
           <div className="text-center">
             <TrendingUp className="w-4 h-4 text-success mx-auto mb-1" />
             <p className="text-2xl font-bold">{published}</p>
-            <p className="text-xs text-muted-foreground">블로그 게시</p>
+            <p className="text-xs text-muted-foreground">게시 완료</p>
           </div>
           <div className="text-center">
-            <Eye className="w-4 h-4 text-info mx-auto mb-1" />
-            <p className="text-2xl font-bold">1,240</p>
-            <p className="text-xs text-muted-foreground">조회수</p>
+            <BarChart3 className="w-4 h-4 text-info mx-auto mb-1" />
+            <p className="text-2xl font-bold">{Math.round(usagePercent)}%</p>
+            <p className="text-xs text-muted-foreground">이번달 사용량</p>
           </div>
         </div>
       </div>
