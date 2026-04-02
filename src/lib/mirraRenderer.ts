@@ -88,7 +88,7 @@ function drawTitle(
   const p = easeOut(Math.min(progress * 1.5, 1));
   ctx.save();
   ctx.globalAlpha = p;
-  ctx.font = 'bold 56px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.font = 'bold 64px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
   ctx.fillStyle = "#FFFFFF";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
