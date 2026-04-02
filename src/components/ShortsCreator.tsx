@@ -215,6 +215,8 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
 
   // ─── Progress screen ───
   if (step === "scripting" || step === "narration" || step === "rendering") {
+    const stepOrder: ShortsStep[] = ["scripting", "narration", "rendering", "done"];
+    const currentIdx = stepOrder.indexOf(step);
     return (
       <div className="px-4 pt-6 pb-24 space-y-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -227,10 +229,10 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="space-y-3 w-full max-w-xs">
-          <StepItem label="🎬 스크립트 생성 중..." active={step === "scripting"} done={step !== "scripting"} />
-          <StepItem label="🎵 나레이션 생성 중..." active={step === "narration"} done={step === "rendering" || step === "done"} />
-          <StepItem label="🎥 영상 렌더링 중..." active={step === "rendering"} done={step === "done"} />
-          <StepItem label="✅ 영상 완성!" active={false} done={step === "done"} />
+          <StepItem label="🎬 스크립트 생성 중..." active={currentIdx === 0} done={currentIdx > 0} />
+          <StepItem label="🎵 나레이션 생성 중..." active={currentIdx === 1} done={currentIdx > 1} />
+          <StepItem label="🎥 영상 렌더링 중..." active={currentIdx === 2} done={currentIdx > 2} />
+          <StepItem label="✅ 영상 완성!" active={false} done={false} />
         </div>
         {step === "rendering" && (
           <p className="text-xs text-muted-foreground text-center">렌더링에 약 30~60초 소요됩니다.<br/>다른 작업을 하셔도 됩니다.</p>
