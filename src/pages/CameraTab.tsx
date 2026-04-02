@@ -122,7 +122,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         blocks: aiResult.blocks as any,
         hashtags: aiResult.hashtags,
         photos: photos.map(p => ({ id: p.id, dataUrl: p.dataUrl })) as any,
-        work_type: selectedWorkType,
+        work_type: "AI자동판단",
         style: "시공일지형",
         persona: selectedPersona,
         platforms: [...selectedPlatforms],
