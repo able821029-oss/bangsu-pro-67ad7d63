@@ -46,7 +46,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                   <span
                     className={cn(
                       "text-xs font-medium mt-1",
-                      isActive ? "text-[hsl(217,94%,68%)]" : "text-[hsl(216,18%,51%)]"
+                    isActive ? "text-[#237FFF]" : "text-[#6B7E99]"
                     )}
                   >
                     {tab.label}
