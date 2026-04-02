@@ -1,23 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Film, CheckCircle2, Loader2, Download, RotateCcw, X } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Film, CheckCircle2, Download, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { renderMirraVideo, type MirraScene } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
 type NarrationType = "남성" | "여성" | "없음";
 type BgmType = "upbeat" | "calm" | "none";
 type ShortsStep = "config" | "generating" | "done" | "error";
-
-interface ScriptScene {
-  photo_id: number | null;
-  duration: number;
-  caption_top: string;
-  caption_bottom: string;
-  effect: "zoomin" | "zoomout" | "fadein";
-}
 
 const videoStyles: { id: VideoStyle; label: string; desc: string; emoji: string }[] = [
   { id: "시공일지형", label: "시공일지형", desc: "시공 전→중→후 순서", emoji: "📋" },
@@ -41,176 +34,6 @@ const PLAN_LIMITS: Record<string, number> = {
   "무료": 0, "베이직": 5, "프로": 20, "비즈니스": 50, "무제한": 999,
 };
 
-// ─── Canvas Video Renderer ───
-async function renderVideoOnCanvas(
-  photos: { dataUrl: string }[],
-  scenes: ScriptScene[],
-  companyName: string,
-  phoneNumber: string,
-  onProgress: (current: number, total: number) => void,
-): Promise<Blob> {
-  const W = 1080, H = 1920;
-  const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d")!;
-
-  // Load all photo images first
-  const images: (HTMLImageElement | null)[] = await Promise.all(
-    photos.map(p => new Promise<HTMLImageElement | null>((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = p.dataUrl;
-    }))
-  );
-
-  // Setup recording
-  const stream = canvas.captureStream(25);
-  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-    ? "video/webm;codecs=vp9"
-    : "video/webm";
-  const recorder = new MediaRecorder(stream, {
-    mimeType,
-    videoBitsPerSecond: 4_000_000,
-  });
-  const chunks: Blob[] = [];
-  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-
-  const recordingDone = new Promise<Blob>((resolve) => {
-    recorder.onstop = () => {
-      resolve(new Blob(chunks, { type: "video/webm" }));
-    };
-  });
-
-  recorder.start();
-
-  const FONT_MAIN = 'bold 28px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  const FONT_SUB = '24px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  const FONT_TITLE = 'bold 40px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  const FONT_PHONE = 'bold 28px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  const FONT_SMALL = '16px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-
-  // Draw cover-fit image with Ken Burns
-  function drawImageCover(img: HTMLImageElement, scale: number) {
-    const imgRatio = img.width / img.height;
-    const canvasRatio = W / H;
-    let sw: number, sh: number, sx: number, sy: number;
-
-    if (imgRatio > canvasRatio) {
-      sh = img.height;
-      sw = sh * canvasRatio;
-      sx = (img.width - sw) / 2;
-      sy = 0;
-    } else {
-      sw = img.width;
-      sh = sw / canvasRatio;
-      sx = 0;
-      sy = (img.height - sh) / 2;
-    }
-
-    const dw = W * scale;
-    const dh = H * scale;
-    const dx = (W - dw) / 2;
-    const dy = (H - dh) / 2;
-
-    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-  }
-
-  function drawCaptionTop(text: string) {
-    ctx.font = FONT_MAIN;
-    const metrics = ctx.measureText(text);
-    const tw = metrics.width + 40;
-    const x = (W - tw) / 2;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.beginPath();
-    ctx.roundRect(x, 60, tw, 50, 12);
-    ctx.fill();
-    ctx.fillStyle = "#FFFFFF";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, W / 2, 85);
-  }
-
-  function drawCaptionBottom(text: string) {
-    ctx.font = FONT_SUB;
-    const metrics = ctx.measureText(text);
-    const tw = metrics.width + 40;
-    const x = (W - tw) / 2;
-    const y = H - 110;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.beginPath();
-    ctx.roundRect(x, y, tw, 44, 12);
-    ctx.fill();
-    ctx.fillStyle = "#FFFFFF";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, W / 2, y + 22);
-  }
-
-  function drawEndingCard(company: string, phone: string) {
-    ctx.fillStyle = "#001130";
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.font = FONT_TITLE;
-    ctx.fillStyle = "#FFFFFF";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(company, W / 2, H / 2 - 40);
-
-    ctx.font = FONT_PHONE;
-    ctx.fillStyle = "#237FFF";
-    ctx.fillText(phone, W / 2, H / 2 + 20);
-
-    ctx.font = FONT_SMALL;
-    ctx.fillStyle = "#AB5EBE";
-    ctx.fillText("SMS 셀프마케팅서비스", W / 2, H - 120);
-  }
-
-  // Render each scene
-  const FPS = 25;
-  for (let si = 0; si < scenes.length; si++) {
-    const scene = scenes[si];
-    const dur = scene.duration || 4;
-    const totalFrames = dur * FPS;
-    const isEnding = scene.photo_id === null;
-    const img = !isEnding && scene.photo_id !== null ? images[scene.photo_id - 1] : null;
-
-    onProgress(si, scenes.length);
-
-    for (let f = 0; f < totalFrames; f++) {
-      const t = f / totalFrames; // 0..1
-
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, W, H);
-
-      if (isEnding) {
-        drawEndingCard(companyName || "SMS", phoneNumber || "");
-      } else if (img) {
-        let scale: number;
-        if (scene.effect === "zoomout") {
-          scale = 1.08 - 0.08 * t;
-        } else {
-          scale = 1.0 + 0.08 * t;
-        }
-        drawImageCover(img, scale);
-
-        if (scene.caption_top) drawCaptionTop(scene.caption_top);
-        if (scene.caption_bottom) drawCaptionBottom(scene.caption_bottom);
-      }
-
-      // Wait for next frame
-      await new Promise(r => setTimeout(r, 1000 / FPS));
-    }
-  }
-
-  onProgress(scenes.length, scenes.length);
-  recorder.stop();
-  return recordingDone;
-}
-
-// ─── Usage Meter ───
 function UsageMeter({ used, max, plan }: { used: number; max: number; plan: string }) {
   const ratio = max > 0 ? used / max : 1;
   const barColor = ratio >= 1 ? "#EF4444" : ratio >= 0.8 ? "#F97316" : "#237FFF";
@@ -243,7 +66,6 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
   );
 }
 
-// ─── Main Component ───
 export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const { photos, settings, subscription } = useAppStore();
   const { toast } = useToast();
@@ -268,12 +90,12 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
     }
 
     setStep("generating");
-    setProgressText("🎬 스크립트 생성 중...");
+    setProgressText("🎬 AI 스크립트 생성 중...");
     setProgressPct(10);
     setErrorMsg("");
 
     try {
-      // 1. Get AI script
+      // 1. Get AI script (new mirra-style format)
       const { data: scriptData, error: scriptErr } = await supabase.functions.invoke("generate-shorts", {
         body: {
           photos: photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
@@ -290,20 +112,21 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
 
       if (scriptErr) throw new Error(scriptErr.message);
 
-      const scenes: ScriptScene[] = scriptData?.scenes || [];
+      const scenes: MirraScene[] = scriptData?.scenes || [];
       if (scenes.length === 0) throw new Error("스크립트 생성 실패");
 
-      setProgressText("🎥 영상 렌더링 중...");
-      setProgressPct(30);
+      setProgressText("🎥 텍스트 애니메이션 렌더링 중...");
+      setProgressPct(25);
 
-      // 2. Render on canvas
-      const blob = await renderVideoOnCanvas(
+      // 2. Render with mirra-style Canvas engine
+      const blob = await renderMirraVideo(
         photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
         scenes,
         settings.companyName,
         settings.phoneNumber,
+        narration !== "없음",
         (current, total) => {
-          const pct = 30 + Math.round((current / total) * 65);
+          const pct = 25 + Math.round((current / total) * 70);
           setProgressPct(pct);
           setProgressText(`🎥 장면 렌더링 중... (${current}/${total})`);
         },
@@ -423,7 +246,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
             <div className="bg-primary rounded-full h-3 transition-all duration-300" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">약 15~20초 소요됩니다</p>
+        <p className="text-xs text-muted-foreground">약 15~30초 소요됩니다</p>
       </div>
     );
   }
