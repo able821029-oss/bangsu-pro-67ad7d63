@@ -68,6 +68,53 @@ export type Database = {
         }
         Relationships: []
       }
+      videos: {
+        Row: {
+          created_at: string
+          id: string
+          narration_type: string
+          post_id: string | null
+          script: Json
+          shotstack_render_id: string | null
+          status: string
+          updated_at: string
+          video_style: string
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          narration_type?: string
+          post_id?: string | null
+          script?: Json
+          shotstack_render_id?: string | null
+          status?: string
+          updated_at?: string
+          video_style?: string
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          narration_type?: string
+          post_id?: string | null
+          script?: Json
+          shotstack_render_id?: string | null
+          status?: string
+          updated_at?: string
+          video_style?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
