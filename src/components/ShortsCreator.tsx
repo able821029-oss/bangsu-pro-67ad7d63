@@ -137,7 +137,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       setStep("error");
       setErrorMsg(err.message || "다시 시도해 주세요");
     }
-  }, [photos, videoStyle, narration, settings, toast]);
+  }, [photos, videoStyle, settings, toast]);
 
   const handleDownload = () => {
     if (videoUrl) {
