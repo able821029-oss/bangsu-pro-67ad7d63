@@ -94,25 +94,45 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
     // TODO: re-invoke generate-blog edge function
   };
 
-  const getClipboardText = () => {
+  const getClipboardText = (platform: Platform) => {
+    if (platform === "instagram") {
+      // 150자 캡션 + 해시태그 20개
+      const textContent = blocks.filter(b => b.type === "text").map(b => b.content).join(" ");
+      const caption = textContent.slice(0, 150);
+      const tags = hashtags.slice(0, 20).map(t => `#${t}`).join(" ");
+      return caption + "\n\n" + tags;
+    }
+    if (platform === "tiktok") {
+      // 3줄 자막 + 해시태그 5개
+      const textContent = blocks.filter(b => b.type === "text").map(b => b.content).join("\n");
+      const lines = textContent.split(/\n+/).filter(Boolean).slice(0, 3);
+      const tags = hashtags.slice(0, 5).map(t => `#${t}`).join(" ");
+      return lines.join("\n") + "\n\n" + tags;
+    }
+    // naver: 제목 + 본문 + 해시태그 10개
     let text = title + "\n\n";
     blocks.forEach((block, idx) => {
       if (block.type === "text") text += block.content + "\n\n";
       else text += `[📸 사진${idx + 1} 여기에 첨부]\n\n`;
     });
-    text += hashtags.map((t) => `#${t}`).join(" ");
+    text += hashtags.slice(0, 10).map(t => `#${t}`).join(" ");
     return text;
   };
 
-  const handleCopyAndOpenNaver = async () => {
+  const deeplinks: Record<Platform, string> = {
+    naver: "naver://blog/write",
+    instagram: "instagram://",
+    tiktok: "snssdk1233://",
+  };
+
+  const handleCopyAndOpen = async (platform: Platform) => {
     try {
-      await navigator.clipboard.writeText(getClipboardText());
-      toast({ title: "✅ 글이 복사되었습니다! 네이버 앱에서 붙여넣기 해주세요." });
+      await navigator.clipboard.writeText(getClipboardText(platform));
+      toast({ title: `✅ ${platformLabels[platform]}용 글이 복사되었습니다!` });
     } catch {
       toast({ title: "클립보드 복사 실패", variant: "destructive" });
     }
-    window.location.href = "naver://blog/write";
-    setTimeout(() => window.open("https://blog.naver.com/", "_blank"), 2000);
+    window.location.href = deeplinks[platform];
   };
 
   return (
