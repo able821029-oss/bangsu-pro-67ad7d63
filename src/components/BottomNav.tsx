@@ -18,12 +18,11 @@ const tabs: { id: TabId; label: string; icon: React.ElementType; isCenter?: bool
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 safe-bottom">
-      {/* Fade gradient */}
       <div
         className="h-4 pointer-events-none"
-        style={{ background: "linear-gradient(to bottom, rgba(238,242,248,0), hsl(218 48% 13%))" }}
+        style={{ background: "linear-gradient(to bottom, rgba(238,242,248,0), #001130)" }}
       />
-      <div style={{ backgroundColor: 'hsl(218 48% 13%)' }}>
+      <div style={{ backgroundColor: '#001130' }}>
         <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
