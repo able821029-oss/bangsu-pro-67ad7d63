@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus } from "lucide-react";
+import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, BlogPost, Platform, ContentBlock } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { TabId } from "@/components/BottomNav";
 
 const platformLabels: Record<Platform, string> = {
   naver: "네이버 블로그",
