@@ -4,12 +4,10 @@ import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { ShortsCreator } from "@/components/ShortsCreator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAppStore, WorkType, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
+import { useAppStore, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-
-const workTypes: WorkType[] = ["옥상방수", "외벽방수", "지하방수", "균열보수", "욕실방수", "기타"];
 
 const platforms: { id: Platform; label: string; emoji: string }[] = [
   { id: "naver", label: "네이버 블로그", emoji: "📗" },
@@ -29,8 +27,8 @@ type GeneratingStep = "analyzing" | "writing" | "done" | "error";
 
 export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) => void; onViewPost: (post: BlogPost) => void }) {
   const {
-    photos, selectedWorkType, selectedPlatforms, selectedPersona,
-    addPhoto, removePhoto, setWorkType, togglePlatform, setSelectedPersona,
+    photos, selectedPlatforms, selectedPersona,
+    addPhoto, removePhoto, togglePlatform, setSelectedPersona,
     addPost, settings,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,10 +63,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       toast({ title: "사진을 먼저 촬영해주세요", variant: "destructive" });
       return;
     }
-    if (!selectedWorkType) {
-      toast({ title: "공사 유형을 선택해주세요", variant: "destructive" });
-      return;
-    }
     if (selectedPlatforms.length === 0) {
       toast({ title: "게시 플랫폼을 선택해주세요", variant: "destructive" });
       return;
@@ -97,7 +91,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       const { data, error } = await supabase.functions.invoke("generate-blog", {
         body: {
           photos: photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
-          workType: selectedWorkType,
           persona: selectedPersona,
           platform: primaryPlatform,
           location,
@@ -129,7 +122,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         blocks: aiResult.blocks as any,
         hashtags: aiResult.hashtags,
         photos: photos.map(p => ({ id: p.id, dataUrl: p.dataUrl })) as any,
-        work_type: selectedWorkType,
+        work_type: "AI자동판단",
         style: "시공일지형",
         persona: selectedPersona,
         platforms: [...selectedPlatforms],
@@ -148,7 +141,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         id: dbPost?.id || crypto.randomUUID(),
         title: aiResult.title,
         photos: [...photos],
-        workType: selectedWorkType,
+        workType: "기타",
         style: "시공일지형",
         blocks: aiResult.blocks,
         hashtags: aiResult.hashtags,
@@ -272,20 +265,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         </div>
       </div>
 
-      {/* 3. Work Type */}
-      <div>
-        <p className="text-sm font-semibold mb-1">공사 종류 선택</p>
-        <p className="text-xs text-muted-foreground mb-2">어떤 공사인지 (옥상방수·균열보수 등)</p>
-        <div className="flex flex-wrap gap-2">
-          {workTypes.map((type) => (
-            <Badge key={type} variant={selectedWorkType === type ? "chipActive" : "chip"} className="text-base px-4 py-2 cursor-pointer" onClick={() => setWorkType(type)}>
-              {type}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
-      {/* 4. Platform */}
+      {/* 3. Platform */}
       <div>
         <p className="text-sm font-semibold mb-2">게시 플랫폼 (중복 가능)</p>
         <div className="flex flex-wrap gap-2">

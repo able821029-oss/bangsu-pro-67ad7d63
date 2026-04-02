@@ -65,9 +65,16 @@ serve(async (req) => {
 
 ${platformText}
 
+[업종 자동 판단 — 필수]
+첨부된 사진을 분석하여 어떤 현장 업종인지 자동으로 판단하라.
+(방수·토목·인테리어·간판·조경·철거·도장·타일·전기·설비 등)
+판단한 업종을 글쓰기에 반영하고, 해당 업종의 SEO 키워드를 자동 적용하라.
+사진에서 공사 유형(옥상방수, 외벽방수, 균열보수 등)도 구체적으로 판단하여 제목과 본문에 삽입하라.
+
 [응답 형식 — 반드시 JSON으로 응답]
 {
   "title": "글 제목",
+  "detectedWorkType": "AI가 판단한 공사 유형",
   "blocks": [
     {"type": "text", "content": "본문 텍스트"},
     {"type": "photo", "content": "photo-1", "caption": "사진 설명"},
@@ -108,7 +115,6 @@ ${platformText}
       type: "text",
       text: `다음 정보로 ${platform === "naver" ? "네이버 블로그" : platform === "instagram" ? "인스타그램" : "틱톡"} 글을 작성해주세요.
 
-- 공사 유형: ${workType}
 - 시공 위치: ${location || "미입력"}
 - 건물 유형: ${buildingType || "미입력"}
 - 시공 일자: ${constructionDate || "오늘"}
@@ -116,6 +122,7 @@ ${platformText}
 - 연락처: ${phoneNumber || ""}
 - 첨부 사진: ${photoSlice.length}장
 
+사진을 분석하여 업종과 공사 유형을 자동 판단한 뒤 글을 작성해주세요.
 JSON 형식으로만 응답해주세요.`,
     });
 
@@ -139,24 +146,26 @@ JSON 형식으로만 응답해주세요.`,
       console.error("Claude API error:", anthropicResponse.status, errText);
 
       // Fallback mock response for testing when Claude is unavailable
+      const detectedType = workType || "시공";
       const photoBlocks = photoSlice.flatMap((_, i) => [
-        { type: "photo" as const, content: `photo-${i + 1}`, caption: `${workType} 시공 현장 사진 ${i + 1}` },
+        { type: "photo" as const, content: `photo-${i + 1}`, caption: `${detectedType} 시공 현장 사진 ${i + 1}` },
         { type: "text" as const, content: i === photoSlice.length - 1
-          ? `${companyName || "SMS"}에서 ${location || "현장"}의 ${buildingType || "건물"} ${workType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
-          : `${workType} 시공 ${i + 1}단계를 진행했습니다. 꼼꼼하게 작업하여 완벽한 방수 처리를 완료했습니다.` },
+          ? `${companyName || "SMS"}에서 ${location || "현장"}의 ${buildingType || "건물"} ${detectedType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
+          : `${detectedType} 시공 ${i + 1}단계를 진행했습니다. 꼼꼼하게 작업하여 완벽한 처리를 완료했습니다.` },
       ]);
 
       const mockResponse = {
-        title: `${location || "현장"} ${buildingType || ""} ${workType} 시공 완료`,
+        title: `${location || "현장"} ${buildingType || ""} ${detectedType} 시공 완료`,
+        detectedWorkType: detectedType,
         blocks: [
-          { type: "text", content: `안녕하세요, ${companyName || "SMS"}입니다.\n${constructionDate || "오늘"} ${location || "현장"}에서 ${workType} 시공을 진행했습니다.` },
+          { type: "text", content: `안녕하세요, ${companyName || "SMS"}입니다.\n${constructionDate || "오늘"} ${location || "현장"}에서 ${detectedType} 시공을 진행했습니다.` },
           ...photoBlocks,
         ],
         hashtags: platform === "instagram"
-          ? ["방수공사", "옥상방수", workType, "시공후기", "방수전문", "인테리어", "집수리", "리모델링", "방수업체", "방수시공", ...(location ? [location.replace(/\s/g, ""), location + "방수"] : []), "SMS", "시공완료", "건물방수", "누수차단", "우레탄방수", "방수전문업체", "시공브이로그"]
+          ? ["시공후기", detectedType, "인테리어", "집수리", "리모델링", "시공완료", ...(location ? [location.replace(/\s/g, ""), location + "시공"] : []), "SMS", "건물시공", "시공브이로그"]
           : platform === "tiktok"
-          ? ["방수공사", "시공브이로그", "집수리", workType, "방수전문"]
-          : ["방수공사", workType, "방수업체추천", ...(location ? [location + "방수공사"] : []), "시공후기", "방수전문", companyName || "SMS", "시공완료", "누수", "방수"],
+          ? ["시공브이로그", "집수리", detectedType, "시공전문"]
+          : [detectedType, "시공업체추천", ...(location ? [location + "시공"] : []), "시공후기", companyName || "SMS", "시공완료"],
         isMock: true,
       };
 
