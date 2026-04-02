@@ -155,7 +155,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
     if (videoUrl) {
       const a = document.createElement("a");
       a.href = videoUrl;
-      a.download = `shorts-${Date.now()}.webm`;
+      a.download = `sms_shorts_${Date.now()}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
