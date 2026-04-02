@@ -20,7 +20,7 @@ const statusColor: Record<string, "success" | "warning" | "info" | "default"> = 
   "AI생성중": "warning",
 };
 
-export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () => void }) {
+export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; onBack: () => void; onNavigate?: (tab: TabId) => void }) {
   const { updatePost } = useAppStore();
   const { toast } = useToast();
   const [title, setTitle] = useState(post.title);
