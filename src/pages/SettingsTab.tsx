@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   User, CreditCard, Ticket, Users, HelpCircle, MessageSquare, Bell,
-  ChevronRight, ArrowLeft,
+  ChevronRight, LogOut, Link2,
 } from "lucide-react";
 import { ProfileSettings } from "@/pages/settings/ProfileSettings";
 import { PricingPlan } from "@/pages/settings/PricingPlan";
@@ -13,9 +13,12 @@ import { AnnouncementsPage } from "@/pages/settings/AnnouncementsPage";
 
 type SettingsPage = "menu" | "profile" | "pricing" | "coupon" | "referral" | "faq" | "contact" | "announcements";
 
-const menuItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
-  { id: "profile", label: "프로필 설정", icon: User },
-  { id: "pricing", label: "요금제·결제", icon: CreditCard },
+const myInfoItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
+  { id: "profile", label: "업체명 · 전화번호 · 지역", icon: User },
+];
+
+const appSettingsItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
+  { id: "pricing", label: "요금제 확인", icon: CreditCard },
   { id: "coupon", label: "쿠폰·혜택", icon: Ticket },
   { id: "referral", label: "지인 소개", icon: Users },
   { id: "faq", label: "자주 묻는 질문", icon: HelpCircle },
@@ -40,19 +43,18 @@ export function SettingsTab() {
     return Component ? <Component onBack={() => setPage("menu")} /> : null;
   }
 
-  return (
-    <div className="px-4 pt-6 pb-24 space-y-4 max-w-lg mx-auto">
-      <h1 className="text-xl font-bold">⚙️ 설정</h1>
-
+  const renderGroup = (title: string, items: typeof myInfoItems) => (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground px-1">{title}</p>
       <div className="bg-card rounded-xl border border-border overflow-hidden">
-        {menuItems.map((item, i) => {
+        {items.map((item, i) => {
           const Icon = item.icon;
           return (
             <button
               key={item.id}
               onClick={() => setPage(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-secondary ${
-                i < menuItems.length - 1 ? "border-b border-border" : ""
+                i < items.length - 1 ? "border-b border-border" : ""
               }`}
             >
               <Icon className="w-5 h-5 text-muted-foreground" />
@@ -62,6 +64,21 @@ export function SettingsTab() {
           );
         })}
       </div>
+    </div>
+  );
+
+  return (
+    <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
+      <h1 className="text-xl font-bold">⚙️ 설정</h1>
+
+      {renderGroup("내 정보", myInfoItems)}
+      {renderGroup("앱 설정", appSettingsItems)}
+
+      {/* Logout */}
+      <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-destructive font-medium rounded-xl border border-border hover:bg-destructive/5 transition-colors">
+        <LogOut className="w-5 h-5" />
+        로그아웃
+      </button>
 
       <p className="text-center text-xs text-muted-foreground mt-6">SMS v1.0 | Self Marketing Service</p>
     </div>
