@@ -112,7 +112,7 @@ ${platformText}
 - 시공 위치: ${location || "미입력"}
 - 건물 유형: ${buildingType || "미입력"}
 - 시공 일자: ${constructionDate || "오늘"}
-- 업체명: ${companyName || "방수PRO"}
+- 업체명: ${companyName || "SMS"}
 - 연락처: ${phoneNumber || ""}
 - 첨부 사진: ${photoSlice.length}장
 
