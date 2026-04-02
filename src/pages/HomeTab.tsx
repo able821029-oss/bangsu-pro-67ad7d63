@@ -81,6 +81,16 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         </div>
       </div>
 
+      {/* ★ Quick Start — Large CTA */}
+      <button
+        onClick={() => onNavigate("camera")}
+        className="w-full rounded-2xl px-6 py-5 text-white text-lg font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all"
+        style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)" }}
+      >
+        <Camera className="w-7 h-7" />
+        📷 지금 바로 글 작성하기
+      </button>
+
       {/* Subscription + Usage */}
       <div className="bg-card rounded-[--radius] border border-border px-4 py-3 space-y-2">
         <div className="flex items-center justify-between">
@@ -169,22 +179,13 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button variant="hero" size="lg" className="w-full" onClick={() => onNavigate("camera")}>
-          <Camera className="w-6 h-6" />
-          촬영 시작
-        </Button>
-        <Button variant="outline" size="lg" className="w-full" onClick={() => onNavigate("publish")}>
-          <Upload className="w-6 h-6" />
-          발행현황
-        </Button>
-      </div>
-
-      {/* Recent Posts */}
+      {/* Recent Posts — tap goes directly to PostDetail */}
       <div>
         <h2 className="text-lg font-bold mb-3">최근 작성글</h2>
         <div className="space-y-3">
+          {posts.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">아직 작성한 글이 없습니다</p>
+          )}
           {posts.map((post) => (
             <button
               key={post.id}

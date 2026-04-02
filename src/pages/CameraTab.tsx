@@ -1,10 +1,9 @@
-import { useRef, useState } from "react";
-import { Camera, ImagePlus, X, Sparkles, MapPin, Building2, CalendarDays, CheckCircle2, Loader2, Film } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { Camera, ImagePlus, X, Sparkles, MapPin, CalendarDays, CheckCircle2, Loader2, Film } from "lucide-react";
 import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { ShortsCreator } from "@/components/ShortsCreator";
 import { PlatformChip } from "@/components/PlatformChip";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAppStore, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
@@ -18,9 +17,8 @@ const personas: { id: Persona; label: string; desc: string }[] = [
   { id: "전문기업형", label: "🏢 전문기업형", desc: "체계적인 전문 기업 이미지" },
 ];
 
-const buildingTypes = ["아파트", "상가", "단독주택", "기타"] as const;
-
 type GeneratingStep = "analyzing" | "writing" | "done" | "error";
+type WizardStep = 1 | 2;
 
 export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) => void; onViewPost: (post: BlogPost) => void }) {
   const {
@@ -32,14 +30,42 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const [wizardStep, setWizardStep] = useState<WizardStep>(1);
   const [location, setLocation] = useState("");
-  const [buildingType, setBuildingType] = useState<string>("아파트");
   const [constructionDate, setConstructionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [isLocating, setIsLocating] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
   const [progress, setProgress] = useState(0);
   const [showShorts, setShowShorts] = useState(false);
+
+  // Auto-detect GPS location on mount
+  useEffect(() => {
+    if (!location && navigator.geolocation) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const { latitude, longitude } = pos.coords;
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=ko`
+            );
+            const data = await res.json();
+            const addr = data.address;
+            const loc = addr?.borough || addr?.suburb || addr?.city_district || addr?.city || addr?.town || "";
+            if (loc) setLocation(loc);
+          } catch {
+            // silently fail
+          } finally {
+            setIsLocating(false);
+          }
+        },
+        () => setIsLocating(false),
+        { timeout: 5000 }
+      );
+    }
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -53,6 +79,14 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       reader.readAsDataURL(file);
     });
     e.target.value = "";
+  };
+
+  const handleNext = () => {
+    if (photos.length === 0) {
+      toast({ title: "사진을 먼저 촬영해주세요", variant: "destructive" });
+      return;
+    }
+    setWizardStep(2);
   };
 
   const handleStartAI = async () => {
@@ -69,7 +103,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     setGenStep("analyzing");
     setProgress(0);
 
-    // Progress animation
     const interval = setInterval(() => {
       setProgress((p) => {
         if (p < 30) return p + 2;
@@ -81,8 +114,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
 
     try {
       setGenStep("analyzing");
-      
-      // Use the first selected platform for generation
       const primaryPlatform = selectedPlatforms[0];
 
       const { data, error } = await supabase.functions.invoke("generate-blog", {
@@ -91,7 +122,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
           persona: selectedPersona,
           platform: primaryPlatform,
           location,
-          buildingType,
+          buildingType: "AI자동판단",
           constructionDate,
           companyName: settings.companyName,
           phoneNumber: settings.phoneNumber,
@@ -113,7 +144,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
 
       const aiResult = data as { title: string; blocks: ContentBlock[]; hashtags: string[] };
 
-      // Save to Supabase DB
       const { data: dbPost, error: dbError } = await supabase.from("posts").insert({
         title: aiResult.title,
         blocks: aiResult.blocks as any,
@@ -125,7 +155,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         platforms: [...selectedPlatforms],
         status: "완료",
         location,
-        building_type: buildingType,
+        building_type: "AI자동판단",
         work_date: constructionDate,
       }).select().single();
 
@@ -189,80 +219,137 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     );
   }
 
-  return (
-    <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-      <h1 className="text-xl font-bold">📷 현장 촬영</h1>
-
-      {/* 1. Site Info Fields */}
-      <div className="bg-card rounded-[--radius] border border-border p-4 space-y-4">
-        <p className="text-sm font-semibold">📍 현장 정보</p>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground flex items-center gap-1">
-            <MapPin className="w-3 h-3" /> 시공 위치
-          </label>
-          <input
-            className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
-            placeholder="예) 강남구 역삼동"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          />
+  // ─── Step 1: Photos + Basic Info ───
+  if (wizardStep === 1) {
+    return (
+      <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold">📷 사진 + 현장 정보</h1>
+          <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">1 / 2</span>
         </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground flex items-center gap-1">
-            <Building2 className="w-3 h-3" /> 건물 종류
-          </label>
-          <p className="text-xs text-muted-foreground">어떤 건물인지 (아파트·상가 등)</p>
-          <div className="flex flex-wrap gap-2">
-            {buildingTypes.map((bt) => (
-              <Badge key={bt} variant={buildingType === bt ? "chipActive" : "chip"} className="text-sm px-3 py-1.5 cursor-pointer" onClick={() => setBuildingType(bt)}>
-                {bt}
-              </Badge>
+
+        {/* Camera & Gallery */}
+        <div className="grid grid-cols-2 gap-3">
+          <Button size="lg" className="w-full" onClick={() => cameraInputRef.current?.click()}>
+            <Camera className="w-5 h-5" />
+            사진 촬영
+          </Button>
+          <Button variant="secondary" size="lg" className="w-full" onClick={() => fileInputRef.current?.click()}>
+            <ImagePlus className="w-5 h-5" />
+            갤러리 선택
+          </Button>
+        </div>
+
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
+
+        <div>
+          <p className="text-sm text-muted-foreground mb-2">촬영 사진 ({photos.length}/10)</p>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {photos.map((photo) => (
+              <div key={photo.id} className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border">
+                <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
+                <button onClick={() => removePhoto(photo.id)} className="absolute top-0.5 right-0.5 bg-destructive rounded-full p-0.5">
+                  <X className="w-3 h-3 text-destructive-foreground" />
+                </button>
+              </div>
             ))}
+            {photos.length === 0 && (
+              <div className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center">
+                <Camera className="w-6 h-6 text-muted-foreground" />
+              </div>
+            )}
           </div>
         </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground flex items-center gap-1">
-            <CalendarDays className="w-3 h-3" /> 시공 일자
-          </label>
-          <input type="date" className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground" value={constructionDate} onChange={(e) => setConstructionDate(e.target.value)} />
-        </div>
-      </div>
 
-      {/* 2. Camera & Gallery */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button size="lg" className="w-full" onClick={() => cameraInputRef.current?.click()}>
-          <Camera className="w-5 h-5" />
-          사진 촬영
-        </Button>
-        <Button variant="secondary" size="lg" className="w-full" onClick={() => fileInputRef.current?.click()}>
-          <ImagePlus className="w-5 h-5" />
-          갤러리 선택
-        </Button>
-      </div>
-
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
-      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
-
-      <div>
-        <p className="text-sm text-muted-foreground mb-2">촬영 사진 ({photos.length}/10)</p>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {photos.map((photo) => (
-            <div key={photo.id} className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border">
-              <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
-              <button onClick={() => removePhoto(photo.id)} className="absolute top-0.5 right-0.5 bg-destructive rounded-full p-0.5">
-                <X className="w-3 h-3 text-destructive-foreground" />
+        {/* Location + Date (minimal) */}
+        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> 시공 위치
+            </label>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
+                placeholder={isLocating ? "GPS 감지 중..." : "예) 강남구 역삼동"}
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+              <button
+                onClick={() => {
+                  if (!navigator.geolocation) return;
+                  setIsLocating(true);
+                  navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                      try {
+                        const { latitude, longitude } = pos.coords;
+                        const res = await fetch(
+                          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=ko`
+                        );
+                        const data = await res.json();
+                        const addr = data.address;
+                        const loc = addr?.borough || addr?.suburb || addr?.city_district || addr?.city || addr?.town || "";
+                        if (loc) setLocation(loc);
+                      } catch {} finally { setIsLocating(false); }
+                    },
+                    () => setIsLocating(false),
+                    { timeout: 5000 }
+                  );
+                }}
+                className="bg-primary/10 text-primary rounded-lg px-3 py-2 text-xs font-medium shrink-0"
+              >
+                {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : "📍 자동"}
               </button>
             </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground flex items-center gap-1">
+              <CalendarDays className="w-3 h-3" /> 시공 일자
+            </label>
+            <input type="date" className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground" value={constructionDate} onChange={(e) => setConstructionDate(e.target.value)} />
+          </div>
+        </div>
+
+        {/* Before/After */}
+        <BeforeAfterComparator />
+
+        {/* Next */}
+        <Button variant="hero" size="xl" className="w-full" onClick={handleNext}>
+          다음 →
+        </Button>
+
+        {/* Shorts */}
+        <Button variant="outline" size="xl" className="w-full" onClick={() => setShowShorts(true)}>
+          <Film className="w-6 h-6" />
+          쇼츠 영상 만들기
+        </Button>
+      </div>
+    );
+  }
+
+  // ─── Step 2: Persona + Platform + Generate ───
+  return (
+    <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
+      <div className="flex items-center justify-between">
+        <button onClick={() => setWizardStep(1)} className="text-sm text-primary font-medium">← 이전</button>
+        <h1 className="text-xl font-bold">✍️ 스타일 선택</h1>
+        <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">2 / 2</span>
+      </div>
+
+      {/* Persona */}
+      <div>
+        <p className="text-sm font-semibold mb-2">글쓰기 페르소나</p>
+        <div className="space-y-2">
+          {personas.map((p) => (
+            <button key={p.id} onClick={() => setSelectedPersona(p.id)} className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${selectedPersona === p.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
+              <p className="font-semibold text-sm">{p.label}</p>
+              <p className="text-xs text-muted-foreground">{p.desc}</p>
+            </button>
           ))}
-          {photos.length === 0 && (
-            <div className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center">
-              <Camera className="w-6 h-6 text-muted-foreground" />
-            </div>
-          )}
         </div>
       </div>
 
-      {/* 3. Platform */}
+      {/* Platform */}
       <div>
         <p className="text-sm font-semibold mb-2">게시 플랫폼 (중복 가능)</p>
         <div className="flex flex-wrap gap-2">
@@ -277,32 +364,10 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         </div>
       </div>
 
-      {/* 5. Persona */}
-      <div>
-        <p className="text-sm font-semibold mb-2">글쓰기 페르소나</p>
-        <div className="space-y-2">
-          {personas.map((p) => (
-            <button key={p.id} onClick={() => setSelectedPersona(p.id)} className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${selectedPersona === p.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
-              <p className="font-semibold text-sm">{p.label}</p>
-              <p className="text-xs text-muted-foreground">{p.desc}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 6. Before/After */}
-      <BeforeAfterComparator />
-
-      {/* 7. Start AI */}
+      {/* Generate */}
       <Button variant="hero" size="xl" className="w-full" onClick={handleStartAI}>
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
-      </Button>
-
-      {/* 8. Shorts Video */}
-      <Button variant="outline" size="xl" className="w-full" onClick={() => setShowShorts(true)}>
-        <Film className="w-6 h-6" />
-        쇼츠 영상 만들기
       </Button>
     </div>
   );

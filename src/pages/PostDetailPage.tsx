@@ -92,25 +92,21 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
 
   const handleRegenerate = () => {
     toast({ title: "🔄 같은 설정으로 AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
-    // TODO: re-invoke generate-blog edge function
   };
 
   const getClipboardText = (platform: Platform) => {
     if (platform === "instagram") {
-      // 150자 캡션 + 해시태그 20개
       const textContent = blocks.filter(b => b.type === "text").map(b => b.content).join(" ");
       const caption = textContent.slice(0, 150);
       const tags = hashtags.slice(0, 20).map(t => `#${t}`).join(" ");
       return caption + "\n\n" + tags;
     }
     if (platform === "tiktok") {
-      // 3줄 자막 + 해시태그 5개
       const textContent = blocks.filter(b => b.type === "text").map(b => b.content).join("\n");
       const lines = textContent.split(/\n+/).filter(Boolean).slice(0, 3);
       const tags = hashtags.slice(0, 5).map(t => `#${t}`).join(" ");
       return lines.join("\n") + "\n\n" + tags;
     }
-    // naver: 제목 + 본문 + 해시태그 10개
     let text = title + "\n\n";
     blocks.forEach((block, idx) => {
       if (block.type === "text") text += block.content + "\n\n";
@@ -126,6 +122,12 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     tiktok: "snssdk1233://",
   };
 
+  const platformButtonStyles: Record<Platform, string> = {
+    naver: "bg-[#03C75A] hover:bg-[#03C75A]/90 text-white",
+    instagram: "bg-[#E1306C] hover:bg-[#E1306C]/90 text-white",
+    tiktok: "bg-black hover:bg-black/90 text-white",
+  };
+
   const handleCopyAndOpen = async (platform: Platform) => {
     try {
       await navigator.clipboard.writeText(getClipboardText(platform));
@@ -135,6 +137,11 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     }
     window.location.href = deeplinks[platform];
   };
+
+  // Order platforms: naver first (main CTA)
+  const orderedPlatforms = ["naver", "instagram", "tiktok"].filter(p =>
+    post.platforms.includes(p as Platform)
+  ) as Platform[];
 
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
@@ -146,17 +153,12 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
         <Badge variant={statusColor[post.status] || "default"}>{post.status}</Badge>
       </div>
 
-      {/* Title — tap to edit */}
+      {/* Title */}
       <div className="bg-card rounded-[--radius] border border-border p-4">
         <label className="text-xs text-muted-foreground mb-1 block">제목</label>
         {isEditingTitle ? (
           <div className="space-y-2">
-            <input
-              className="w-full bg-secondary rounded-lg px-3 py-2 text-lg font-bold outline-none text-foreground"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              autoFocus
-            />
+            <input className="w-full bg-secondary rounded-lg px-3 py-2 text-lg font-bold outline-none text-foreground" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSaveTitle}>저장</Button>
               <Button size="sm" variant="outline" onClick={() => { setIsEditingTitle(false); setTitle(post.title); }}>취소</Button>
@@ -191,21 +193,14 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
             <div key={idx} className="bg-card rounded-[--radius] border border-border p-4 relative group">
               {editingBlockIdx === idx ? (
                 <div className="space-y-2">
-                  <textarea
-                    className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[100px] text-foreground resize-none"
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                  />
+                  <textarea className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[100px] text-foreground resize-none" value={editText} onChange={(e) => setEditText(e.target.value)} />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleSaveEdit}>저장</Button>
                     <Button size="sm" variant="outline" onClick={() => setEditingBlockIdx(null)}>취소</Button>
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => { setEditingBlockIdx(idx); setEditText(block.content); }}
-                  className="w-full text-left"
-                >
+                <button onClick={() => { setEditingBlockIdx(idx); setEditText(block.content); }} className="w-full text-left">
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{block.content}</p>
                   <Edit3 className="w-4 h-4 text-muted-foreground absolute top-2 right-2 opacity-60" />
                 </button>
@@ -245,16 +240,8 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
               ))}
             </div>
             <div className="flex gap-2">
-              <input
-                className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
-                value={newTagInput}
-                onChange={(e) => setNewTagInput(e.target.value)}
-                placeholder="새 태그 입력"
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTag(); } }}
-              />
-              <Button size="sm" variant="outline" onClick={handleAddTag}>
-                <Plus className="w-4 h-4" />
-              </Button>
+              <input className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground" value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} placeholder="새 태그 입력" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTag(); } }} />
+              <Button size="sm" variant="outline" onClick={handleAddTag}><Plus className="w-4 h-4" /></Button>
             </div>
             <Button size="sm" onClick={handleFinishHashtags} className="w-full">완료</Button>
           </div>
@@ -268,94 +255,57 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
         )}
       </div>
 
-      {/* Meta info */}
+      {/* Meta */}
       <div className="bg-card rounded-[--radius] border border-border p-4 space-y-2 text-xs text-muted-foreground">
         <p>작성일: {post.createdAt}</p>
-        <p>공사 유형: {post.workType}</p>
         <p>페르소나: {post.persona}</p>
         <p>플랫폼: {post.platforms.map(p => platformLabels[p]).join(", ")}</p>
       </div>
 
-      {/* Action Buttons */}
+      {/* ─── Action Buttons (ordered by priority) ─── */}
       <div className="space-y-3">
-        {/* Shorts Button */}
-        <div>
-          <button
-            onClick={() => {
-              toast({ title: "🎬 이 글 기반으로 영상을 생성합니다" });
-              onBack();
-              onNavigate?.("camera");
-            }}
-            className="w-full flex items-center justify-center gap-2 text-white font-bold rounded-[14px] px-4 py-4"
-            style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)" }}
-          >
-            <Film className="w-5 h-5" />
-            🎬 이 글로 쇼츠 영상 만들기
-          </button>
-          <p className="text-[11px] text-center mt-1.5" style={{ color: "#6B7280" }}>
-            현장 사진 + AI 글로 30초 쇼츠 자동 완성
-          </p>
-        </div>
+        {/* ① Platform CTA buttons — only selected platforms */}
+        {orderedPlatforms.map((platform, i) => (
+          <div key={platform}>
+            <Button
+              size={i === 0 ? "xl" : "lg"}
+              className={`w-full gap-2 ${platformButtonStyles[platform]}`}
+              onClick={() => handleCopyAndOpen(platform)}
+            >
+              <Copy className="w-5 h-5" />
+              복사 후 {platformLabels[platform]} 열기
+            </Button>
+            {i === 0 && platform === "naver" && (
+              <p className="text-[11px] text-center mt-1 text-muted-foreground">📋 붙여넣기 → 사진 첨부 → 발행</p>
+            )}
+          </div>
+        ))}
 
+        {/* Divider */}
+        {orderedPlatforms.length > 0 && <div className="border-t border-border" />}
+
+        {/* ④ Shorts */}
+        <Button variant="outline" className="w-full gap-2" onClick={() => {
+          toast({ title: "🎬 이 글 기반으로 영상을 생성합니다" });
+          onBack();
+          onNavigate?.("camera");
+        }}>
+          <Film className="w-5 h-5" />
+          쇼츠 영상 만들기
+        </Button>
+
+        {/* ⑤ Regenerate */}
         <Button variant="outline" className="w-full gap-2" onClick={handleRegenerate}>
           <RefreshCw className="w-4 h-4" />
           AI 재생성
         </Button>
 
-        {/* Platform-specific upload buttons */}
-        {post.platforms.includes("naver") && (
-          <>
-            <Button
-              size="lg"
-              className="w-full gap-2 bg-[#03C75A] hover:bg-[#03C75A]/90 text-white"
-              onClick={() => handleCopyAndOpen("naver")}
-            >
-              <Copy className="w-5 h-5" />
-              복사 후 네이버 블로그 열기
-            </Button>
-            <PlatformHint text="붙여넣기 → 사진 첨부 → 발행 (3번 탭)" />
-          </>
-        )}
-        {post.platforms.includes("instagram") && (
-          <>
-            <Button
-              size="lg"
-              className="w-full gap-2 bg-[#E1306C] hover:bg-[#E1306C]/90 text-white"
-              onClick={() => handleCopyAndOpen("instagram")}
-            >
-              <Copy className="w-5 h-5" />
-              복사 후 인스타그램 열기
-            </Button>
-            <PlatformHint text="인스타 앱에서 붙여넣기 → 사진 선택 → 게시" />
-          </>
-        )}
-        {post.platforms.includes("tiktok") && (
-          <>
-            <Button
-              size="lg"
-              className="w-full gap-2 bg-black hover:bg-black/90 text-white"
-              onClick={() => handleCopyAndOpen("tiktok")}
-            >
-              <Copy className="w-5 h-5" />
-              복사 후 틱톡 열기
-            </Button>
-            <PlatformHint text="틱톡 앱에서 붙여넣기 → 영상/사진 → 게시" />
-          </>
-        )}
-
-        <Button variant="outline" className="w-full gap-2" onClick={handleTempSave}>
+        {/* ⑥ Temp save — small */}
+        <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" onClick={handleTempSave}>
           <Save className="w-4 h-4" />
           임시저장
         </Button>
       </div>
-    </div>
-  );
-}
-
-function PlatformHint({ text }: { text: string }) {
-  return (
-    <div className="bg-primary/10 border border-primary/20 rounded-[--radius] px-4 py-2 text-center">
-      <p className="text-xs text-primary font-medium leading-relaxed">📋 {text}</p>
     </div>
   );
 }
