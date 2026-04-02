@@ -1,10 +1,11 @@
 // Canvas Video Renderer — mirra.my style text animation engine
+// Cross-browser compatible (Android Chrome, iOS Safari, Desktop)
 
 const W = 1080, H = 1920;
 const FPS = 25;
 
 export interface MirraScene {
-  duration: number; // frames at 25fps
+  duration: number;
   bg_type: "gradient" | "photo";
   bg_colors: [string, string];
   badge: string;
@@ -12,11 +13,10 @@ export interface MirraScene {
   subtitle: string;
   accent_color: string;
   animation: "slide_up" | "slide_left" | "zoom_in" | "fade_in";
-  photo: string | null; // "photo_1" etc or null
+  photo: string | null;
   narration: string;
 }
 
-// easeOut cubic
 function easeOut(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
@@ -104,7 +104,6 @@ function drawTitle(
   ctx.translate(W / 2 + dx, y + dy);
   ctx.scale(scale, scale);
 
-  // Word wrap
   const maxW = W - 120;
   const words = text.split("");
   let line = "";
@@ -138,7 +137,6 @@ function drawSubtitleTyping(
   ctx.textBaseline = "middle";
   ctx.fillText(visible, W / 2, y);
 
-  // Blinking cursor
   if (typingProgress < 1 && Math.floor(typingProgress * 10) % 2 === 0) {
     const cursorX = W / 2 + ctx.measureText(visible).width / 2 + 4;
     ctx.fillRect(cursorX, y - 16, 3, 32);
@@ -163,11 +161,9 @@ function drawPhotoWithOverlay(
   ctx: CanvasRenderingContext2D, img: HTMLImageElement,
   bgColors: [string, string], progress: number,
 ) {
-  // Photo in bottom half
   const photoH = H * 0.55;
   const photoY = H - photoH;
 
-  // Cover-fit
   const imgRatio = img.width / img.height;
   const slotRatio = W / photoH;
   let sx = 0, sy = 0, sw = img.width, sh = img.height;
@@ -179,7 +175,6 @@ function drawPhotoWithOverlay(
     sy = (img.height - sh) / 2;
   }
 
-  // Ken Burns
   const scale = 1.0 + 0.05 * progress;
   const dw = W * scale;
   const dh = photoH * scale;
@@ -192,7 +187,6 @@ function drawPhotoWithOverlay(
   ctx.clip();
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
 
-  // Gradient overlay on top of photo
   const overlay = ctx.createLinearGradient(0, photoY, 0, photoY + 200);
   overlay.addColorStop(0, bgColors[0]);
   overlay.addColorStop(1, hexToRgba(bgColors[0], 0));
@@ -209,19 +203,16 @@ function drawEndingCard(
   ctx.save();
   ctx.globalAlpha = p;
 
-  // Company name
   ctx.font = 'bold 72px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
   ctx.fillStyle = "#FFFFFF";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(company, W / 2, H / 2 - 60);
 
-  // Phone
   ctx.font = 'bold 44px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
   ctx.fillStyle = accentColor;
   ctx.fillText(phone, W / 2, H / 2 + 30);
 
-  // Branding
   ctx.font = '24px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
   ctx.fillStyle = "#AB5EBE";
   ctx.fillText("SMS 셀프마케팅서비스", W / 2, H - 160);
@@ -229,14 +220,48 @@ function drawEndingCard(
   ctx.restore();
 }
 
+// ─── Cross-browser MIME type detection ───
+function getBestMimeType(): string {
+  const types = [
+    'video/mp4;codecs=h264',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  for (const type of types) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return '';
+}
+
+function getFileExtension(mimeType: string): string {
+  if (mimeType.startsWith('video/mp4')) return 'mp4';
+  return 'webm';
+}
+
+export function isIOSDevice(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
+export function isRecordingSupported(): boolean {
+  return typeof MediaRecorder !== 'undefined' &&
+    typeof HTMLCanvasElement.prototype.captureStream === 'function';
+}
+
 export async function renderMirraVideo(
   photos: { dataUrl: string }[],
   scenes: MirraScene[],
   companyName: string,
   phoneNumber: string,
-  narrationEnabled: boolean,
+  _narrationEnabled: boolean,
   onProgress: (current: number, total: number) => void,
 ): Promise<Blob> {
+  // Pre-flight checks
+  if (!isRecordingSupported()) {
+    throw new Error("UNSUPPORTED");
+  }
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -254,29 +279,36 @@ export async function renderMirraVideo(
     }))
   );
 
-  // Recording setup
+  // Recording setup — cross-browser MIME detection
   const stream = canvas.captureStream(FPS);
 
-  // Try to add speech synthesis audio to stream
   let audioCtx: AudioContext | null = null;
   let audioDest: MediaStreamAudioDestinationNode | null = null;
   try {
     audioCtx = new AudioContext();
     audioDest = audioCtx.createMediaStreamDestination();
     audioDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-  } catch { /* no audio */ }
+  } catch { /* no audio support */ }
 
-  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-    ? "video/webm;codecs=vp9" : "video/webm";
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 4_000_000 });
+  const mimeType = getBestMimeType();
+  const ext = getFileExtension(mimeType);
+
+  const recorderOptions: MediaRecorderOptions = { videoBitsPerSecond: 4_000_000 };
+  if (mimeType) recorderOptions.mimeType = mimeType;
+
+  const recorder = new MediaRecorder(stream, recorderOptions);
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
   const recordingDone = new Promise<Blob>((resolve) => {
-    recorder.onstop = () => resolve(new Blob(chunks, { type: "video/webm" }));
+    recorder.onstop = () => {
+      const blobType = mimeType || `video/${ext}`;
+      resolve(new Blob(chunks, { type: blobType }));
+    };
   });
 
-  recorder.start();
+  // Start with timeslice for iOS compatibility
+  recorder.start(100);
 
   // Render each scene
   for (let si = 0; si < scenes.length; si++) {
@@ -287,16 +319,13 @@ export async function renderMirraVideo(
 
     onProgress(si, scenes.length);
 
-
     for (let f = 0; f < totalFrames; f++) {
-      const t = f / totalFrames; // 0..1
+      const t = f / totalFrames;
 
-      // 1. Background
       drawGradientBg(ctx, scene.bg_colors || ["#001130", "#0d2847"]);
       drawGridPattern(ctx, Math.min(t * 3, 1));
       drawGlow(ctx, scene.accent_color || "#237FFF", t);
 
-      // 2. Photo (if present)
       if (photoImg && scene.bg_type === "photo") {
         drawPhotoWithOverlay(ctx, photoImg, scene.bg_colors || ["#001130", "#0d2847"], t);
       }
@@ -304,7 +333,6 @@ export async function renderMirraVideo(
       if (isEnding) {
         drawEndingCard(ctx, companyName || "SMS", phoneNumber || "", scene.accent_color || "#237FFF", t);
       } else {
-        // Animation timings
         const badgeStart = 0.05;
         const titleStart = 0.15;
         const subtitleStart = 0.35;
@@ -315,19 +343,11 @@ export async function renderMirraVideo(
         const subtitleProgress = Math.max(0, (t - subtitleStart) / 0.5);
         const dividerProgress = Math.max(0, (t - dividerStart) / 0.3);
 
-        // Layout positions
         const textCenterY = photoImg ? H * 0.22 : H * 0.4;
 
-        // 3. Badge
         drawBadge(ctx, scene.badge, scene.accent_color || "#237FFF", textCenterY - 80, badgeProgress);
-
-        // 4. Title
         drawTitle(ctx, scene.title, textCenterY + 20, scene.animation, titleProgress);
-
-        // 5. Divider
         drawDividerLine(ctx, textCenterY + 80, scene.accent_color || "#237FFF", dividerProgress);
-
-        // 6. Subtitle (typing)
         drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 130, subtitleProgress);
       }
 
