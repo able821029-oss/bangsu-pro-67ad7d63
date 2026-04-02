@@ -91,7 +91,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       const { data, error } = await supabase.functions.invoke("generate-blog", {
         body: {
           photos: photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
-          workType: selectedWorkType,
           persona: selectedPersona,
           platform: primaryPlatform,
           location,
