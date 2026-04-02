@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { renderMirraVideo, type MirraScene } from "@/lib/mirraRenderer";
+import { renderMirraVideo, isRecordingSupported, isIOSDevice, type MirraScene } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
 
@@ -83,6 +83,18 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    if (!isRecordingSupported()) {
+      toast({ title: "이 기기에서는 영상 생성을 지원하지 않습니다", description: "최신 Chrome 또는 Safari 브라우저를 사용해 주세요.", variant: "destructive" });
+      return;
+    }
+
+    if (isIOSDevice()) {
+      toast({
+        title: "📱 아이폰 안내",
+        description: "아이폰에서는 영상 자동 저장이 제한됩니다.\n제어센터 → 화면 기록 버튼으로 저장해 주세요.",
+      });
+    }
+
     setStep("generating");
     setProgressText("🎬 AI 스크립트 생성 중...");
     setProgressPct(10);
@@ -135,7 +147,11 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
     } catch (err: any) {
       console.error("Shorts generation error:", err);
       setStep("error");
-      setErrorMsg(err.message || "다시 시도해 주세요");
+      if (err.message === "UNSUPPORTED") {
+        setErrorMsg("이 기기에서는 영상 생성을 지원하지 않습니다. 최신 Chrome 브라우저를 사용해 주세요.");
+      } else {
+        setErrorMsg(err.message || "다시 시도해 주세요");
+      }
     }
   }, [photos, videoStyle, settings, toast]);
 
@@ -143,7 +159,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
     if (videoUrl) {
       const a = document.createElement("a");
       a.href = videoUrl;
-      a.download = `shorts-${Date.now()}.webm`;
+      a.download = `sms_shorts_${Date.now()}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
