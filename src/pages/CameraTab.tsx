@@ -44,6 +44,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
   const [progress, setProgress] = useState(0);
+  const [showShorts, setShowShorts] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
