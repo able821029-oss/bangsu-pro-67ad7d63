@@ -45,6 +45,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {renderTab()}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <InstallBanner />
     </div>
   );
 };
