@@ -34,12 +34,10 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Site info fields
   const [location, setLocation] = useState("");
   const [buildingType, setBuildingType] = useState<string>("아파트");
   const [constructionDate, setConstructionDate] = useState(new Date().toISOString().slice(0, 10));
 
-  // AI generation state
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
   const [progress, setProgress] = useState(0);
@@ -78,17 +76,9 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
 
     const interval = setInterval(() => {
       setProgress((p) => {
-        if (p < 35) {
-          setGenStep("analyzing");
-          return p + 3;
-        } else if (p < 85) {
-          setGenStep("writing");
-          return p + 2;
-        } else if (p >= 100) {
-          clearInterval(interval);
-          setGenStep("done");
-          return 100;
-        }
+        if (p < 35) { setGenStep("analyzing"); return p + 3; }
+        else if (p < 85) { setGenStep("writing"); return p + 2; }
+        else if (p >= 100) { clearInterval(interval); setGenStep("done"); return 100; }
         return p + 1;
       });
     }, 80);
@@ -98,7 +88,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       setProgress(100);
       setGenStep("done");
 
-      // Generate mock post
       const wt = selectedWorkType || "옥상방수";
       const loc = location || "서울";
       const dateStr = constructionDate;
@@ -129,16 +118,10 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       };
 
       addPost(newPost);
-
-      // After short delay, navigate to post detail
-      setTimeout(() => {
-        setIsGenerating(false);
-        onViewPost(newPost);
-      }, 800);
+      setTimeout(() => { setIsGenerating(false); onViewPost(newPost); }, 800);
     }, 4000);
   };
 
-  // Show loading screen while generating
   if (isGenerating) {
     return (
       <div className="px-4 pt-6 pb-24 space-y-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
@@ -146,15 +129,11 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
           <Sparkles className="w-10 h-10 text-primary animate-pulse" />
         </div>
         <h2 className="text-xl font-bold text-center">AI가 글을 작성하고 있습니다</h2>
-
-        {/* Progress bar */}
         <div className="w-full max-w-xs">
           <div className="w-full bg-secondary rounded-full h-3">
             <div className="bg-primary rounded-full h-3 transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
-
-        {/* Steps */}
         <div className="space-y-3 w-full max-w-xs">
           <StepItem label="사진 분석 중" active={genStep === "analyzing"} done={genStep === "writing" || genStep === "done"} />
           <StepItem label="글 생성 중" active={genStep === "writing"} done={genStep === "done"} />
@@ -166,44 +145,9 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
 
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-      <h1 className="text-xl font-bold">📷 현장 사진 촬영</h1>
+      <h1 className="text-xl font-bold">📷 현장 촬영</h1>
 
-      {/* Camera & Gallery */}
-      <div className="grid grid-cols-2 gap-3">
-        <Button size="lg" className="w-full" onClick={() => cameraInputRef.current?.click()}>
-          <Camera className="w-5 h-5" />
-          사진 촬영
-        </Button>
-        <Button variant="secondary" size="lg" className="w-full" onClick={() => fileInputRef.current?.click()}>
-          <ImagePlus className="w-5 h-5" />
-          갤러리 선택
-        </Button>
-      </div>
-
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
-      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
-
-      {/* Photo Thumbnails */}
-      <div>
-        <p className="text-sm text-muted-foreground mb-2">촬영 사진 ({photos.length}/10)</p>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {photos.map((photo) => (
-            <div key={photo.id} className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border">
-              <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
-              <button onClick={() => removePhoto(photo.id)} className="absolute top-0.5 right-0.5 bg-destructive rounded-full p-0.5">
-                <X className="w-3 h-3 text-destructive-foreground" />
-              </button>
-            </div>
-          ))}
-          {photos.length === 0 && (
-            <div className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center">
-              <Camera className="w-6 h-6 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Site Info Fields */}
+      {/* 1. Site Info Fields (FIRST) */}
       <div className="bg-card rounded-[--radius] border border-border p-4 space-y-4">
         <p className="text-sm font-semibold">📍 현장 정보</p>
         <div className="space-y-1">
@@ -223,12 +167,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
           </label>
           <div className="flex flex-wrap gap-2">
             {buildingTypes.map((bt) => (
-              <Badge
-                key={bt}
-                variant={buildingType === bt ? "chipActive" : "chip"}
-                className="text-sm px-3 py-1.5 cursor-pointer"
-                onClick={() => setBuildingType(bt)}
-              >
+              <Badge key={bt} variant={buildingType === bt ? "chipActive" : "chip"} className="text-sm px-3 py-1.5 cursor-pointer" onClick={() => setBuildingType(bt)}>
                 {bt}
               </Badge>
             ))}
@@ -238,63 +177,62 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
           <label className="text-xs text-muted-foreground flex items-center gap-1">
             <CalendarDays className="w-3 h-3" /> 시공 일자
           </label>
-          <input
-            type="date"
-            className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
-            value={constructionDate}
-            onChange={(e) => setConstructionDate(e.target.value)}
-          />
+          <input type="date" className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground" value={constructionDate} onChange={(e) => setConstructionDate(e.target.value)} />
         </div>
       </div>
 
-      {/* Work Type */}
+      {/* 2. Camera & Gallery */}
+      <div className="grid grid-cols-2 gap-3">
+        <Button size="lg" className="w-full" onClick={() => cameraInputRef.current?.click()}>
+          <Camera className="w-5 h-5" />
+          사진 촬영
+        </Button>
+        <Button variant="secondary" size="lg" className="w-full" onClick={() => fileInputRef.current?.click()}>
+          <ImagePlus className="w-5 h-5" />
+          갤러리 선택
+        </Button>
+      </div>
+
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
+      <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
+
+      <div>
+        <p className="text-sm text-muted-foreground mb-2">촬영 사진 ({photos.length}/10)</p>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {photos.map((photo) => (
+            <div key={photo.id} className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border">
+              <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
+              <button onClick={() => removePhoto(photo.id)} className="absolute top-0.5 right-0.5 bg-destructive rounded-full p-0.5">
+                <X className="w-3 h-3 text-destructive-foreground" />
+              </button>
+            </div>
+          ))}
+          {photos.length === 0 && (
+            <div className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center">
+              <Camera className="w-6 h-6 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 3. Work Type */}
       <div>
         <p className="text-sm font-semibold mb-2">공사 유형 선택</p>
         <div className="flex flex-wrap gap-2">
           {workTypes.map((type) => (
-            <Badge
-              key={type}
-              variant={selectedWorkType === type ? "chipActive" : "chip"}
-              className="text-base px-4 py-2 cursor-pointer"
-              onClick={() => setWorkType(type)}
-            >
+            <Badge key={type} variant={selectedWorkType === type ? "chipActive" : "chip"} className="text-base px-4 py-2 cursor-pointer" onClick={() => setWorkType(type)}>
               {type}
             </Badge>
           ))}
         </div>
       </div>
 
-      {/* Platform Selection */}
-      <div>
-        <p className="text-sm font-semibold mb-2">게시 플랫폼 (중복 가능)</p>
-        <div className="flex flex-wrap gap-2">
-          {platforms.map((p) => (
-            <Badge
-              key={p.id}
-              variant={selectedPlatforms.includes(p.id) ? "chipActive" : "chip"}
-              className="text-base px-4 py-2 cursor-pointer"
-              onClick={() => togglePlatform(p.id)}
-            >
-              {p.emoji} {p.label}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
-      {/* Persona Selection */}
+      {/* 4. Persona */}
       <div>
         <p className="text-sm font-semibold mb-2">글쓰기 페르소나</p>
         <div className="space-y-2">
           {personas.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedPersona(p.id)}
-              className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${
-                selectedPersona === p.id
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-card"
-              }`}
-            >
+            <button key={p.id} onClick={() => setSelectedPersona(p.id)} className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${selectedPersona === p.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
               <p className="font-semibold text-sm">{p.label}</p>
               <p className="text-xs text-muted-foreground">{p.desc}</p>
             </button>
@@ -302,7 +240,19 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         </div>
       </div>
 
-      {/* Start AI */}
+      {/* 5. Platform */}
+      <div>
+        <p className="text-sm font-semibold mb-2">게시 플랫폼 (중복 가능)</p>
+        <div className="flex flex-wrap gap-2">
+          {platforms.map((p) => (
+            <Badge key={p.id} variant={selectedPlatforms.includes(p.id) ? "chipActive" : "chip"} className="text-base px-4 py-2 cursor-pointer" onClick={() => togglePlatform(p.id)}>
+              {p.emoji} {p.label}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      {/* 6. Start AI */}
       <Button variant="hero" size="xl" className="w-full" onClick={handleStartAI}>
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
@@ -314,16 +264,8 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
 function StepItem({ label, active, done }: { label: string; active: boolean; done: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      {done ? (
-        <CheckCircle2 className="w-6 h-6 text-success shrink-0" />
-      ) : active ? (
-        <Loader2 className="w-6 h-6 text-primary animate-spin shrink-0" />
-      ) : (
-        <div className="w-6 h-6 rounded-full border-2 border-muted-foreground/30 shrink-0" />
-      )}
-      <p className={`text-sm font-medium ${done ? "text-success" : active ? "text-foreground" : "text-muted-foreground"}`}>
-        {label}
-      </p>
+      {done ? <CheckCircle2 className="w-6 h-6 text-success shrink-0" /> : active ? <Loader2 className="w-6 h-6 text-primary animate-spin shrink-0" /> : <div className="w-6 h-6 rounded-full border-2 border-muted-foreground/30 shrink-0" />}
+      <p className={`text-sm font-medium ${done ? "text-success" : active ? "text-foreground" : "text-muted-foreground"}`}>{label}</p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Edit3, Hash, Camera, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Edit3, Hash, Camera, Copy, ExternalLink, RefreshCw, Save, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, BlogPost, Platform } from "@/stores/appStore";
@@ -35,6 +35,7 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
     setBlocks(newBlocks);
     setEditingBlockIdx(null);
     updatePost(post.id, { blocks: newBlocks });
+    toast({ title: "✅ 본문이 수정되었습니다." });
   };
 
   const handleSaveTitle = () => {
@@ -47,34 +48,38 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
     setHashtags(newTags);
     setEditingHashtags(false);
     updatePost(post.id, { hashtags: newTags });
+    toast({ title: "✅ 해시태그가 수정되었습니다." });
+  };
+
+  const handleTempSave = () => {
+    updatePost(post.id, { title, blocks, hashtags, status: "작성중" });
+    toast({ title: "✅ 임시저장 되었습니다." });
+  };
+
+  const handleRegenerate = () => {
+    toast({ title: "🔄 같은 설정으로 AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
+    // TODO: actual AI regeneration via backend
   };
 
   const getClipboardText = () => {
     let text = title + "\n\n";
-    blocks.forEach((block) => {
+    blocks.forEach((block, idx) => {
       if (block.type === "text") text += block.content + "\n\n";
-      else text += `[📸 ${block.caption || "사진"}]\n\n`;
+      else text += `[📸 사진${idx + 1} 여기에 첨부]\n\n`;
     });
     text += hashtags.map((t) => `#${t}`).join(" ");
     return text;
   };
 
-  const handleCopyAndOpen = async (platform: Platform) => {
+  const handleCopyAndOpenNaver = async () => {
     try {
       await navigator.clipboard.writeText(getClipboardText());
-      toast({ title: `✅ 글이 복사되었습니다! ${platformLabels[platform]}을 열어주세요.` });
+      toast({ title: "✅ 글이 복사되었습니다! 네이버 앱에서 붙여넣기 해주세요." });
     } catch {
       toast({ title: "클립보드 복사 실패", variant: "destructive" });
     }
-
-    if (platform === "naver") {
-      window.location.href = "naver://blog/write";
-      setTimeout(() => window.open("https://blog.naver.com/", "_blank"), 2000);
-    } else if (platform === "instagram") {
-      window.open("https://www.instagram.com/", "_blank");
-    } else {
-      window.open("https://www.tiktok.com/", "_blank");
-    }
+    window.location.href = "naver://blog/write";
+    setTimeout(() => window.open("https://blog.naver.com/", "_blank"), 2000);
   };
 
   return (
@@ -131,22 +136,20 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
                     </div>
                   </div>
                 ) : (
-                  <>
+                  <button
+                    onClick={() => { setEditingBlockIdx(idx); setEditText(block.content); }}
+                    className="w-full text-left"
+                  >
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{block.content}</p>
-                    <button
-                      onClick={() => { setEditingBlockIdx(idx); setEditText(block.content); }}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-secondary p-1.5 rounded-lg"
-                    >
-                      <Edit3 className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  </>
+                    <Edit3 className="w-4 h-4 text-muted-foreground absolute top-2 right-2 opacity-60" />
+                  </button>
                 )}
               </div>
             ) : (
               <div key={idx} className="bg-primary/10 border-2 border-dashed border-primary/30 rounded-[--radius] p-4 flex items-center gap-3">
                 <Camera className="w-6 h-6 text-primary" />
                 <div className="flex-1">
-                  <p className="font-semibold text-sm text-primary">사진 위치</p>
+                  <p className="font-semibold text-sm text-primary">📸 사진{idx + 1} 여기 업로드 ▲</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{block.caption}</p>
                 </div>
               </div>
@@ -189,24 +192,35 @@ export function PostDetailPage({ post, onBack }: { post: BlogPost; onBack: () =>
         )}
       </div>
 
-      {/* Re-publish buttons */}
-      <div className="space-y-2">
-        <p className="text-sm font-semibold">플랫폼별 업로드</p>
-        {post.platforms.map((p) => (
-          <Button key={p} variant="outline" className="w-full justify-start gap-3" onClick={() => handleCopyAndOpen(p)}>
-            <Copy className="w-4 h-4" />
-            {platformLabels[p]}에 복사 후 열기
-            <ExternalLink className="w-4 h-4 ml-auto" />
-          </Button>
-        ))}
-      </div>
-
       {/* Meta info */}
       <div className="bg-card rounded-[--radius] border border-border p-4 space-y-2 text-xs text-muted-foreground">
         <p>작성일: {post.createdAt}</p>
         <p>공사 유형: {post.workType}</p>
         <p>페르소나: {post.persona}</p>
         <p>플랫폼: {post.platforms.map(p => platformLabels[p]).join(", ")}</p>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="space-y-2">
+        <Button variant="outline" className="w-full gap-2" onClick={handleRegenerate}>
+          <RefreshCw className="w-4 h-4" />
+          AI 재생성
+        </Button>
+        <Button variant="hero" size="lg" className="w-full gap-2" onClick={handleCopyAndOpenNaver}>
+          <Copy className="w-5 h-5" />
+          복사 후 네이버 앱 열기
+        </Button>
+        {/* Semi-auto guidance */}
+        <div className="bg-primary/10 border border-primary/20 rounded-[--radius] px-4 py-3 text-center">
+          <p className="text-xs text-primary font-medium leading-relaxed">
+            📋 앱이 글을 복사하고 네이버를 열어드립니다.<br />
+            붙여넣기 → 사진 첨부 → 발행 (3번 탭)
+          </p>
+        </div>
+        <Button variant="outline" className="w-full gap-2" onClick={handleTempSave}>
+          <Save className="w-4 h-4" />
+          임시저장
+        </Button>
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 import { useState } from "react";
-
-import { Camera, Send, TrendingUp, FileCheck, Award, Upload, PenTool, BarChart3 } from "lucide-react";
+import { Camera, TrendingUp, Award, Upload, PenTool, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -34,6 +33,12 @@ function getNextTier(months: number) {
   return { target: 1, remaining: 1 };
 }
 
+const allTiers = [
+  { emoji: "🥉", label: "브론즈", range: "1~2개월", reward: "" },
+  { emoji: "🥈", label: "실버", range: "3~5개월", reward: "다음달 20% 할인 쿠폰 자동 지급" },
+  { emoji: "🥇", label: "골드", range: "6개월 이상", reward: "1개월 무료 자동 지급" },
+];
+
 export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) => void; onViewPost: (post: BlogPost) => void }) {
   const posts = useAppStore((s) => s.posts);
   const settings = useAppStore((s) => s.settings);
@@ -48,11 +53,13 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
   const tier = getMedalTier(subscription.consecutiveMonths);
   const medal = tier > 0 ? medalInfo[tier] : null;
   const nextTier = getNextTier(subscription.consecutiveMonths);
-  const [badgeExpanded, setBadgeExpanded] = useState(false);
+  const [showBadgeSheet, setShowBadgeSheet] = useState(false);
+
+  const currentTierLabel = tier >= 6 ? "골드" : tier >= 3 ? "실버" : tier >= 1 ? "브론즈" : "";
 
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-      {/* Header with Logo */}
+      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-[--radius] bg-primary/20 border border-primary/30 flex items-center justify-center overflow-hidden">
           {settings.logoUrl ? (
@@ -69,7 +76,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         </div>
       </div>
 
-      {/* Subscription + Usage Progress Bar */}
+      {/* Subscription + Usage */}
       <div className="bg-card rounded-[--radius] border border-border px-4 py-3 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -80,10 +87,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
             잔여 {remaining}건
           </span>
         </div>
-        <Progress
-          value={usagePercent}
-          className={`h-2 ${isHighUsage ? "[&>div]:bg-primary" : ""}`}
-        />
+        <Progress value={usagePercent} className={`h-2 ${isHighUsage ? "[&>div]:bg-primary" : ""}`} />
         {isHighUsage && (
           <div className="flex items-center justify-end">
             <Badge variant="default" className="text-xs">업그레이드 추천</Badge>
@@ -91,27 +95,46 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         )}
       </div>
 
-      {/* Consecutive Month Badge */}
+      {/* Medal Badge */}
       {medal && (
         <button
-          onClick={() => setBadgeExpanded(!badgeExpanded)}
+          onClick={() => setShowBadgeSheet(true)}
           className="w-full bg-primary/10 border border-primary/20 rounded-[--radius] px-4 py-2 text-center transition-all"
         >
           <span className="text-sm font-semibold text-primary">
             {medal.emoji} 연속 {subscription.consecutiveMonths}개월 사용 중 — {medal.label}
           </span>
-          {badgeExpanded && (
-            <div className="mt-2 space-y-1">
-              {medal.reward && <p className="text-xs text-primary">{medal.reward}</p>}
-              {nextTier && (
-                <p className="text-xs text-muted-foreground">
-                  다음 레벨까지 {nextTier.remaining}개월 남음
-                </p>
-              )}
-              {!nextTier && <p className="text-xs text-muted-foreground">최고 레벨 달성! 🎉</p>}
-            </div>
-          )}
         </button>
+      )}
+
+      {/* Badge Bottom Sheet */}
+      {showBadgeSheet && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" onClick={() => setShowBadgeSheet(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="relative w-full max-w-lg bg-card rounded-t-2xl p-5 pb-8 space-y-4 animate-in slide-in-from-bottom" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto" />
+            <h3 className="text-lg font-bold text-center">연속 사용 등급</h3>
+            <div className="space-y-3">
+              {allTiers.map((t) => (
+                <div key={t.label} className={`flex items-start gap-3 p-3 rounded-[--radius] border ${currentTierLabel === t.label ? "border-primary bg-primary/10" : "border-border"}`}>
+                  <span className="text-2xl">{t.emoji}</span>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">{t.label} <span className="text-xs text-muted-foreground font-normal">({t.range})</span></p>
+                    {t.reward && <p className="text-xs text-primary mt-0.5">{t.reward}</p>}
+                  </div>
+                  {currentTierLabel === t.label && <Badge variant="default" className="text-xs">현재</Badge>}
+                </div>
+              ))}
+            </div>
+            {nextTier && (
+              <p className="text-sm text-center text-muted-foreground">
+                다음 등급까지 <span className="text-primary font-semibold">{nextTier.remaining}개월</span> 남았습니다
+              </p>
+            )}
+            {!nextTier && <p className="text-sm text-center text-primary font-semibold">🎉 최고 등급 달성!</p>}
+            <Button variant="outline" className="w-full" onClick={() => setShowBadgeSheet(false)}>닫기</Button>
+          </div>
+        </div>
       )}
 
       {/* Stats Banner */}
@@ -129,9 +152,13 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
             <p className="text-xs text-muted-foreground">게시 완료</p>
           </div>
           <div className="text-center">
-            <BarChart3 className="w-4 h-4 text-info mx-auto mb-1" />
-            <p className="text-2xl font-bold">{Math.round(usagePercent)}%</p>
-            <p className="text-xs text-muted-foreground">이번달 사용량</p>
+            <button
+              onClick={() => { window.location.href = "naver://blog"; }}
+              className="flex flex-col items-center w-full"
+            >
+              <ExternalLink className="w-4 h-4 text-[#03C75A] mx-auto mb-1" />
+              <p className="text-sm font-semibold text-[#03C75A]">네이버에서<br/>확인 →</p>
+            </button>
           </div>
         </div>
       </div>
@@ -144,7 +171,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         </Button>
         <Button variant="outline" size="lg" className="w-full" onClick={() => onNavigate("publish")}>
           <Upload className="w-6 h-6" />
-          게시 목록
+          발행현황
         </Button>
       </div>
 

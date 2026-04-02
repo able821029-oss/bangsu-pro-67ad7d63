@@ -63,7 +63,7 @@ export function PublishTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
       <div className="flex items-center gap-2">
         <Upload className="w-5 h-5 text-primary" />
-        <h1 className="text-xl font-bold">게시 목록</h1>
+        <h1 className="text-xl font-bold">발행현황</h1>
         <Badge variant="warning" className="text-xs">반자동</Badge>
       </div>
 
