@@ -141,7 +141,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         id: dbPost?.id || crypto.randomUUID(),
         title: aiResult.title,
         photos: [...photos],
-        workType: selectedWorkType,
+        workType: "기타",
         style: "시공일지형",
         blocks: aiResult.blocks,
         hashtags: aiResult.hashtags,
