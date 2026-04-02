@@ -147,7 +147,11 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
     } catch (err: any) {
       console.error("Shorts generation error:", err);
       setStep("error");
-      setErrorMsg(err.message || "다시 시도해 주세요");
+      if (err.message === "UNSUPPORTED") {
+        setErrorMsg("이 기기에서는 영상 생성을 지원하지 않습니다. 최신 Chrome 브라우저를 사용해 주세요.");
+      } else {
+        setErrorMsg(err.message || "다시 시도해 주세요");
+      }
     }
   }, [photos, videoStyle, settings, toast]);
 
