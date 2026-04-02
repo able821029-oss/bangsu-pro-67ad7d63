@@ -4,8 +4,8 @@
   "description": "현장 사진 → AI 블로그 → 반자동 업로드",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#EEF2F8",
-  "theme_color": "#F97316",
+  "background_color": "#1A2B4A",
+  "theme_color": "#1A2B4A",
   "icons": [
     {
       "src": "/icon-192.png",
