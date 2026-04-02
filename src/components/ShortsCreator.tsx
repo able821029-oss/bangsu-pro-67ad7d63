@@ -95,7 +95,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           photos: photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
           workType: "자동판단",
           videoStyle,
-          narrationType: narration,
+          narrationType: "없음",
           location: "",
           buildingType: "",
           constructionDate: new Date().toISOString().slice(0, 10),
