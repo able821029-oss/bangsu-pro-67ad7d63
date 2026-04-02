@@ -65,7 +65,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
 
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("시공일지형");
-  const [narration, setNarration] = useState<NarrationType>("남성");
+  
   const [bgm, setBgm] = useState<BgmType>("upbeat");
   const [step, setStep] = useState<ShortsStep>("config");
   const [progressText, setProgressText] = useState("");
