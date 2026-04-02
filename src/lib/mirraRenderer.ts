@@ -249,14 +249,48 @@ export function isRecordingSupported(): boolean {
     typeof HTMLCanvasElement.prototype.captureStream === 'function';
 }
 
+export interface VoiceConfig {
+  lang: string;
+  pitch: number;
+  rate: number;
+  voiceNameHint: string[];
+}
+
+function speakNarration(text: string, voiceConfig: VoiceConfig): Promise<void> {
+  return new Promise((resolve) => {
+    if (!text || !window.speechSynthesis) { resolve(); return; }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = voiceConfig.lang;
+    utterance.pitch = voiceConfig.pitch;
+    utterance.rate = voiceConfig.rate;
+
+    const voices = speechSynthesis.getVoices();
+    const koVoices = voices.filter(v => v.lang.startsWith("ko"));
+    for (const hint of voiceConfig.voiceNameHint) {
+      const match = koVoices.find(v => v.name.includes(hint));
+      if (match) { utterance.voice = match; break; }
+    }
+    if (!utterance.voice && koVoices[0]) utterance.voice = koVoices[0];
+
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    // Safety timeout
+    const timeout = setTimeout(() => resolve(), 10000);
+    utterance.onend = () => { clearTimeout(timeout); resolve(); };
+
+    speechSynthesis.speak(utterance);
+  });
+}
+
 export async function renderMirraVideo(
   photos: { dataUrl: string }[],
   scenes: MirraScene[],
   companyName: string,
   phoneNumber: string,
-  _narrationEnabled: boolean,
+  narrationEnabled: boolean,
   onProgress: (current: number, total: number) => void,
   narrationAudios?: (string | null)[],
+  voiceConfig?: VoiceConfig,
 ): Promise<Blob> {
   // Pre-flight checks
   if (!isRecordingSupported()) {
