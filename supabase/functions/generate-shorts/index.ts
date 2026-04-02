@@ -7,6 +7,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Production Shotstack API
+const SHOTSTACK_BASE = "https://api.shotstack.io/v1";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -19,34 +22,20 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!SHOTSTACK_API_KEY) {
-      return new Response(JSON.stringify({ error: "SHOTSTACK_API_KEY not configured" }), {
+      return new Response(JSON.stringify({ error: "API 키를 확인해 주세요" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const body = await req.json();
-    const {
-      action, // "generate-script" | "render" | "check-status"
-      photos,
-      workType,
-      videoStyle,
-      narrationType,
-      location,
-      buildingType,
-      constructionDate,
-      companyName,
-      phoneNumber,
-      script, // for render action
-      renderId, // for check-status action
-      videoId, // DB video id
-    } = body;
+    const { action, photos, workType, videoStyle, narrationType, location, buildingType, constructionDate, companyName, phoneNumber, script, renderId, videoId } = body;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // ──────────────── ACTION: generate-script ────────────────
     if (action === "generate-script") {
       const styleGuide: Record<string, string> = {
-        "시공일지형": "시공 전 → 시공 중 → 시공 후 순서로 장면을 구성합니다. 각 단계의 작업 내용을 자막으로 설명합니다.",
+        "시공일지형": "시공 전 → 시공 중 → 시공 후 순서로 장면을 구성합니다.",
         "홍보형": "완료된 시공 사진을 강조하고, 업체 정보와 연락처를 부각합니다.",
         "Before/After형": "시공 전후 비교를 중심으로 극적인 변화를 보여줍니다.",
       };
@@ -124,26 +113,19 @@ ${styleGuide[videoStyle] || styleGuide["시공일지형"]}
         const mockScenes = [];
         for (let i = 0; i < photoCount; i++) {
           mockScenes.push({
-            photo_id: i + 1,
-            duration: 4,
-            caption_top: i === 0 ? `${location || "현장"} ${buildingType || "건물"}` : `${workType} 시공 ${i + 1}단계`,
+            photo_id: i + 1, duration: 4,
+            caption_top: i === 0 ? `${location || "현장"} ${buildingType || "건물"}` : `시공 ${i + 1}단계`,
             caption_bottom: i === 0 ? "시공 전 상태" : i === photoCount - 1 ? "시공 완료" : "작업 진행 중",
             effect: i % 2 === 0 ? "zoomin" : "zoomout",
           });
         }
         mockScenes.push({
-          photo_id: null,
-          duration: 4,
+          photo_id: null, duration: 4,
           caption_top: "SMS 셀프마케팅서비스",
           caption_bottom: `${companyName || "SMS"} | ${phoneNumber || ""}`,
           effect: "fadein",
         });
-        scenes = {
-          scenes: mockScenes,
-          narration: narrationType === "없음" ? "" : `${location || "현장"} ${workType} 시공 완료 현장입니다.`,
-          bgm: "upbeat",
-          isMock: true,
-        };
+        scenes = { scenes: mockScenes, narration: narrationType === "없음" ? "" : `${location || "현장"} 시공 완료 현장입니다.`, bgm: "upbeat", isMock: true };
       }
 
       return new Response(JSON.stringify(scenes), {
@@ -155,42 +137,56 @@ ${styleGuide[videoStyle] || styleGuide["시공일지형"]}
     if (action === "render") {
       const scenesData = script?.scenes || [];
 
-      // Upload base64 photos to Supabase Storage to get public URLs
+      // Convert base64 photos → JPEG → upload to Storage → public URLs
       const uploadedUrls: Record<number, string> = {};
       if (photos && photos.length > 0) {
         for (let i = 0; i < photos.length; i++) {
-          const photoData = photos[i];
-          const dataUrl = photoData.dataUrl || photoData;
-          if (typeof dataUrl === "string" && dataUrl.startsWith("data:")) {
-            const base64Match = dataUrl.match(/^data:image\/([^;]+);base64,(.+)$/);
-            if (base64Match) {
-              const ext = base64Match[1] === "jpeg" ? "jpg" : base64Match[1];
-              const rawBase64 = base64Match[2];
-              const binaryStr = atob(rawBase64);
-              const bytes = new Uint8Array(binaryStr.length);
-              for (let j = 0; j < binaryStr.length; j++) {
-                bytes[j] = binaryStr.charCodeAt(j);
-              }
-              const filePath = `render/${crypto.randomUUID()}.${ext}`;
-              const { error: uploadError } = await supabase.storage
-                .from("shorts-videos")
-                .upload(filePath, bytes, { contentType: `image/${base64Match[1]}`, upsert: true });
-              if (!uploadError) {
+          try {
+            const photoData = photos[i];
+            const dataUrl = photoData.dataUrl || photoData;
+
+            if (typeof dataUrl === "string" && dataUrl.startsWith("data:")) {
+              const base64Match = dataUrl.match(/^data:image\/([^;]+);base64,(.+)$/);
+              if (base64Match) {
+                const rawBase64 = base64Match[2];
+                const binaryStr = atob(rawBase64);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let j = 0; j < binaryStr.length; j++) {
+                  bytes[j] = binaryStr.charCodeAt(j);
+                }
+
+                // Always upload as JPEG for compatibility
+                const filePath = `render/${crypto.randomUUID()}.jpg`;
+                const { error: uploadError } = await supabase.storage
+                  .from("shorts-videos")
+                  .upload(filePath, bytes, { contentType: "image/jpeg", upsert: true });
+
+                if (uploadError) {
+                  console.error(`Photo ${i} upload error:`, uploadError);
+                  continue;
+                }
                 const { data: urlData } = supabase.storage.from("shorts-videos").getPublicUrl(filePath);
                 uploadedUrls[i] = urlData.publicUrl;
               }
+            } else if (typeof dataUrl === "string" && dataUrl.startsWith("http")) {
+              uploadedUrls[i] = dataUrl;
             }
-          } else if (typeof dataUrl === "string" && (dataUrl.startsWith("http://") || dataUrl.startsWith("https://"))) {
-            uploadedUrls[i] = dataUrl;
+          } catch (photoErr) {
+            console.error(`Photo ${i} processing error:`, photoErr);
           }
         }
+      }
+
+      if (Object.keys(uploadedUrls).length === 0) {
+        if (videoId) await supabase.from("videos").update({ status: "실패" }).eq("id", videoId);
+        return new Response(JSON.stringify({ error: "사진 준비 중 오류가 발생했습니다" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       // Build Shotstack timeline
       const tracks: any[] = [];
       let offset = 0;
-
-      // Photo clips track
       const photoClips: any[] = [];
       const captionClips: any[] = [];
 
@@ -199,59 +195,42 @@ ${styleGuide[videoStyle] || styleGuide["시공일지형"]}
 
         if (scene.photo_id !== null && uploadedUrls[scene.photo_id - 1]) {
           photoClips.push({
-            asset: {
-              type: "image",
-              src: uploadedUrls[scene.photo_id - 1],
-            },
-            start: offset,
-            length: dur,
+            asset: { type: "image", src: uploadedUrls[scene.photo_id - 1] },
+            start: offset, length: dur,
             effect: scene.effect === "zoomout" ? "zoomOut" : "zoomIn",
             fit: "cover",
           });
         } else {
-          // Ending card — solid color background
           photoClips.push({
             asset: {
               type: "html",
-              html: `<div style="width:1080px;height:1920px;background:#1A2B4A;display:flex;align-items:center;justify-content:center;"></div>`,
-              width: 1080,
-              height: 1920,
+              html: `<div style="width:1080px;height:1920px;background:#001130;display:flex;align-items:center;justify-content:center;"></div>`,
+              width: 1080, height: 1920,
             },
-            start: offset,
-            length: dur,
+            start: offset, length: dur,
           });
         }
 
-        // Top caption
         if (scene.caption_top) {
           captionClips.push({
             asset: {
               type: "html",
               html: `<div style="font-family:'NanumGothic',sans-serif;color:white;font-size:48px;font-weight:bold;text-align:center;background:rgba(0,0,0,0.6);padding:16px 32px;border-radius:12px;">${scene.caption_top}</div>`,
-              width: 900,
-              height: 120,
+              width: 900, height: 120,
             },
-            start: offset,
-            length: dur,
-            position: "top",
-            offset: { y: 0.1 },
+            start: offset, length: dur, position: "top", offset: { y: 0.1 },
             transition: { in: "fade", out: "fade" },
           });
         }
 
-        // Bottom caption
         if (scene.caption_bottom) {
           captionClips.push({
             asset: {
               type: "html",
               html: `<div style="font-family:'NanumGothic',sans-serif;color:white;font-size:36px;text-align:center;background:rgba(0,0,0,0.6);padding:12px 24px;border-radius:12px;">${scene.caption_bottom}</div>`,
-              width: 900,
-              height: 100,
+              width: 900, height: 100,
             },
-            start: offset,
-            length: dur,
-            position: "bottom",
-            offset: { y: -0.1 },
+            start: offset, length: dur, position: "bottom", offset: { y: -0.1 },
             transition: { in: "fade", out: "fade" },
           });
         }
@@ -262,57 +241,38 @@ ${styleGuide[videoStyle] || styleGuide["시공일지형"]}
       tracks.push({ clips: captionClips });
       tracks.push({ clips: photoClips });
 
-      const timeline = {
-        tracks,
-        soundtrack: {
-          src: "https://shotstack-assets.s3.ap-southeast-2.amazonaws.com/music/upbeat.mp3",
-          effect: "fadeOut",
-        },
-      };
-
       const renderPayload = {
-        timeline,
-        output: {
-          format: "mp4",
-          resolution: "1080",
-          aspectRatio: "9:16",
-          size: { width: 1080, height: 1920 },
+        timeline: {
+          tracks,
+          soundtrack: { src: "https://shotstack-assets.s3.ap-southeast-2.amazonaws.com/music/upbeat.mp3", effect: "fadeOut" },
         },
+        output: { format: "mp4", resolution: "1080", aspectRatio: "9:16", size: { width: 1080, height: 1920 } },
       };
 
-      // Use Shotstack sandbox API for testing, production for live
-      const shotstackUrl = "https://api.shotstack.io/stage/render";
-
-      const renderRes = await fetch(shotstackUrl, {
+      const renderRes = await fetch(`${SHOTSTACK_BASE}/render`, {
         method: "POST",
-        headers: {
-          "x-api-key": SHOTSTACK_API_KEY,
-          "Content-Type": "application/json",
-        },
+        headers: { "x-api-key": SHOTSTACK_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify(renderPayload),
       });
 
       const renderData = await renderRes.json();
 
       if (!renderRes.ok) {
-        console.error("Shotstack render error:", renderData);
-        // Update video status to failed
-        if (videoId) {
-          await supabase.from("videos").update({ status: "실패" }).eq("id", videoId);
-        }
-        return new Response(JSON.stringify({ error: "영상 렌더링 요청 실패", detail: renderData }), {
+        console.error("Shotstack render error:", JSON.stringify(renderData));
+        if (videoId) await supabase.from("videos").update({ status: "실패" }).eq("id", videoId);
+
+        const errMsg = renderRes.status === 401 || renderRes.status === 403
+          ? "API 키를 확인해 주세요"
+          : "다시 시도해 주세요";
+
+        return new Response(JSON.stringify({ error: errMsg, detail: renderData }), {
           status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const shotRdId = renderData.response?.id;
-
-      // Update DB with render ID
       if (videoId && shotRdId) {
-        await supabase.from("videos").update({
-          shotstack_render_id: shotRdId,
-          status: "렌더링중",
-        }).eq("id", videoId);
+        await supabase.from("videos").update({ shotstack_render_id: shotRdId, status: "렌더링중" }).eq("id", videoId);
       }
 
       return new Response(JSON.stringify({ renderId: shotRdId, status: "렌더링중" }), {
@@ -328,19 +288,23 @@ ${styleGuide[videoStyle] || styleGuide["시공일지형"]}
         });
       }
 
-      const statusRes = await fetch(`https://api.shotstack.io/stage/render/${renderId}`, {
+      const statusRes = await fetch(`${SHOTSTACK_BASE}/render/${renderId}`, {
         headers: { "x-api-key": SHOTSTACK_API_KEY },
       });
+
+      if (!statusRes.ok) {
+        const errMsg = statusRes.status === 401 ? "API 키를 확인해 주세요" : "다시 시도해 주세요";
+        return new Response(JSON.stringify({ status: "실패", error: errMsg }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       const statusData = await statusRes.json();
       const renderStatus = statusData.response?.status;
       const videoUrl = statusData.response?.url;
 
       if (renderStatus === "done" && videoUrl && videoId) {
-        await supabase.from("videos").update({
-          status: "완료",
-          video_url: videoUrl,
-        }).eq("id", videoId);
+        await supabase.from("videos").update({ status: "완료", video_url: videoUrl }).eq("id", videoId);
       } else if (renderStatus === "failed" && videoId) {
         await supabase.from("videos").update({ status: "실패" }).eq("id", videoId);
       }
@@ -358,7 +322,7 @@ ${styleGuide[videoStyle] || styleGuide["시공일지형"]}
     });
   } catch (e) {
     console.error("generate-shorts error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "다시 시도해 주세요" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
