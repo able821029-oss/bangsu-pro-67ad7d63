@@ -14,7 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      posts: {
+        Row: {
+          blocks: Json
+          building_type: string | null
+          created_at: string
+          hashtags: string[]
+          id: string
+          location: string | null
+          persona: string
+          photos: Json
+          platforms: string[]
+          status: string
+          style: string
+          title: string
+          updated_at: string
+          work_date: string | null
+          work_type: string
+        }
+        Insert: {
+          blocks?: Json
+          building_type?: string | null
+          created_at?: string
+          hashtags?: string[]
+          id?: string
+          location?: string | null
+          persona?: string
+          photos?: Json
+          platforms?: string[]
+          status?: string
+          style?: string
+          title?: string
+          updated_at?: string
+          work_date?: string | null
+          work_type?: string
+        }
+        Update: {
+          blocks?: Json
+          building_type?: string | null
+          created_at?: string
+          hashtags?: string[]
+          id?: string
+          location?: string | null
+          persona?: string
+          photos?: Json
+          platforms?: string[]
+          status?: string
+          style?: string
+          title?: string
+          updated_at?: string
+          work_date?: string | null
+          work_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
