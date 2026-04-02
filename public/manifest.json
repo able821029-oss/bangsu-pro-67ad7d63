@@ -1,7 +1,7 @@
 {
-  "name": "방수PRO",
-  "short_name": "방수PRO",
-  "description": "현장 사진 → AI 블로그 → 반자동 업로드",
+  "name": "SMS",
+  "short_name": "SMS",
+  "description": "셀프마케팅서비스",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1A2B4A",

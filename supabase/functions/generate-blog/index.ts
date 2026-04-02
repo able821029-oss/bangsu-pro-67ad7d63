@@ -112,7 +112,7 @@ ${platformText}
 - 시공 위치: ${location || "미입력"}
 - 건물 유형: ${buildingType || "미입력"}
 - 시공 일자: ${constructionDate || "오늘"}
-- 업체명: ${companyName || "방수PRO"}
+- 업체명: ${companyName || "SMS"}
 - 연락처: ${phoneNumber || ""}
 - 첨부 사진: ${photoSlice.length}장
 
@@ -142,21 +142,21 @@ JSON 형식으로만 응답해주세요.`,
       const photoBlocks = photoSlice.flatMap((_, i) => [
         { type: "photo" as const, content: `photo-${i + 1}`, caption: `${workType} 시공 현장 사진 ${i + 1}` },
         { type: "text" as const, content: i === photoSlice.length - 1
-          ? `${companyName || "방수PRO"}에서 ${location || "현장"}의 ${buildingType || "건물"} ${workType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
+          ? `${companyName || "SMS"}에서 ${location || "현장"}의 ${buildingType || "건물"} ${workType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
           : `${workType} 시공 ${i + 1}단계를 진행했습니다. 꼼꼼하게 작업하여 완벽한 방수 처리를 완료했습니다.` },
       ]);
 
       const mockResponse = {
         title: `${location || "현장"} ${buildingType || ""} ${workType} 시공 완료`,
         blocks: [
-          { type: "text", content: `안녕하세요, ${companyName || "방수PRO"}입니다.\n${constructionDate || "오늘"} ${location || "현장"}에서 ${workType} 시공을 진행했습니다.` },
+          { type: "text", content: `안녕하세요, ${companyName || "SMS"}입니다.\n${constructionDate || "오늘"} ${location || "현장"}에서 ${workType} 시공을 진행했습니다.` },
           ...photoBlocks,
         ],
         hashtags: platform === "instagram"
-          ? ["방수공사", "옥상방수", workType, "시공후기", "방수전문", "인테리어", "집수리", "리모델링", "방수업체", "방수시공", ...(location ? [location.replace(/\s/g, ""), location + "방수"] : []), "방수PRO", "시공완료", "건물방수", "누수차단", "우레탄방수", "방수전문업체", "시공브이로그"]
+          ? ["방수공사", "옥상방수", workType, "시공후기", "방수전문", "인테리어", "집수리", "리모델링", "방수업체", "방수시공", ...(location ? [location.replace(/\s/g, ""), location + "방수"] : []), "SMS", "시공완료", "건물방수", "누수차단", "우레탄방수", "방수전문업체", "시공브이로그"]
           : platform === "tiktok"
           ? ["방수공사", "시공브이로그", "집수리", workType, "방수전문"]
-          : ["방수공사", workType, "방수업체추천", ...(location ? [location + "방수공사"] : []), "시공후기", "방수전문", companyName || "방수PRO", "시공완료", "누수", "방수"],
+          : ["방수공사", workType, "방수업체추천", ...(location ? [location + "방수공사"] : []), "시공후기", "방수전문", companyName || "SMS", "시공완료", "누수", "방수"],
         isMock: true,
       };
 

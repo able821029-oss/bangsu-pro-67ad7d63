@@ -65,14 +65,14 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
           {settings.logoUrl ? (
             <img src={settings.logoUrl} alt="로고" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-primary font-black text-lg">방</span>
+            <span className="text-primary font-black text-lg">S</span>
           )}
         </div>
         <div>
           <h1 className="text-xl font-extrabold tracking-tight">
-            {settings.companyName || "방수PRO"}
+            {settings.companyName || "SMS"}
           </h1>
-          <p className="text-muted-foreground text-xs">현장 사진 → AI 블로그 → 반자동 업로드</p>
+          <p className="text-muted-foreground text-xs">셀프마케팅서비스</p>
         </div>
       </div>
 
