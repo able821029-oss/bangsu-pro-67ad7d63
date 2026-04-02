@@ -142,7 +142,7 @@ JSON 형식으로만 응답해주세요.`,
       const photoBlocks = photoSlice.flatMap((_, i) => [
         { type: "photo" as const, content: `photo-${i + 1}`, caption: `${workType} 시공 현장 사진 ${i + 1}` },
         { type: "text" as const, content: i === photoSlice.length - 1
-          ? `${companyName || "방수PRO"}에서 ${location || "현장"}의 ${buildingType || "건물"} ${workType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
+          ? `${companyName || "SMS"}에서 ${location || "현장"}의 ${buildingType || "건물"} ${workType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
           : `${workType} 시공 ${i + 1}단계를 진행했습니다. 꼼꼼하게 작업하여 완벽한 방수 처리를 완료했습니다.` },
       ]);
 
