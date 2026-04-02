@@ -249,14 +249,48 @@ export function isRecordingSupported(): boolean {
     typeof HTMLCanvasElement.prototype.captureStream === 'function';
 }
 
+export interface VoiceConfig {
+  lang: string;
+  pitch: number;
+  rate: number;
+  voiceNameHint: string[];
+}
+
+function speakNarration(text: string, voiceConfig: VoiceConfig): Promise<void> {
+  return new Promise((resolve) => {
+    if (!text || !window.speechSynthesis) { resolve(); return; }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = voiceConfig.lang;
+    utterance.pitch = voiceConfig.pitch;
+    utterance.rate = voiceConfig.rate;
+
+    const voices = speechSynthesis.getVoices();
+    const koVoices = voices.filter(v => v.lang.startsWith("ko"));
+    for (const hint of voiceConfig.voiceNameHint) {
+      const match = koVoices.find(v => v.name.includes(hint));
+      if (match) { utterance.voice = match; break; }
+    }
+    if (!utterance.voice && koVoices[0]) utterance.voice = koVoices[0];
+
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    // Safety timeout
+    const timeout = setTimeout(() => resolve(), 10000);
+    utterance.onend = () => { clearTimeout(timeout); resolve(); };
+
+    speechSynthesis.speak(utterance);
+  });
+}
+
 export async function renderMirraVideo(
   photos: { dataUrl: string }[],
   scenes: MirraScene[],
   companyName: string,
   phoneNumber: string,
-  _narrationEnabled: boolean,
+  narrationEnabled: boolean,
   onProgress: (current: number, total: number) => void,
   narrationAudios?: (string | null)[],
+  voiceConfig?: VoiceConfig,
 ): Promise<Blob> {
   // Pre-flight checks
   if (!isRecordingSupported()) {
@@ -333,19 +367,26 @@ export async function renderMirraVideo(
     const isEnding = si === scenes.length - 1 && !scene.photo;
     const photoImg = scene.photo ? imageMap[scene.photo] : null;
 
-    // If narration exists, extend scene to match audio duration (min scene.duration)
+    // Pre-rendered audio narration (ElevenLabs path)
     const narrationBuffer = narrationBuffers[si] || null;
     if (narrationBuffer && audioCtx) {
-      const audioFrames = Math.ceil(narrationBuffer.duration * FPS) + 15; // +0.6s padding
+      const audioFrames = Math.ceil(narrationBuffer.duration * FPS) + 15;
       totalFrames = Math.max(totalFrames, audioFrames);
-
-      // Play narration audio into the recording stream
       try {
         const source = audioCtx.createBufferSource();
         source.buffer = narrationBuffer;
         if (audioDest) source.connect(audioDest);
         source.start();
       } catch { /* audio playback error */ }
+    }
+
+    // Web Speech API narration (browser TTS path)
+    if (!narrationBuffer && narrationEnabled && voiceConfig && scene.narration) {
+      // Fire and forget — speech plays in background while frames render
+      speakNarration(scene.narration, voiceConfig);
+      // Extend scene to give time for speech (~5 chars/sec for Korean)
+      const estimatedSpeechFrames = Math.ceil((scene.narration.length / 5) * FPS) + 15;
+      totalFrames = Math.max(totalFrames, estimatedSpeechFrames);
     }
 
     onProgress(si, scenes.length);

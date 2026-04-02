@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2 } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
@@ -13,19 +13,23 @@ type ShortsStep = "config" | "generating" | "done" | "error";
 
 interface VoiceOption {
   id: string;
-  voiceId: string;
   label: string;
   desc: string;
   gender: "male" | "female";
+  lang: string;
+  pitch: number;
+  rate: number;
+  voiceNameHint: string[];
 }
 
+// Web Speech API voices — mapped to Korean-compatible system voices
 const VOICES: VoiceOption[] = [
-  { id: "male_calm", voiceId: "pNInz6obpgDQGcFmaJgB", label: "남성 — 차분한", desc: "낮고 안정적", gender: "male" },
-  { id: "male_pro", voiceId: "TxGEqnHWrfWFTfGW9XjX", label: "남성 — 전문적", desc: "신뢰감 있는", gender: "male" },
-  { id: "male_strong", voiceId: "VR6AewLTigWG4xSOukaG", label: "남성 — 힘있는", desc: "에너지 넘치는", gender: "male" },
-  { id: "female_friendly", voiceId: "EXAVITQu4vr4xnSDxMaL", label: "여성 — 친근한", desc: "따뜻하고 밝은", gender: "female" },
-  { id: "female_pro", voiceId: "AZnzlk1XvdvUeBnXmlld", label: "여성 — 전문적", desc: "자신감 있는", gender: "female" },
-  { id: "female_bright", voiceId: "21m00Tcm4TlvDq8ikWAM", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female" },
+  { id: "male_calm", label: "남성 — 차분한", desc: "낮고 안정적", gender: "male", lang: "ko-KR", pitch: 0.85, rate: 0.85, voiceNameHint: ["Google 한국의", "Yuna", "Korean Male"] },
+  { id: "male_pro", label: "남성 — 전문적", desc: "신뢰감 있는", gender: "male", lang: "ko-KR", pitch: 0.95, rate: 0.9, voiceNameHint: ["Google 한국의", "Korean Male"] },
+  { id: "male_strong", label: "남성 — 힘있는", desc: "에너지 넘치는", gender: "male", lang: "ko-KR", pitch: 1.0, rate: 1.0, voiceNameHint: ["Google 한국의", "Korean Male"] },
+  { id: "female_friendly", label: "여성 — 친근한", desc: "따뜻하고 밝은", gender: "female", lang: "ko-KR", pitch: 1.1, rate: 0.9, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
+  { id: "female_pro", label: "여성 — 전문적", desc: "자신감 있는", gender: "female", lang: "ko-KR", pitch: 1.0, rate: 0.95, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
+  { id: "female_bright", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female", lang: "ko-KR", pitch: 1.2, rate: 1.0, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
 ];
 
 const videoStyles: { id: VideoStyle; label: string; desc: string; emoji: string }[] = [
@@ -45,6 +49,20 @@ const PLAN_LIMITS: Record<string, number> = {
 };
 
 const PREVIEW_TEXT = "안녕하세요. 방수 전문 시공업체입니다.";
+
+function getKoreanVoice(voiceOption: VoiceOption): SpeechSynthesisVoice | null {
+  const voices = speechSynthesis.getVoices();
+  const koVoices = voices.filter(v => v.lang.startsWith("ko"));
+
+  // Try matching by hint names
+  for (const hint of voiceOption.voiceNameHint) {
+    const match = koVoices.find(v => v.name.includes(hint));
+    if (match) return match;
+  }
+
+  // Fallback to any Korean voice
+  return koVoices[0] || null;
+}
 
 function UsageMeter({ used, max, plan }: { used: number; max: number; plan: string }) {
   const ratio = max > 0 ? used / max : 1;
@@ -79,10 +97,10 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
 }
 
 function VoiceCard({
-  voice, selected, onSelect, onPreview, isPlaying, isLoading,
+  voice, selected, onSelect, onPreview, isPlaying,
 }: {
   voice: VoiceOption; selected: boolean; onSelect: () => void;
-  onPreview: () => void; isPlaying: boolean; isLoading: boolean;
+  onPreview: () => void; isPlaying: boolean;
 }) {
   const genderEmoji = voice.gender === "male" ? "👨" : "👩";
 
@@ -104,15 +122,14 @@ function VoiceCard({
       <p className="text-xs text-muted-foreground mt-0.5">{voice.desc}</p>
       <button
         onClick={(e) => { e.stopPropagation(); onPreview(); }}
-        disabled={isLoading}
         className="mt-2 flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors"
         style={{
           backgroundColor: isPlaying ? "#237FFF" : "#F3F4F6",
           color: isPlaying ? "white" : "#6B7280",
         }}
       >
-        {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-        {isLoading ? "로딩..." : isPlaying ? "재생 중" : "미리 듣기"}
+        {isPlaying ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+        {isPlaying ? "정지" : "미리 듣기"}
       </button>
     </button>
   );
@@ -130,60 +147,43 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const [progressPct, setProgressPct] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
-  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
   const videoLimit = PLAN_LIMITS[subscription.plan] || 5;
   const [videoUsed] = useState(2);
   const quotaExceeded = videoUsed >= videoLimit;
 
-  const handlePreviewVoice = useCallback(async (voice: VoiceOption) => {
-    // Stop current playback
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      setCurrentAudio(null);
+  // Preload voices
+  useEffect(() => {
+    speechSynthesis.getVoices();
+    const handler = () => speechSynthesis.getVoices();
+    speechSynthesis.addEventListener("voiceschanged", handler);
+    return () => speechSynthesis.removeEventListener("voiceschanged", handler);
+  }, []);
+
+  const handlePreviewVoice = useCallback((voice: VoiceOption) => {
+    // Stop any current speech
+    speechSynthesis.cancel();
+
+    if (playingVoice === voice.id) {
       setPlayingVoice(null);
+      return;
     }
 
-    if (playingVoice === voice.id) return; // Was playing, just stop
+    const utterance = new SpeechSynthesisUtterance(PREVIEW_TEXT);
+    utterance.lang = voice.lang;
+    utterance.pitch = voice.pitch;
+    utterance.rate = voice.rate;
 
-    setPreviewingVoice(voice.id);
+    const synthVoice = getKoreanVoice(voice);
+    if (synthVoice) utterance.voice = synthVoice;
 
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: PREVIEW_TEXT, voiceId: voice.voiceId, mode: "preview" }),
-        }
-      );
+    utterance.onend = () => setPlayingVoice(null);
+    utterance.onerror = () => setPlayingVoice(null);
 
-      if (!response.ok) throw new Error("TTS 요청 실패");
-
-      const data = await response.json();
-      const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
-      const audio = new Audio(audioUrl);
-
-      audio.onended = () => { setPlayingVoice(null); setCurrentAudio(null); };
-      audio.onerror = () => { setPlayingVoice(null); setCurrentAudio(null); };
-
-      setCurrentAudio(audio);
-      setPlayingVoice(voice.id);
-      setPreviewingVoice(null);
-      await audio.play();
-    } catch (err) {
-      console.error("Voice preview error:", err);
-      setPreviewingVoice(null);
-      toast({ title: "미리 듣기 실패", description: "다시 시도해 주세요", variant: "destructive" });
-    }
-  }, [currentAudio, playingVoice, toast]);
+    setPlayingVoice(voice.id);
+    speechSynthesis.speak(utterance);
+  }, [playingVoice]);
 
   const handleGenerate = useCallback(async () => {
     if (photos.length < 2) {
@@ -200,8 +200,8 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       toast({ title: "📱 아이폰 안내", description: "아이폰에서는 영상 자동 저장이 제한됩니다.\n제어센터 → 화면 기록 버튼으로 저장해 주세요." });
     }
 
-    // Stop any playing preview
-    if (currentAudio) { currentAudio.pause(); setCurrentAudio(null); setPlayingVoice(null); }
+    speechSynthesis.cancel();
+    setPlayingVoice(null);
 
     setStep("generating");
     setProgressText("🎬 AI 스크립트 생성 중...");
@@ -212,7 +212,6 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
     const voice = VOICES.find(v => v.id === selectedVoice);
 
     try {
-      // 1. Get AI script
       const { data: scriptData, error: scriptErr } = await supabase.functions.invoke("generate-shorts", {
         body: {
           photos: photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
@@ -232,41 +231,17 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       const scenes: MirraScene[] = scriptData?.scenes || [];
       if (scenes.length === 0) throw new Error("스크립트 생성 실패");
 
-      // 2. Generate narration audio for each scene (if enabled)
-      let narrationAudios: (string | null)[] = [];
-      if (narrationEnabled && voice) {
-        setProgressText("🎙️ 나레이션 음성 생성 중...");
-        setProgressPct(20);
-
-        narrationAudios = await Promise.all(
-          scenes.map(async (scene, idx) => {
-            if (!scene.narration) return null;
-            try {
-              const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-tts`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-                    Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-                  },
-                  body: JSON.stringify({ text: scene.narration, voiceId: voice.voiceId, mode: "narration" }),
-                }
-              );
-              if (!response.ok) return null;
-              const data = await response.json();
-              setProgressPct(20 + Math.round((idx / scenes.length) * 15));
-              return data.audioContent as string; // base64
-            } catch { return null; }
-          })
-        );
-      }
-
       setProgressText("🎥 텍스트 애니메이션 렌더링 중...");
-      setProgressPct(35);
+      setProgressPct(25);
 
-      // 3. Render with Canvas engine
+      // Pass voice config for Web Speech API narration during recording
+      const voiceConfig = narrationEnabled && voice ? {
+        lang: voice.lang,
+        pitch: voice.pitch,
+        rate: voice.rate,
+        voiceNameHint: voice.voiceNameHint,
+      } : undefined;
+
       const blob = await renderMirraVideo(
         photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
         scenes,
@@ -274,11 +249,12 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         settings.phoneNumber,
         narrationEnabled,
         (current, total) => {
-          const pct = 35 + Math.round((current / total) * 60);
+          const pct = 25 + Math.round((current / total) * 70);
           setProgressPct(pct);
           setProgressText(`🎥 장면 렌더링 중... (${current}/${total})`);
         },
-        narrationAudios.length > 0 ? narrationAudios : undefined,
+        undefined, // no pre-rendered audio
+        voiceConfig,
       );
 
       const url = URL.createObjectURL(blob);
@@ -296,7 +272,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         setErrorMsg(err.message || "다시 시도해 주세요");
       }
     }
-  }, [photos, videoStyle, selectedVoice, settings, toast, currentAudio]);
+  }, [photos, videoStyle, selectedVoice, settings, toast]);
 
   const handleDownload = () => {
     if (videoUrl) {
@@ -338,7 +314,6 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {/* Video Style */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold">🎥 영상 스타일</p>
           <div className="space-y-2">
@@ -352,7 +327,6 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Voice Selection */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold">🎙️ 나레이션 목소리</p>
           <div className="grid grid-cols-2 gap-2">
@@ -364,12 +338,11 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
                 onSelect={() => setSelectedVoice(v.id)}
                 onPreview={() => handlePreviewVoice(v)}
                 isPlaying={playingVoice === v.id}
-                isLoading={previewingVoice === v.id}
               />
             ))}
           </div>
           <button
-            onClick={() => { setSelectedVoice(null); if (currentAudio) { currentAudio.pause(); setCurrentAudio(null); setPlayingVoice(null); } }}
+            onClick={() => { setSelectedVoice(null); speechSynthesis.cancel(); setPlayingVoice(null); }}
             className="w-full text-center py-2.5 rounded-xl text-sm font-medium transition-all"
             style={{
               border: selectedVoice === null ? "2px solid #237FFF" : "0.5px solid #E5E7EB",
@@ -381,7 +354,6 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* BGM */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold">🎵 배경 음악</p>
           <div className="flex flex-wrap gap-2">
@@ -418,9 +390,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
             <div className="bg-primary rounded-full h-3 transition-all duration-300" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {selectedVoice ? "나레이션 생성 포함 약 30~60초 소요됩니다" : "약 15~30초 소요됩니다"}
-        </p>
+        <p className="text-xs text-muted-foreground">약 15~30초 소요됩니다</p>
       </div>
     );
   }
@@ -433,11 +403,9 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           <CheckCircle2 className="w-10 h-10 text-success" />
         </div>
         <h2 className="text-xl font-bold">영상이 완성되었습니다!</h2>
-
         {videoUrl && (
           <video src={videoUrl} controls className="w-full max-w-xs rounded-xl border border-border aspect-[9/16]" />
         )}
-
         <div className="w-full max-w-xs space-y-3">
           <Button className="w-full" onClick={handleDownload}>
             <Download className="w-5 h-5" /> 갤러리에 저장
