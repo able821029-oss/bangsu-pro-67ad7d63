@@ -153,10 +153,10 @@ JSON 형식으로만 응답해주세요.`,
           ...photoBlocks,
         ],
         hashtags: platform === "instagram"
-          ? ["방수공사", "옥상방수", workType, "시공후기", "방수전문", "인테리어", "집수리", "리모델링", "방수업체", "방수시공", ...(location ? [location.replace(/\s/g, ""), location + "방수"] : []), "방수PRO", "시공완료", "건물방수", "누수차단", "우레탄방수", "방수전문업체", "시공브이로그"]
+          ? ["방수공사", "옥상방수", workType, "시공후기", "방수전문", "인테리어", "집수리", "리모델링", "방수업체", "방수시공", ...(location ? [location.replace(/\s/g, ""), location + "방수"] : []), "SMS", "시공완료", "건물방수", "누수차단", "우레탄방수", "방수전문업체", "시공브이로그"]
           : platform === "tiktok"
           ? ["방수공사", "시공브이로그", "집수리", workType, "방수전문"]
-          : ["방수공사", workType, "방수업체추천", ...(location ? [location + "방수공사"] : []), "시공후기", "방수전문", companyName || "방수PRO", "시공완료", "누수", "방수"],
+          : ["방수공사", workType, "방수업체추천", ...(location ? [location + "방수공사"] : []), "시공후기", "방수전문", companyName || "SMS", "시공완료", "누수", "방수"],
         isMock: true,
       };
 
