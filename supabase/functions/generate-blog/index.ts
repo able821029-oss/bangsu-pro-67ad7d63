@@ -149,7 +149,7 @@ JSON 형식으로만 응답해주세요.`,
       const mockResponse = {
         title: `${location || "현장"} ${buildingType || ""} ${workType} 시공 완료`,
         blocks: [
-          { type: "text", content: `안녕하세요, ${companyName || "방수PRO"}입니다.\n${constructionDate || "오늘"} ${location || "현장"}에서 ${workType} 시공을 진행했습니다.` },
+          { type: "text", content: `안녕하세요, ${companyName || "SMS"}입니다.\n${constructionDate || "오늘"} ${location || "현장"}에서 ${workType} 시공을 진행했습니다.` },
           ...photoBlocks,
         ],
         hashtags: platform === "instagram"
