@@ -318,6 +318,12 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
       </Button>
+
+      {/* 8. Shorts Video */}
+      <Button variant="outline" size="xl" className="w-full" onClick={() => setShowShorts(true)}>
+        <Film className="w-6 h-6" />
+        쇼츠 영상 만들기
+      </Button>
     </div>
   );
 }
