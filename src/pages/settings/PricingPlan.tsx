@@ -127,6 +127,7 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
       )}
 
       <CancelDialog open={showCancel} onOpenChange={setShowCancel} />
+      </div>
     </div>
   );
 }

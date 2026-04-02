@@ -276,7 +276,19 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         </div>
       </div>
 
-      {/* 4. Persona */}
+      {/* 4. Platform */}
+      <div>
+        <p className="text-sm font-semibold mb-2">게시 플랫폼 (중복 가능)</p>
+        <div className="flex flex-wrap gap-2">
+          {platforms.map((p) => (
+            <Badge key={p.id} variant={selectedPlatforms.includes(p.id) ? "chipActive" : "chip"} className="text-base px-4 py-2 cursor-pointer" onClick={() => togglePlatform(p.id)}>
+              {p.emoji} {p.label}
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      {/* 5. Persona */}
       <div>
         <p className="text-sm font-semibold mb-2">글쓰기 페르소나</p>
         <div className="space-y-2">
@@ -285,18 +297,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
               <p className="font-semibold text-sm">{p.label}</p>
               <p className="text-xs text-muted-foreground">{p.desc}</p>
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 5. Platform */}
-      <div>
-        <p className="text-sm font-semibold mb-2">게시 플랫폼 (중복 가능)</p>
-        <div className="flex flex-wrap gap-2">
-          {platforms.map((p) => (
-            <Badge key={p.id} variant={selectedPlatforms.includes(p.id) ? "chipActive" : "chip"} className="text-base px-4 py-2 cursor-pointer" onClick={() => togglePlatform(p.id)}>
-              {p.emoji} {p.label}
-            </Badge>
           ))}
         </div>
       </div>
