@@ -27,8 +27,8 @@ type GeneratingStep = "analyzing" | "writing" | "done" | "error";
 
 export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) => void; onViewPost: (post: BlogPost) => void }) {
   const {
-    photos, selectedWorkType, selectedPlatforms, selectedPersona,
-    addPhoto, removePhoto, setWorkType, togglePlatform, setSelectedPersona,
+    photos, selectedPlatforms, selectedPersona,
+    addPhoto, removePhoto, togglePlatform, setSelectedPersona,
     addPost, settings,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
