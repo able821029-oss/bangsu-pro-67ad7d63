@@ -35,6 +35,13 @@ const seoTips = [
   { title: "지역명+업종+공사종류 조합 필수", detail: '"강남구 방수공사 전문업체" 같은 조합이 효과적' },
 ];
 
+interface PostSeoScore {
+  postId: string;
+  totalScore: number;
+  checklist: { label: string; passed: boolean; current: string; recommend: string }[];
+  loading: boolean;
+}
+
 export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const posts = useAppStore((s) => s.posts);
   const settings = useAppStore((s) => s.settings);
@@ -43,6 +50,43 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
   const [showAdvice, setShowAdvice] = useState(false);
   const [expandedTip, setExpandedTip] = useState<number | null>(null);
+  const [postScores, setPostScores] = useState<PostSeoScore[]>([]);
+  const [isAnalyzingPosts, setIsAnalyzingPosts] = useState(false);
+
+  const handleAnalyzeAllPosts = async () => {
+    const postsWithContent = posts.filter(p => p.blocks.length > 0 && p.blocks.some(b => b.type === "text" && b.content));
+    if (postsWithContent.length === 0) {
+      toast({ title: "분석할 글이 없습니다", variant: "destructive" });
+      return;
+    }
+    setIsAnalyzingPosts(true);
+    const scores: PostSeoScore[] = [];
+
+    for (const post of postsWithContent.slice(0, 5)) {
+      try {
+        const { data } = await supabase.functions.invoke("seo-analyze", {
+          body: {
+            mode: "seo_score",
+            title: post.title,
+            blocks: post.blocks,
+            hashtags: post.hashtags,
+            location: "",
+            workType: post.workType,
+          },
+        });
+        if (data && !data.error) {
+          scores.push({
+            postId: post.id,
+            totalScore: data.totalScore,
+            checklist: data.checklist || [],
+            loading: false,
+          });
+        }
+      } catch {}
+    }
+    setPostScores(scores);
+    setIsAnalyzingPosts(false);
+  };
 
   const handleDiagnose = async () => {
     setIsLoading(true);
