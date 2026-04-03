@@ -33,16 +33,16 @@ const VOICES: VoiceOption[] = [
   { id: "female_bright", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female", lang: "ko-KR", pitch: 1.2, rate: 1.0, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
 ];
 
-const videoStyles: { id: VideoStyle; label: string; desc: string; emoji: string }[] = [
-  { id: "시공일지형", label: "시공일지형", desc: "시공 전→중→후 순서", emoji: "📋" },
-  { id: "홍보형", label: "홍보형", desc: "완료컷 강조 + 업체 정보", emoji: "📢" },
-  { id: "Before/After형", label: "Before/After형", desc: "전후 비교 중심", emoji: "🔄" },
+const videoStyles: { id: VideoStyle; label: string; desc: string; icon: string }[] = [
+  { id: "시공일지형", label: "시공일지형", desc: "시공 전→중→후 순서", icon: "clipboard" },
+  { id: "홍보형", label: "홍보형", desc: "완료컷 강조 + 업체 정보", icon: "megaphone" },
+  { id: "Before/After형", label: "Before/After형", desc: "전후 비교 중심", icon: "refresh" },
 ];
 
-const bgmOptions: { id: BgmType; label: string; emoji: string }[] = [
-  { id: "upbeat", label: "경쾌한", emoji: "🎵" },
-  { id: "calm", label: "잔잔한", emoji: "🎶" },
-  { id: "none", label: "없음", emoji: "🔇" },
+const bgmOptions: { id: BgmType; label: string; icon: string }[] = [
+  { id: "upbeat", label: "경쾌한", icon: "music" },
+  { id: "calm", label: "잔잔한", icon: "volume2" },
+  { id: "none", label: "없음", icon: "volumeX" },
 ];
 
 const PLAN_LIMITS: Record<string, number> = {
