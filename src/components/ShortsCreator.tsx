@@ -550,8 +550,8 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
   if (step === "done") {
     return (
       <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto flex flex-col items-center">
-        <div className="w-20 h-20 rounded-full bg-[#22C55E]/20 flex items-center justify-center">
-          <CheckCircle2 className="w-10 h-10 text-[#22C55E]" />
+        <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center">
+          <CheckCircle2 className="w-10 h-10 text-success" />
         </div>
         <h2 className="text-xl font-bold">영상이 완성되었습니다!</h2>
 
