@@ -45,7 +45,7 @@ export function PublishSchedule({ onNavigate }: { onNavigate: (tab: TabId) => vo
                   : "bg-secondary/50 border border-dashed border-border"
               }`}
             >
-              {day.published ? "✅" : day.isPast ? "⬜" : "⬜"}
+              {day.published ? <Check className="w-4 h-4 text-green-500" /> : null}
             </div>
           </div>
         ))}
