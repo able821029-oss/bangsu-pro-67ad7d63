@@ -309,7 +309,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
               <MapPin className="w-3 h-3" /> 시공 위치
             </label>
             {gpsTimedOut && !location && (
-              <p className="text-xs text-yellow-500">⚠️ 위치 감지 실패 — 직접 입력해 주세요</p>
+              <p className="text-xs text-yellow-500">위치 감지 실패 — 직접 입력해 주세요</p>
             )}
             <div className="flex gap-2">
               <input
