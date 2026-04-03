@@ -98,7 +98,7 @@ export function HomeTab({
 
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-      {/* ✅ FIX: 헤더 — 설정 아이콘 제거 */}
+      {/* 헤더 — 설정 아이콘 제거, 로고 수정 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2.5">
@@ -146,7 +146,6 @@ export function HomeTab({
             </div>
           </div>
         </div>
-        {/* 설정 아이콘 제거 — 하단 탭으로 통일 */}
       </div>
 
       {/* User + Plan Info */}
@@ -192,7 +191,7 @@ export function HomeTab({
         지금 바로 글 작성하기
       </button>
 
-      {/* ✅ FIX: 통계 카드 4개 — 클릭 시 탭 이동 */}
+      {/* 통계 카드 4개 — 클릭 시 탭 이동 */}
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => onNavigate("publish")} className="glass-card p-4 text-center w-full">
           <p className="text-[28px] font-bold text-foreground">{completed}</p>
@@ -204,6 +203,7 @@ export function HomeTab({
           <p className="text-xs text-muted-foreground">게시 완료</p>
           <p className="text-xs text-[#22C55E] mt-1">▲ 2 지난달</p>
         </button>
+        {/* 영상 제작 — 프로+ 잠금 표시 */}
         <button onClick={() => onNavigate("publish")} className="glass-card p-4 text-center w-full">
           <p className="text-[28px] font-bold text-foreground">3</p>
           <p className="text-xs text-muted-foreground">영상 제작</p>
@@ -240,7 +240,7 @@ export function HomeTab({
 
       {/* SEO Donut + Platform Bars */}
       <div className="grid grid-cols-2 gap-3">
-        {/* ✅ FIX: SEO 도넛 클릭 → seo 탭 */}
+        {/* SEO 도넛 — 클릭 시 seo 탭 이동 */}
         <button onClick={() => onNavigate("seo")} className="chart-card p-4 flex flex-col items-center w-full">
           <p className="text-xs font-semibold text-muted-foreground mb-2">블로그 SEO 점수</p>
           <div className="relative">
