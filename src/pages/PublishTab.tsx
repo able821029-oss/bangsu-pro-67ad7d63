@@ -35,7 +35,7 @@ export function PublishTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId
     let text = post.title + "\n\n";
     post.blocks.forEach((block) => {
       if (block.type === "text") text += block.content + "\n\n";
-      else text += `[📸 ${block.caption || "사진"}]\n\n`;
+      else text += `[${block.caption || "사진"}]\n\n`;
     });
     text += post.hashtags.map((t) => `#${t}`).join(" ");
     return text;
@@ -44,7 +44,7 @@ export function PublishTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId
   const handleUpload = async (post: BlogPost, platform: Platform) => {
     try {
       await navigator.clipboard.writeText(getClipboardText(post));
-      toast({ title: `✅ "${post.title}" 복사 완료!` });
+      toast({ title: `"${post.title}" 복사 완료!` });
     } catch {
       toast({ title: "클립보드 복사 실패", variant: "destructive" });
     }

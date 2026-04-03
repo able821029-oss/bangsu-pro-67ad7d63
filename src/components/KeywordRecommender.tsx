@@ -71,7 +71,7 @@ export function KeywordRecommender({
   return (
     <div className="bg-card rounded-[--radius] border border-border p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">🔍 키워드 추천</p>
+        <p className="text-sm font-semibold flex items-center gap-1"><Search className="w-4 h-4 text-primary" /> 키워드 추천</p>
         <button onClick={() => setShow(false)}>
           <X className="w-4 h-4 text-muted-foreground" />
         </button>
@@ -87,7 +87,7 @@ export function KeywordRecommender({
           {/* Main keywords */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-              📌 메인 키워드 <span className="text-red-500">(경쟁 높음)</span>
+              <Target className="w-3 h-3" /> 메인 키워드 <span className="text-red-500">(경쟁 높음)</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {result.main.map((kw, i) => (

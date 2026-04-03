@@ -6,23 +6,23 @@
 
 @layer base {
   :root {
-    --background: 216 43% 95%;
-    --foreground: 213 100% 9%;
+    --background: 220 40% 7%;
+    --foreground: 0 0% 100%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 213 100% 9%;
+    --card: 220 30% 10%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 213 100% 9%;
+    --popover: 220 30% 10%;
+    --popover-foreground: 0 0% 100%;
 
     --primary: 215 100% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 216 30% 90%;
-    --secondary-foreground: 213 100% 9%;
+    --secondary: 220 20% 14%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 216 25% 92%;
-    --muted-foreground: 216 18% 51%;
+    --muted: 220 15% 16%;
+    --muted-foreground: 216 15% 55%;
 
     --accent: 287 42% 56%;
     --accent-foreground: 0 0% 100%;
@@ -30,8 +30,8 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 216 20% 88%;
-    --input: 216 20% 88%;
+    --border: 220 15% 15%;
+    --input: 220 15% 15%;
     --ring: 215 100% 57%;
 
     --radius: 0.875rem;
@@ -52,13 +52,13 @@
 
     --brand-gradient: linear-gradient(135deg, hsl(215 100% 57%) 0%, hsl(287 42% 56%) 100%);
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 213 100% 9%;
+    --sidebar-background: 220 30% 10%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 215 100% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 216 30% 90%;
-    --sidebar-accent-foreground: 213 100% 9%;
-    --sidebar-border: 216 20% 88%;
+    --sidebar-accent: 220 20% 14%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 15% 15%;
     --sidebar-ring: 215 100% 57%;
   }
 }
@@ -83,5 +83,19 @@
   }
   .bg-brand-gradient {
     background: linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%);
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+  }
+  .chart-card {
+    background: rgba(35, 127, 255, 0.03);
+    border: 1px solid rgba(35, 127, 255, 0.15);
+    border-radius: 12px;
   }
 }

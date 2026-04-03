@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { BarChart3, Loader2, Lightbulb, RefreshCw, ChevronDown, ChevronUp, FileText, Check, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { BarChart3, Loader2, Lightbulb, RefreshCw, ChevronDown, ChevronUp, FileText, Check, AlertTriangle, Search, TrendingUp } from "lucide-react";
+import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -17,13 +18,13 @@ interface DiagnosisResult {
   overallAdvice: string;
 }
 
-const categoryEmoji: Record<string, string> = {
-  "주제 전문성": "📌",
-  "발행 꾸준함": "📅",
-  "글 길이·구조": "📝",
-  "키워드 최적화": "🔑",
-  "이미지 활용": "🖼️",
-  "해시태그": "#️⃣",
+const categoryIcons: Record<string, React.ElementType> = {
+  "주제 전문성": BarChart3,
+  "발행 꾸준함": RefreshCw,
+  "글 길이·구조": FileText,
+  "키워드 최적화": Search,
+  "이미지 활용": FileText,
+  "해시태그": TrendingUp,
 };
 
 const seoTips = [
@@ -65,22 +66,10 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     for (const post of postsWithContent.slice(0, 5)) {
       try {
         const { data } = await supabase.functions.invoke("seo-analyze", {
-          body: {
-            mode: "seo_score",
-            title: post.title,
-            blocks: post.blocks,
-            hashtags: post.hashtags,
-            location: "",
-            workType: post.workType,
-          },
+          body: { mode: "seo_score", title: post.title, blocks: post.blocks, hashtags: post.hashtags, location: "", workType: post.workType },
         });
         if (data && !data.error) {
-          scores.push({
-            postId: post.id,
-            totalScore: data.totalScore,
-            checklist: data.checklist || [],
-            loading: false,
-          });
+          scores.push({ postId: post.id, totalScore: data.totalScore, checklist: data.checklist || [], loading: false });
         }
       } catch {}
     }
@@ -94,12 +83,7 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       const { data, error } = await supabase.functions.invoke("seo-analyze", {
         body: {
           mode: "blog_diagnosis",
-          posts: posts.map(p => ({
-            title: p.title,
-            blocks: p.blocks,
-            hashtags: p.hashtags,
-            createdAt: p.createdAt,
-          })),
+          posts: posts.map(p => ({ title: p.title, blocks: p.blocks, hashtags: p.hashtags, createdAt: p.createdAt })),
           companyName: settings.companyName,
         },
       });
@@ -121,21 +105,34 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     return "text-red-500";
   };
 
-  const scoreEmoji = (score: number) => (score >= 80 ? "🟢" : score >= 60 ? "🟡" : "🔴");
-
   const scoreLabel = (score: number) => {
     if (score >= 80) return "상위 노출 가능";
     if (score >= 60) return "개선 시 가능";
     return "개선 필요";
   };
 
+  // Radar chart data from diagnosis or defaults
+  const radarData = diagnosis
+    ? diagnosis.categories.map(c => ({ subject: c.name.replace("글 길이·구조", "글길이"), score: c.score }))
+    : [
+        { subject: "전문성", score: 85 },
+        { subject: "꾸준함", score: 60 },
+        { subject: "키워드", score: 80 },
+        { subject: "글길이", score: 65 },
+        { subject: "이미지", score: 70 },
+        { subject: "해시태그", score: 55 },
+      ];
+
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-      <h1 className="text-xl font-bold">📈 블로그 상위노출</h1>
+      <div className="flex items-center gap-2">
+        <TrendingUp className="w-5 h-5 text-primary" />
+        <h1 className="text-xl font-bold">블로그 상위노출</h1>
+      </div>
 
       {/* Score Card */}
       {diagnosis ? (
-        <div className="bg-card rounded-[--radius] border border-border p-5 space-y-3">
+        <div className="glass-card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground">내 블로그 SEO 점수</p>
             <button onClick={handleDiagnose} className="text-xs text-primary flex items-center gap-1">
@@ -152,7 +149,7 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           <p className="text-sm text-muted-foreground">{scoreLabel(diagnosis.totalScore)}</p>
         </div>
       ) : (
-        <div className="bg-card rounded-[--radius] border border-border p-5 text-center space-y-3">
+        <div className="glass-card p-5 text-center space-y-3">
           <BarChart3 className="w-12 h-12 text-primary mx-auto" />
           <p className="text-sm font-semibold">블로그 SEO 진단</p>
           <p className="text-xs text-muted-foreground">작성한 글들을 AI가 분석하여<br />상위노출 가능성을 점검합니다</p>
@@ -162,18 +159,34 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
         </div>
       )}
 
+      {/* Radar Chart */}
+      <div className="chart-card p-4 space-y-2">
+        <p className="text-sm font-semibold text-foreground">항목별 SEO 분석</p>
+        <ResponsiveContainer width="100%" height={220}>
+          <RadarChart data={radarData}>
+            <PolarGrid stroke="rgba(255,255,255,0.1)" />
+            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "#888" }} />
+            <Radar dataKey="score" stroke="#237FFF" fill="#237FFF" fillOpacity={0.15} />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+
       {/* Category Scores - 2 column grid */}
       {diagnosis && (
         <div className="grid grid-cols-2 gap-3">
-          {diagnosis.categories.map((cat, i) => (
-            <div key={i} className="bg-card rounded-[--radius] border border-border p-3 space-y-1">
-              <p className="text-xs text-muted-foreground">{categoryEmoji[cat.name] || "📊"} {cat.name}</p>
-              <div className="flex items-center gap-2">
-                <span className={`text-xl font-bold ${scoreColor(cat.score)}`}>{cat.score}점</span>
-                <span className="text-sm">{scoreEmoji(cat.score)}</span>
+          {diagnosis.categories.map((cat, i) => {
+            const Icon = categoryIcons[cat.name] || BarChart3;
+            return (
+              <div key={i} className="glass-card p-3 space-y-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Icon className="w-3 h-3" /> {cat.name}
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xl font-bold ${scoreColor(cat.score)}`}>{cat.score}점</span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -185,8 +198,8 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
         </Button>
       )}
       {showAdvice && diagnosis && (
-        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">💡 AI 개선 조언</p>
+        <div className="glass-card p-4 space-y-3">
+          <p className="text-sm font-semibold flex items-center gap-2"><Lightbulb className="w-4 h-4 text-primary" /> AI 개선 조언</p>
           <p className="text-sm text-muted-foreground">{diagnosis.overallAdvice}</p>
           {diagnosis.categories.map((cat, i) => (
             <div key={i} className="border-t border-border pt-2">
@@ -199,17 +212,19 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
 
       {/* Keyword Recommender */}
       <div className="space-y-2">
-        <p className="text-sm font-semibold">🔍 키워드 추천</p>
+        <p className="text-sm font-semibold flex items-center gap-1">
+          <Search className="w-4 h-4 text-primary" /> 키워드 추천
+        </p>
         <KeywordRecommender
           location={settings.serviceArea}
           onSelectKeyword={(kw) => {
-            toast({ title: `✅ "${kw}" 키워드가 다음 글쓰기에 반영됩니다` });
+            toast({ title: `"${kw}" 키워드가 다음 글쓰기에 반영됩니다` });
           }}
         />
       </div>
 
       {/* Per-Post SEO Scores */}
-      <div className="bg-card rounded-[--radius] border border-border overflow-hidden">
+      <div className="glass-card overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <p className="text-sm font-semibold flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" /> 글별 SEO 품질 체크
@@ -239,7 +254,7 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
                       ps.totalScore >= 60 ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" :
                       "bg-red-500/10 text-red-600 border-red-500/30"
                     }`}>
-                      {ps.totalScore}점 {ps.totalScore >= 80 ? "🟢" : ps.totalScore >= 60 ? "🟡" : "🔴"}
+                      {ps.totalScore}점
                     </Badge>
                   </div>
                   {ps.checklist.length > 0 && (
@@ -273,15 +288,17 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       <PublishSchedule onNavigate={onNavigate} />
 
       {/* SEO Tips Accordion */}
-      <div className="bg-card rounded-[--radius] border border-border overflow-hidden">
-        <p className="text-sm font-semibold px-4 py-3 border-b border-border">📌 네이버 SEO 핵심 팁</p>
+      <div className="glass-card overflow-hidden">
+        <p className="text-sm font-semibold px-4 py-3 border-b border-border flex items-center gap-2">
+          <Lightbulb className="w-4 h-4 text-primary" /> 네이버 SEO 핵심 팁
+        </p>
         {seoTips.map((tip, i) => (
           <div key={i} className={`${i < seoTips.length - 1 ? "border-b border-border" : ""}`}>
             <button
               onClick={() => setExpandedTip(expandedTip === i ? null : i)}
-              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-secondary/50 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
             >
-              <span className="text-sm font-medium">① {tip.title}</span>
+              <span className="text-sm font-medium">{i + 1}. {tip.title}</span>
               {expandedTip === i ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
             </button>
             {expandedTip === i && (

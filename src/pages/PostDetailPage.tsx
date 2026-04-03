@@ -88,7 +88,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     setIsEditingTitle(false);
     updatePost(post.id, { title });
     await saveToDb({ title });
-    toast({ title: "✅ 제목이 수정되었습니다." });
+    toast({ title: "제목이 수정되었습니다." });
   };
 
   const handleSaveEdit = async () => {
@@ -98,7 +98,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     setEditingBlockIdx(null);
     updatePost(post.id, { blocks: newBlocks });
     await saveToDb({ blocks: newBlocks });
-    toast({ title: "✅ 본문이 수정되었습니다." });
+    toast({ title: "본문이 수정되었습니다." });
   };
 
   const handleRemoveTag = (idx: number) => {
@@ -120,25 +120,25 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
 
   const handleFinishHashtags = () => {
     setEditingHashtags(false);
-    toast({ title: "✅ 해시태그가 저장되었습니다." });
+    toast({ title: "해시태그가 저장되었습니다." });
   };
 
   const handleTempSave = async () => {
     updatePost(post.id, { title, blocks, hashtags, status: "작성중" });
     setCurrentStatus("작성중");
     await saveToDb({ title, blocks, hashtags, status: "작성중" });
-    toast({ title: "✅ 임시저장 완료", duration: 2000 });
+    toast({ title: "임시저장 완료", duration: 2000 });
   };
 
   const handleMarkPublished = async () => {
     updatePostStatus(post.id, "게시완료");
     setCurrentStatus("게시완료");
     await saveToDb({ status: "게시완료" });
-    toast({ title: "✅ 게시완료로 변경되었습니다" });
+    toast({ title: "게시완료로 변경되었습니다" });
   };
 
   const handleRegenerate = () => {
-    toast({ title: "🔄 같은 설정으로 AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
+    toast({ title: "같은 설정으로 AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
   };
 
   const getClipboardText = (platform: Platform) => {
@@ -157,7 +157,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     let text = title + "\n\n";
     blocks.forEach((block, idx) => {
       if (block.type === "text") text += block.content + "\n\n";
-      else text += `[📸 사진${idx + 1} 여기에 첨부]\n\n`;
+      else text += `[사진${idx + 1} 여기에 첨부]\n\n`;
     });
     text += hashtags.slice(0, 10).map(t => `#${t}`).join(" ");
     return text;
@@ -178,7 +178,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
   const handleCopyAndOpen = async (platform: Platform) => {
     try {
       await navigator.clipboard.writeText(getClipboardText(platform));
-      toast({ title: `✅ ${platformLabels[platform]}용 글이 복사되었습니다!` });
+      toast({ title: `${platformLabels[platform]}용 글이 복사되었습니다!` });
     } catch {
       toast({ title: "클립보드 복사 실패", variant: "destructive" });
     }
@@ -267,7 +267,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
             <div key={idx} className="bg-primary/10 border-2 border-dashed border-primary/30 rounded-[--radius] p-4 flex items-center gap-3">
               <Camera className="w-6 h-6 text-primary" />
               <div className="flex-1">
-                <p className="font-semibold text-sm text-primary">📸 사진{idx + 1} 여기 업로드 ▲</p>
+                <p className="font-semibold text-sm text-primary">사진{idx + 1} 여기 업로드</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{block.caption}</p>
               </div>
             </div>
@@ -397,7 +397,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
               복사 후 {platformLabels[platform]} 열기
             </Button>
             {i === 0 && platform === "naver" && (
-              <p className="text-[11px] text-center mt-1 text-muted-foreground">📋 붙여넣기 → 사진 첨부 → 발행</p>
+              <p className="text-[11px] text-center mt-1 text-muted-foreground">붙여넣기 → 사진 첨부 → 발행</p>
             )}
           </div>
         ))}
@@ -429,7 +429,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
                 disabled={!canCreate}
                 style={canCreate ? { background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white", border: "none" } : {}}
                 onClick={() => {
-                  toast({ title: "🎬 이 글 기반으로 영상을 생성합니다" });
+                  toast({ title: "이 글 기반으로 영상을 생성합니다" });
                   onBack();
                   onNavigate?.("camera");
                 }}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   User, CreditCard, Ticket, Users, HelpCircle, MessageSquare, Bell,
-  ChevronRight, LogOut, BarChart3,
+  ChevronRight, LogOut, Hammer, Smile, Building2,
 } from "lucide-react";
 import { ProfileSettings } from "@/pages/settings/ProfileSettings";
 import { PricingPlan } from "@/pages/settings/PricingPlan";
@@ -15,10 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 
 type SettingsPage = "menu" | "profile" | "pricing" | "coupon" | "referral" | "faq" | "contact" | "announcements";
 
-const personas: { id: Persona; label: string }[] = [
-  { id: "장인형", label: "🔨 장인형" },
-  { id: "친근형", label: "😊 친근형" },
-  { id: "전문기업형", label: "🏢 전문기업형" },
+const personas: { id: Persona; label: string; icon: React.ElementType }[] = [
+  { id: "장인형", label: "장인형", icon: Hammer },
+  { id: "친근형", label: "친근형", icon: Smile },
+  { id: "전문기업형", label: "전문기업형", icon: Building2 },
 ];
 
 const myInfoItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
@@ -56,14 +56,14 @@ export function SettingsTab() {
   const renderGroup = (title: string, items: typeof myInfoItems) => (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-muted-foreground px-1">{title}</p>
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="glass-card overflow-hidden">
         {items.map((item, i) => {
           const Icon = item.icon;
           return (
             <button
               key={item.id}
               onClick={() => setPage(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-secondary ${
+              className={`w-full flex items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-white/[0.03] ${
                 i < items.length - 1 ? "border-b border-border" : ""
               }`}
             >
@@ -79,31 +79,38 @@ export function SettingsTab() {
 
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-      <h1 className="text-xl font-bold">⚙️ 설정</h1>
+      <div className="flex items-center gap-2">
+        <User className="w-5 h-5 text-primary" />
+        <h1 className="text-xl font-bold">설정</h1>
+      </div>
 
       {renderGroup("내 정보", myInfoItems)}
 
       {/* Default Persona */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground px-1">기본 페르소나</p>
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className="glass-card p-4">
           <div className="flex gap-2">
-            {personas.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => {
-                  setSelectedPersona(p.id);
-                  toast({ title: `✅ 기본 페르소나: ${p.label}` });
-                }}
-                className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedPersona === p.id
-                    ? "bg-primary/10 text-primary border-2 border-primary"
-                    : "bg-secondary text-muted-foreground border-2 border-transparent"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+            {personas.map((p) => {
+              const PIcon = p.icon;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setSelectedPersona(p.id);
+                    toast({ title: `기본 페르소나: ${p.label}` });
+                  }}
+                  className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all flex flex-col items-center gap-1 ${
+                    selectedPersona === p.id
+                      ? "bg-primary/10 text-primary border-2 border-primary"
+                      : "bg-secondary text-muted-foreground border-2 border-transparent"
+                  }`}
+                >
+                  <PIcon className="w-4 h-4" />
+                  {p.label}
+                </button>
+              );
+            })}
           </div>
           <p className="text-xs text-muted-foreground mt-2 text-center">촬영 탭에서 기본 선택됩니다</p>
         </div>

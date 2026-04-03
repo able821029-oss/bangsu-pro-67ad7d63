@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Camera, ImagePlus, X, Sparkles, MapPin, CalendarDays, CheckCircle2, Loader2, Film } from "lucide-react";
+import { Camera, ImagePlus, X, Sparkles, MapPin, CalendarDays, CheckCircle2, Loader2, Film, PenLine } from "lucide-react";
 import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { ShortsCreator } from "@/components/ShortsCreator";
 import { KeywordRecommender } from "@/components/KeywordRecommender";
@@ -13,9 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
 const personas: { id: Persona; label: string; desc: string }[] = [
-  { id: "장인형", label: "🔨 장인형", desc: "30년 경력의 장인 느낌" },
-  { id: "😊 친근형" as any, label: "😊 친근형", desc: "이웃집 아저씨같은 친근함" },
-  { id: "전문기업형", label: "🏢 전문기업형", desc: "체계적인 전문 기업 이미지" },
+  { id: "장인형", label: "장인형", desc: "30년 경력의 장인 느낌" },
+  { id: "친근형", label: "친근형", desc: "이웃집 아저씨같은 친근함" },
+  { id: "전문기업형", label: "전문기업형", desc: "체계적인 전문 기업 이미지" },
 ];
 
 type GeneratingStep = "analyzing" | "writing" | "done" | "error";
@@ -264,7 +264,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     return (
       <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold">📷 사진 + 현장 정보</h1>
+          <h1 className="text-xl font-bold flex items-center gap-2"><Camera className="w-5 h-5 text-primary" /> 사진 + 현장 정보</h1>
           <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">1 / 2</span>
         </div>
 
@@ -309,7 +309,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
               <MapPin className="w-3 h-3" /> 시공 위치
             </label>
             {gpsTimedOut && !location && (
-              <p className="text-xs text-yellow-500">⚠️ 위치 감지 실패 — 직접 입력해 주세요</p>
+              <p className="text-xs text-yellow-500">위치 감지 실패 — 직접 입력해 주세요</p>
             )}
             <div className="flex gap-2">
               <input
@@ -322,7 +322,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
                 onClick={handleRetryGps}
                 className="bg-primary/10 text-primary rounded-lg px-3 py-2 text-xs font-medium shrink-0"
               >
-                {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : "📍 자동"}
+                {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><MapPin className="w-3 h-3" /> 자동</>}
               </button>
             </div>
           </div>
@@ -338,7 +338,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         <KeywordRecommender
           location={location}
           onSelectKeyword={(kw) => {
-            toast({ title: `✅ "${kw}" 키워드가 반영됩니다` });
+            toast({ title: `"${kw}" 키워드가 반영됩니다` });
           }}
         />
 
@@ -364,7 +364,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
       <div className="flex items-center justify-between">
         <button onClick={() => setWizardStep(1)} className="text-sm text-primary font-medium">← 이전</button>
-        <h1 className="text-xl font-bold">✍️ 스타일 선택</h1>
+        <h1 className="text-xl font-bold flex items-center gap-2"><PenLine className="w-5 h-5 text-primary" /> 스타일 선택</h1>
         <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">2 / 2</span>
       </div>
 

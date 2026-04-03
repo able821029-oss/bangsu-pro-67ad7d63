@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Check } from "lucide-react";
 import { useAppStore } from "@/stores/appStore";
 import { Button } from "@/components/ui/button";
 import type { TabId } from "@/components/BottomNav";
@@ -31,7 +32,7 @@ export function PublishSchedule({ onNavigate }: { onNavigate: (tab: TabId) => vo
 
   return (
     <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-      <p className="text-sm font-semibold">📅 이번 주 발행 현황</p>
+      <p className="text-sm font-semibold">이번 주 발행 현황</p>
       <div className="flex justify-between gap-2">
         {weekStatus.map((day, i) => (
           <div key={i} className="flex flex-col items-center gap-1 flex-1">
@@ -45,7 +46,7 @@ export function PublishSchedule({ onNavigate }: { onNavigate: (tab: TabId) => vo
                   : "bg-secondary/50 border border-dashed border-border"
               }`}
             >
-              {day.published ? "✅" : day.isPast ? "⬜" : "⬜"}
+              {day.published ? <Check className="w-4 h-4 text-green-500" /> : null}
             </div>
           </div>
         ))}

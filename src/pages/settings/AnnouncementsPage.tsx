@@ -1,10 +1,10 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Bell } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const announcements = [
   {
     id: "0",
-    title: "SMS 앱 출시를 환영합니다 🎉",
+    title: "SMS 앱 출시를 환영합니다",
     date: "2026-04-03",
     content: "현장 사진 한 장으로 블로그 글 완성!\n\n버전 1.0 | 2026년 4월\n\nSMS(Self Marketing Service)는 방수공사 전문 사장님들을 위한 블로그 자동 글쓰기 앱입니다. 사진만 찍으면 AI가 전문적인 시공 블로그 글을 작성해 드립니다.",
   },
@@ -20,7 +20,7 @@ export function AnnouncementsPage({ onBack }: { onBack: () => void }) {
         <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-secondary">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-bold">📢 공지사항</h1>
+        <h1 className="text-xl font-bold flex items-center gap-2"><Bell className="w-5 h-5 text-primary" /> 공지사항</h1>
       </div>
 
       <div className="bg-card rounded-[--radius] border border-border overflow-hidden">
