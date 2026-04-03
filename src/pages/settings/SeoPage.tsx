@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, BarChart3, Loader2, Lightbulb, RefreshCw, CheckCircle2, AlertCircle, XCircle, Pin } from "lucide-react";
+import { ArrowLeft, BarChart3, Loader2, Lightbulb, RefreshCw, CheckCircle2, AlertCircle, XCircle, Pin, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAppStore } from "@/stores/appStore";
