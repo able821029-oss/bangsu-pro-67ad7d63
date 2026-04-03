@@ -52,7 +52,7 @@ function TestModeDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Wrench className="w-5 h-5" style={{ color: "#F97316" }} />
+            <Wrench className="w-5 h-5 text-warning" />
             테스트 모드
           </DialogTitle>
         </DialogHeader>

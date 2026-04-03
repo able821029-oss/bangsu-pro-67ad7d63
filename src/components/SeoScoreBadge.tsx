@@ -161,7 +161,7 @@ export function SeoScoreBadge({
                   </div>
                   <p className="text-xs text-muted-foreground">{item.detail}</p>
                   {item.status !== "good" && (
-                    <p className="text-xs text-primary">💡 {item.suggestion}</p>
+                    <p className="text-xs text-primary flex items-center gap-1"><Lightbulb className="w-3 h-3" /> {item.suggestion}</p>
                   )}
                 </div>
               ))}

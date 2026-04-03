@@ -152,7 +152,7 @@ export function SeoPage({ onBack }: { onBack: () => void }) {
 
       {/* SEO Tips */}
       <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-        <p className="text-sm font-semibold">📌 네이버 SEO 핵심 팁</p>
+        <p className="text-sm font-semibold flex items-center gap-1.5"><Pin className="w-4 h-4 text-primary" /> 네이버 SEO 핵심 팁</p>
         <div className="space-y-2">
           {seoTips.map((tip, i) => (
             <p key={i} className="text-xs text-muted-foreground">{tip}</p>
