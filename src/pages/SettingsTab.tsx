@@ -19,6 +19,7 @@ const myInfoItems: { id: SettingsPage; label: string; icon: React.ElementType }[
 ];
 
 const appSettingsItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
+  { id: "seo", label: "블로그 상위노출 관리", icon: BarChart3 },
   { id: "pricing", label: "요금제 확인", icon: CreditCard },
   { id: "coupon", label: "쿠폰·혜택", icon: Ticket },
   { id: "referral", label: "지인 소개", icon: Users },
