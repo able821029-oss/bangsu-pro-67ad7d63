@@ -138,7 +138,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
   };
 
   const handleRegenerate = () => {
-    toast({ title: "🔄 같은 설정으로 AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
+    toast({ title: "같은 설정으로 AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
   };
 
   const getClipboardText = (platform: Platform) => {
