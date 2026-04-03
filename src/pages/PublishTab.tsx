@@ -35,7 +35,7 @@ export function PublishTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId
     let text = post.title + "\n\n";
     post.blocks.forEach((block) => {
       if (block.type === "text") text += block.content + "\n\n";
-      else text += `[📸 ${block.caption || "사진"}]\n\n`;
+      else text += `[${block.caption || "사진"}]\n\n`;
     });
     text += post.hashtags.map((t) => `#${t}`).join(" ");
     return text;
