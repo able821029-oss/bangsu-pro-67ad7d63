@@ -208,6 +208,67 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
         />
       </div>
 
+      {/* Per-Post SEO Scores */}
+      <div className="bg-card rounded-[--radius] border border-border overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <FileText className="w-4 h-4 text-primary" /> 글별 SEO 품질 체크
+          </p>
+          <Button size="sm" variant="ghost" onClick={handleAnalyzeAllPosts} disabled={isAnalyzingPosts} className="text-xs gap-1 h-7">
+            {isAnalyzingPosts ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            {postScores.length > 0 ? "재분석" : "자동 분석"}
+          </Button>
+        </div>
+        {isAnalyzingPosts && postScores.length === 0 && (
+          <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">글별 SEO 분석 중...</span>
+          </div>
+        )}
+        {postScores.length > 0 && (
+          <div className="divide-y divide-border">
+            {postScores.map((ps) => {
+              const post = posts.find(p => p.id === ps.postId);
+              if (!post) return null;
+              return (
+                <div key={ps.postId} className="px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium truncate flex-1 mr-2">{post.title}</p>
+                    <Badge className={`text-xs font-bold border shrink-0 ${
+                      ps.totalScore >= 80 ? "bg-green-500/10 text-green-600 border-green-500/30" :
+                      ps.totalScore >= 60 ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" :
+                      "bg-red-500/10 text-red-600 border-red-500/30"
+                    }`}>
+                      {ps.totalScore}점 {ps.totalScore >= 80 ? "🟢" : ps.totalScore >= 60 ? "🟡" : "🔴"}
+                    </Badge>
+                  </div>
+                  {ps.checklist.length > 0 && (
+                    <div className="space-y-1">
+                      {ps.checklist.filter(c => !c.passed).slice(0, 2).map((c, i) => (
+                        <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />
+                          <span>{c.label} ({c.current} → {c.recommend})</span>
+                        </div>
+                      ))}
+                      {ps.checklist.every(c => c.passed) && (
+                        <div className="flex items-center gap-1.5 text-xs text-green-600">
+                          <Check className="w-3 h-3" /> 모든 항목 통과!
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {!isAnalyzingPosts && postScores.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            [자동 분석] 버튼을 눌러 각 글의 SEO 품질을 확인하세요
+          </p>
+        )}
+      </div>
+
       {/* Publish Schedule */}
       <PublishSchedule onNavigate={onNavigate} />
 
