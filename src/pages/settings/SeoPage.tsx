@@ -10,7 +10,7 @@ const statusEmoji: Record<string, string> = { good: "🟢", warning: "🟡", bad
 const statusLabel: Record<string, string> = { good: "좋음", warning: "보통", bad: "개선 필요" };
 
 const seoTips = [
-  "💡 제목은 키워드를 앞에 — "강남구 옥상방수" 로 시작",
+  "💡 제목은 키워드를 앞에 — '강남구 옥상방수'로 시작",
   "💡 글 길이 1,500자 이상 유지",
   "💡 현장 사진 최소 6장 포함",
   "💡 주 2~3회 꾸준히 발행",
