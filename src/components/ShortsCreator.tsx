@@ -326,15 +326,6 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
 
       setStep("done");
       toast({ title: "✅ 영상이 완성되었습니다!" });
-              utterance.onend = () => resolve();
-              utterance.onerror = () => resolve();
-              const timeout = setTimeout(() => resolve(), 15000);
-              utterance.onend = () => { clearTimeout(timeout); resolve(); };
-              speechSynthesis.speak(utterance);
-            });
-          }
-        }
-      }
 
     } catch (err: any) {
       console.error("Shorts generation error:", err);
