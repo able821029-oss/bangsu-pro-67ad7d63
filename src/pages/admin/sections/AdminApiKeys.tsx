@@ -74,12 +74,12 @@ const API_KEYS: ApiKeyConfig[] = [
 function getStatusIndicator(color: string, value: string) {
   // Determine actual status based on value
   if (!value || value === "") {
-    return { dot: "🔴", label: "미설정", desc: "해당 기능 비활성" };
+    return { dot: "●", dotColor: "text-red-500", label: "미설정", desc: "해당 기능 비활성" };
   }
   if (value.startsWith("test_") || value.includes("placeholder") || value.includes("sandbox")) {
-    return { dot: "🟡", label: "테스트", desc: "테스트 모드 작동" };
+    return { dot: "●", dotColor: "text-yellow-500", label: "테스트", desc: "테스트 모드 작동" };
   }
-  return { dot: "🟢", label: "운영", desc: "실제 서비스 작동" };
+  return { dot: "●", dotColor: "text-green-500", label: "운영", desc: "실제 서비스 작동" };
 }
 
 export function AdminApiKeys() {
