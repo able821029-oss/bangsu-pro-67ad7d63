@@ -15,6 +15,7 @@ import {
   Check,
   AlertTriangle,
   TrendingUp,
+  Lock,
 } from "lucide-react";
 import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ export function PostDetailPage({
   onNavigate?: (tab: TabId) => void;
 }) {
   const { updatePost, updatePostStatus } = useAppStore();
+  const subscription = useAppStore((s) => s.subscription);
   const { toast } = useToast();
   const [title, setTitle] = useState(post.title);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -58,10 +60,13 @@ export function PostDetailPage({
   const [editingHashtags, setEditingHashtags] = useState(false);
   const [newTagInput, setNewTagInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false); // ✅ 추가
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(post.status);
   const [seoResult, setSeoResult] = useState<any>(null);
   const [seoLoading, setSeoLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const isPremium = subscription.plan === "프로" || subscription.plan === "무제한";
 
   useEffect(() => {
     if (blocks.length > 0 && blocks.some((b) => b.type === "text" && b.content)) {
@@ -73,18 +78,9 @@ export function PostDetailPage({
     setSeoLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("seo-analyze", {
-        body: {
-          mode: "seo_score",
-          title,
-          blocks,
-          hashtags,
-          location: "",
-          workType: post.workType,
-        },
+        body: { mode: "seo_score", title, blocks, hashtags, location: "", workType: post.workType },
       });
-      if (!error && !data?.error) {
-        setSeoResult(data);
-      }
+      if (!error && !data?.error) setSeoResult(data);
     } catch {
     } finally {
       setSeoLoading(false);
@@ -148,7 +144,6 @@ export function PostDetailPage({
     toast({ title: "해시태그가 저장되었습니다." });
   };
 
-  // ✅ FIX: 임시저장 — status 변경 없이 내용만 저장
   const handleTempSave = async () => {
     updatePost(post.id, { title, blocks, hashtags });
     await saveToDb({ title, blocks, hashtags });
@@ -162,7 +157,6 @@ export function PostDetailPage({
     toast({ title: "게시완료로 변경되었습니다" });
   };
 
-  // ✅ FIX: AI 재생성 — 확인 모달 + 실제 API 호출
   const handleRegenerate = async () => {
     if (currentStatus === "게시완료") {
       const confirmed = window.confirm("재생성하면 현재 본문이 교체됩니다.\n계속하시겠습니까?");
@@ -204,35 +198,44 @@ export function PostDetailPage({
         .filter((b) => b.type === "text")
         .map((b) => b.content)
         .join(" ");
-      const caption = textContent.slice(0, 150);
-      const tags = hashtags
-        .slice(0, 20)
-        .map((t) => `#${t}`)
-        .join(" ");
-      return caption + "\n\n" + tags;
+      return (
+        textContent.slice(0, 150) +
+        "\n\n" +
+        hashtags
+          .slice(0, 20)
+          .map((t) => `#${t}`)
+          .join(" ")
+      );
     }
     if (platform === "tiktok") {
-      const textContent = blocks
+      const lines = blocks
         .filter((b) => b.type === "text")
         .map((b) => b.content)
-        .join("\n");
-      const lines = textContent.split(/\n+/).filter(Boolean).slice(0, 3);
-      const tags = hashtags
-        .slice(0, 5)
-        .map((t) => `#${t}`)
-        .join(" ");
-      return lines.join("\n") + "\n\n" + tags;
+        .join("\n")
+        .split(/\n+/)
+        .filter(Boolean)
+        .slice(0, 3);
+      return (
+        lines.join("\n") +
+        "\n\n" +
+        hashtags
+          .slice(0, 5)
+          .map((t) => `#${t}`)
+          .join(" ")
+      );
     }
     let text = title + "\n\n";
     blocks.forEach((block, idx) => {
       if (block.type === "text") text += block.content + "\n\n";
       else text += `[사진${idx + 1} 여기에 첨부]\n\n`;
     });
-    text += hashtags
-      .slice(0, 10)
-      .map((t) => `#${t}`)
-      .join(" ");
-    return text;
+    return (
+      text +
+      hashtags
+        .slice(0, 10)
+        .map((t) => `#${t}`)
+        .join(" ")
+    );
   };
 
   const deeplinks: Record<Platform, string> = {
@@ -281,7 +284,7 @@ export function PostDetailPage({
         <Badge variant={statusBadgeVariant[currentStatus] || "default"}>{currentStatus}</Badge>
       </div>
 
-      {/* Title */}
+      {/* 제목 */}
       <div className="bg-card rounded-[--radius] border border-border p-4">
         <label className="text-xs text-muted-foreground mb-1 block">제목</label>
         {isEditingTitle ? (
@@ -316,7 +319,7 @@ export function PostDetailPage({
         )}
       </div>
 
-      {/* Photos */}
+      {/* 사진 */}
       {post.photos.length > 0 && (
         <div>
           <p className="text-sm font-semibold mb-2">첨부 사진 ({post.photos.length}장)</p>
@@ -333,7 +336,7 @@ export function PostDetailPage({
         </div>
       )}
 
-      {/* Content Blocks */}
+      {/* 본문 */}
       <div className="space-y-3">
         <p className="text-sm font-semibold">본문</p>
         {blocks.map((block, idx) =>
@@ -381,8 +384,6 @@ export function PostDetailPage({
             </div>
           ),
         )}
-
-        {/* ✅ FIX: 본문 없음 — 안내 + 재생성 버튼 */}
         {blocks.length === 0 && (
           <div className="text-center py-8 space-y-3 bg-card rounded-[--radius] border border-border">
             <p className="text-sm text-muted-foreground">아직 본문이 생성되지 않았습니다</p>
@@ -398,7 +399,7 @@ export function PostDetailPage({
         )}
       </div>
 
-      {/* Hashtags */}
+      {/* 해시태그 */}
       <div className="bg-card rounded-[--radius] border border-border p-4">
         <div className="flex items-center gap-2 mb-2">
           <Hash className="w-4 h-4 text-primary" />
@@ -455,7 +456,7 @@ export function PostDetailPage({
         )}
       </div>
 
-      {/* SEO Score */}
+      {/* SEO 점수 */}
       {(seoResult || seoLoading) && (
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <div className="flex items-center gap-2">
@@ -520,7 +521,7 @@ export function PostDetailPage({
         <p>플랫폼: {post.platforms.map((p) => platformLabels[p]).join(", ")}</p>
       </div>
 
-      {/* Action Buttons */}
+      {/* 액션 버튼 */}
       <div className="space-y-3">
         {orderedPlatforms.map((platform, i) => (
           <div key={platform}>
@@ -551,10 +552,31 @@ export function PostDetailPage({
           </Button>
         )}
 
+        {/* 쇼츠 영상 — 플랜 잠금 + 루프 차단 */}
         {(() => {
           const hasPhotos = post.photos.length >= 2;
           const hasText = blocks.length > 0 && blocks.some((b) => b.type === "text" && b.content);
           const canCreate = hasPhotos && hasText;
+
+          if (!isPremium) {
+            return (
+              <div>
+                <Button
+                  variant="secondary"
+                  className="w-full gap-2 opacity-70"
+                  onClick={() => setShowUpgradeModal(true)}
+                >
+                  <Lock className="w-4 h-4" />
+                  쇼츠 영상 만들기
+                  <span className="ml-auto text-xs bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full">프로+</span>
+                </Button>
+                <p className="text-xs text-muted-foreground text-center mt-1.5">
+                  프로 · 무제한 플랜에서 사용 가능합니다
+                </p>
+              </div>
+            );
+          }
+
           const msg =
             !hasPhotos && !hasText
               ? "사진 2장 이상 + AI 글쓰기 완료 시 활성화됩니다"
@@ -563,6 +585,7 @@ export function PostDetailPage({
                 : !hasText
                   ? "AI 글쓰기를 먼저 완료해 주세요"
                   : null;
+
           return (
             <div>
               <Button
@@ -579,27 +602,84 @@ export function PostDetailPage({
                     : {}
                 }
                 onClick={() => {
-                  toast({ title: "이 글 기반으로 영상을 생성합니다" });
-                  onBack();
-                  onNavigate?.("camera");
+                  toast({
+                    title: "쇼츠 영상 기능 준비 중",
+                    description: "곧 출시됩니다. 조금만 기다려 주세요!",
+                    duration: 3000,
+                  });
                 }}
               >
                 <Film className="w-5 h-5" />
                 쇼츠 영상 만들기
               </Button>
-              {/* ✅ FIX: 비활성화 안내를 버튼 아래 깔끔하게 */}
               {msg && <p className="text-xs text-muted-foreground text-center mt-1.5">{msg}</p>}
             </div>
           );
         })()}
 
-        {/* ✅ FIX: AI 재생성 — 로딩 스피너 포함 */}
+        {/* 업그레이드 모달 */}
+        {showUpgradeModal && (
+          <div
+            className="fixed inset-0 z-[70] flex items-end justify-center"
+            onClick={() => setShowUpgradeModal(false)}
+          >
+            <div className="absolute inset-0 bg-black/50" />
+            <div
+              className="relative w-full max-w-lg bg-card rounded-t-2xl p-5 pb-8 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto" />
+              <div className="text-center space-y-2">
+                <div
+                  className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)" }}
+                >
+                  <Film className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-lg font-bold">쇼츠 영상 만들기</h3>
+                <p className="text-sm text-muted-foreground">
+                  현장 사진으로 쇼츠 영상을 자동 생성합니다.
+                  <br />
+                  <span className="text-primary font-semibold">프로 · 무제한 플랜</span>에서 사용 가능합니다.
+                </p>
+              </div>
+              <div className="bg-muted/50 rounded-xl p-3 space-y-1.5 text-sm">
+                <p className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" /> AI가 사진 → 쇼츠 영상 자동 생성
+                </p>
+                <p className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" /> 틱톡 · 인스타 릴스 최적화
+                </p>
+                <p className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" /> 자막 + 배경음악 자동 삽입
+                </p>
+              </div>
+              <Button
+                className="w-full"
+                style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)", color: "white" }}
+                onClick={() => {
+                  setShowUpgradeModal(false);
+                  onNavigate?.("settings");
+                }}
+              >
+                플랜 업그레이드하기
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full text-muted-foreground"
+                onClick={() => setShowUpgradeModal(false)}
+              >
+                닫기
+              </Button>
+            </div>
+          </div>
+        )}
+
         <Button variant="outline" className="w-full gap-2" onClick={handleRegenerate} disabled={isRegenerating}>
           <RefreshCw className={`w-4 h-4 ${isRegenerating ? "animate-spin" : ""}`} />
           {isRegenerating ? "재생성 중..." : "AI 재생성"}
         </Button>
 
-        {/* ✅ FIX: 임시저장 — status 변경 없음 */}
         <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" onClick={handleTempSave}>
           <Save className="w-4 h-4" />
           임시저장
