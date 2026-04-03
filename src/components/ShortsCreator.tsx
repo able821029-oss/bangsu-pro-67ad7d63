@@ -87,7 +87,7 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
             {plan === "프로" && " 비즈니스 플랜으로 업그레이드하면 월 50개까지 가능해요."}
           </p>
           {plan !== "비즈니스" && plan !== "무제한" && (
-            <Button size="sm" variant="outline" className="text-xs" style={{ borderColor: "#237FFF", color: "#237FFF" }}>
+            <Button size="sm" variant="outline" className="text-xs border-primary text-primary">
               플랜 업그레이드
             </Button>
           )}
