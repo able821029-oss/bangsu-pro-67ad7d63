@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film } from "lucide-react";
+import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, BlogPost, Platform, ContentBlock } from "@/stores/appStore";
