@@ -35,7 +35,14 @@ const appSettingsItems: { id: SettingsPage; label: string; icon: React.ElementTy
 ];
 
 export function SettingsTab() {
-  const [page, setPage] = useState<SettingsPage>("menu");
+  const [page, setPage] = useState<SettingsPage>(() => {
+    const pending = sessionStorage.getItem("sms-open-settings-page") as SettingsPage | null;
+    if (pending) {
+      sessionStorage.removeItem("sms-open-settings-page");
+      return pending;
+    }
+    return "menu";
+  });
   const { selectedPersona, setSelectedPersona } = useAppStore();
   const { toast } = useToast();
 

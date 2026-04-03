@@ -20,12 +20,13 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
         style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--nav-background)))" }}
       />
       <div className="bg-[hsl(var(--nav-background))] border-t border-border">
-        <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
+        {/* 5칸 균등 grid */}
+        <div className="grid grid-cols-5 items-end h-16 max-w-lg mx-auto px-2">
 
           {/* 홈 */}
           <button
             onClick={() => onTabChange("home")}
-            className={cn("flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
+            className={cn("flex flex-col items-center justify-end gap-1 pb-2 h-full transition-colors",
               activeTab === "home" ? "text-[#237FFF]" : "text-[#6B7E99]")}
           >
             <Home className={cn("w-5 h-5", activeTab === "home" && "drop-shadow-[0_0_8px_#237FFF]")} />
@@ -35,21 +36,21 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           {/* 글작성 */}
           <button
             onClick={() => onTabChange("camera")}
-            className={cn("flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
+            className={cn("flex flex-col items-center justify-end gap-1 pb-2 h-full transition-colors",
               activeTab === "camera" ? "text-[#237FFF]" : "text-[#6B7E99]")}
           >
             <PenLine className={cn("w-5 h-5", activeTab === "camera" && "drop-shadow-[0_0_8px_#237FFF]")} />
             <span className="text-[10px] font-medium">글작성</span>
           </button>
 
-          {/* 발행현황 — 가운데 원형 버튼 */}
+          {/* 발행현황 — 가운데 원형 (살짝 위로) */}
           <button
             onClick={() => onTabChange("publish")}
-            className="relative -mt-6 flex flex-col items-center"
+            className="flex flex-col items-center justify-end pb-1 h-full"
           >
             <div className={cn(
-              "w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all bg-brand-gradient",
-              activeTab === "publish" ? "shadow-primary/40" : "shadow-primary/20 opacity-90"
+              "w-13 h-13 w-[52px] h-[52px] -mt-5 rounded-full flex items-center justify-center shadow-lg transition-all bg-brand-gradient",
+              activeTab === "publish" ? "shadow-primary/40 scale-105" : "shadow-primary/20"
             )}>
               <Upload className="w-6 h-6 text-white" />
             </div>
@@ -59,11 +60,11 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             </span>
           </button>
 
-          {/* 쇼츠 — 프리미엄 잠금 */}
+          {/* 쇼츠 */}
           <button
             onClick={() => onTabChange("shorts")}
-            className={cn("flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors relative",
-              activeTab === "shorts" ? "text-[#BA7517]" : "text-[#6B7E99]")}
+            className={cn("flex flex-col items-center justify-end gap-1 pb-2 h-full transition-colors relative",
+              activeTab === "shorts" ? "text-amber-500" : "text-[#6B7E99]")}
           >
             <div className="relative">
               <Film className={cn("w-5 h-5", activeTab === "shorts" && "drop-shadow-[0_0_8px_#EF9F27]")} />
@@ -71,7 +72,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 <Lock className="w-2.5 h-2.5 absolute -top-1 -right-1 text-amber-500" />
               )}
             </div>
-            <span className="text-[10px] font-medium">쇼츠</span>
+            <span className="text-[10px] font-medium leading-none">쇼츠</span>
             {!isPremium && (
               <span className="text-[8px] text-amber-500 font-semibold leading-none">프로+</span>
             )}
@@ -80,7 +81,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           {/* 설정 */}
           <button
             onClick={() => onTabChange("settings")}
-            className={cn("flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors",
+            className={cn("flex flex-col items-center justify-end gap-1 pb-2 h-full transition-colors",
               activeTab === "settings" ? "text-[#237FFF]" : "text-[#6B7E99]")}
           >
             <Settings className={cn("w-5 h-5", activeTab === "settings" && "drop-shadow-[0_0_8px_#237FFF]")} />

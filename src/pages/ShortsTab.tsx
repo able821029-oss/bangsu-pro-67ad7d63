@@ -50,7 +50,10 @@ export function ShortsTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) 
       <Button
         className="w-full h-12 text-base font-bold"
         style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)", color: "white" }}
-        onClick={() => onNavigate("settings")}
+        onClick={() => {
+          sessionStorage.setItem("sms-open-settings-page", "pricing");
+          onNavigate("settings");
+        }}
       >
         프로 플랜 업그레이드
       </Button>
