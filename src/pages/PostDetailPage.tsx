@@ -88,7 +88,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     setIsEditingTitle(false);
     updatePost(post.id, { title });
     await saveToDb({ title });
-    toast({ title: "✅ 제목이 수정되었습니다." });
+    toast({ title: "제목이 수정되었습니다." });
   };
 
   const handleSaveEdit = async () => {
