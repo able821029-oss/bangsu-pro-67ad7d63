@@ -2,6 +2,12 @@ import { ArrowLeft } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const announcements = [
+  {
+    id: "0",
+    title: "SMS 앱 출시를 환영합니다 🎉",
+    date: "2026-04-03",
+    content: "현장 사진 한 장으로 블로그 글 완성!\n\n버전 1.0 | 2026년 4월\n\nSMS(Self Marketing Service)는 방수공사 전문 사장님들을 위한 블로그 자동 글쓰기 앱입니다. 사진만 찍으면 AI가 전문적인 시공 블로그 글을 작성해 드립니다.",
+  },
   { id: "1", title: "SMS v2.0 업데이트 안내", date: "2026-04-01", content: "인스타그램·틱톡 지원, 페르소나 선택 기능이 추가되었습니다." },
   { id: "2", title: "봄맞이 프로모션 안내", date: "2026-03-15", content: "신규 가입 시 베이직 플랜 첫 달 50% 할인! 쿠폰 코드: SPRING50" },
   { id: "3", title: "시스템 점검 안내", date: "2026-03-01", content: "3월 5일 02:00~06:00 시스템 점검이 예정되어 있습니다." },
@@ -18,7 +24,7 @@ export function AnnouncementsPage({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="bg-card rounded-[--radius] border border-border overflow-hidden">
-        <Accordion type="single" collapsible>
+        <Accordion type="single" collapsible defaultValue="0">
           {announcements.map((ann) => (
             <AccordionItem key={ann.id} value={ann.id} className="border-border">
               <AccordionTrigger className="px-4 text-sm text-left hover:no-underline">
@@ -27,7 +33,7 @@ export function AnnouncementsPage({ onBack }: { onBack: () => void }) {
                   <p className="text-xs text-muted-foreground mt-0.5">{ann.date}</p>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="px-4 text-sm text-muted-foreground">
+              <AccordionContent className="px-4 text-sm text-muted-foreground whitespace-pre-wrap">
                 {ann.content}
               </AccordionContent>
             </AccordionItem>

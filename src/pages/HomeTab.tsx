@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Camera, TrendingUp, Award, Upload, PenTool, ExternalLink } from "lucide-react";
+import { Camera, TrendingUp, Award, PenTool, ExternalLink } from "lucide-react";
 import { PublishSchedule } from "@/components/PublishSchedule";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,11 +7,11 @@ import { Progress } from "@/components/ui/progress";
 import { useAppStore, PostStatus, BlogPost } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 
-const statusColor: Record<PostStatus, "success" | "warning" | "info" | "default"> = {
-  "게시완료": "success",
+const statusBadgeVariant: Record<PostStatus, "default" | "info" | "success"> = {
+  "작성중": "default",
+  "AI생성중": "default",
   "완료": "info",
-  "작성중": "warning",
-  "AI생성중": "warning",
+  "게시완료": "success",
 };
 
 const medalInfo: Record<number, { emoji: string; label: string; reward: string }> = {
@@ -58,6 +58,9 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
 
   const currentTierLabel = tier >= 6 ? "골드" : tier >= 3 ? "실버" : tier >= 1 ? "브론즈" : "";
 
+  // Check if any SNS is connected
+  const hasSnsConnection = settings.naverConnected || settings.instagramConnected || settings.tiktokConnected;
+
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
       {/* Header */}
@@ -82,7 +85,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         </div>
       </div>
 
-      {/* ★ Quick Start — Large CTA */}
+      {/* Quick Start */}
       <button
         onClick={() => onNavigate("camera")}
         className="w-full rounded-2xl px-6 py-5 text-white text-lg font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all"
@@ -169,13 +172,21 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
           </div>
           <div className="text-center">
             <ExternalLink className="w-4 h-4 text-[#03C75A] mx-auto mb-1" />
-            <p className="text-2xl font-bold">0</p>
-            <button
-              onClick={() => { window.location.href = "naver://blog"; }}
-              className="text-xs text-[#03C75A] font-semibold mt-0.5"
-            >
-              네이버에서 확인 →
-            </button>
+            {hasSnsConnection ? (
+              <>
+                <p className="text-2xl font-bold">0</p>
+                <button
+                  onClick={() => { window.location.href = "naver://blog"; }}
+                  className="text-xs text-[#03C75A] font-semibold mt-0.5"
+                >
+                  네이버에서 확인 →
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground mt-2">연동 후<br />확인 가능</p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -183,7 +194,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
       {/* Publish Schedule */}
       <PublishSchedule onNavigate={onNavigate} />
 
-      {/* Recent Posts — tap goes directly to PostDetail */}
+      {/* Recent Posts */}
       <div>
         <h2 className="text-lg font-bold mb-3">최근 작성글</h2>
         <div className="space-y-3">
@@ -203,7 +214,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
                 <p className="font-semibold text-sm truncate">{post.title}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{post.createdAt}</p>
               </div>
-              <Badge variant={statusColor[post.status]}>{post.status}</Badge>
+              <Badge variant={statusBadgeVariant[post.status]}>{post.status}</Badge>
             </button>
           ))}
         </div>
