@@ -87,7 +87,7 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
             {plan === "프로" && " 비즈니스 플랜으로 업그레이드하면 월 50개까지 가능해요."}
           </p>
           {plan !== "비즈니스" && plan !== "무제한" && (
-            <Button size="sm" variant="outline" className="text-xs" style={{ borderColor: "#237FFF", color: "#237FFF" }}>
+            <Button size="sm" variant="outline" className="text-xs border-primary text-primary">
               플랜 업그레이드
             </Button>
           )}
@@ -115,7 +115,7 @@ function VoiceCard({
       }}
     >
       {selected && (
-        <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "#237FFF" }}>
+        <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-primary">
           <Check className="w-3 h-3 text-white" />
         </div>
       )}
@@ -573,7 +573,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           <Button className="w-full" onClick={handleDownload} disabled={!videoUrl}>
             <Download className="w-5 h-5" /> 갤러리에 저장
           </Button>
-          <Button variant="outline" className="w-full" style={{ borderColor: "#000", color: "#000" }}
+          <Button variant="outline" className="w-full"
             onClick={() => handleDeeplink("tiktok")}>
             틱톡 앱 열기
           </Button>

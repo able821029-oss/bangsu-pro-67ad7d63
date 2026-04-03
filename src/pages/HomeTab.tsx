@@ -166,7 +166,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         <div className="glass-card p-4 text-center">
           <p className="text-[28px] font-bold text-foreground">3</p>
           <p className="text-xs text-muted-foreground">영상 제작</p>
-          <p className="text-xs text-[#888] mt-1">- 이번달</p>
+          <p className="text-xs text-muted-foreground mt-1">- 이번달</p>
         </div>
         <div className="glass-card p-4 text-center">
           <p className="text-[28px] font-bold text-foreground">{subscription.consecutiveMonths}개월</p>
@@ -180,15 +180,16 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         <p className="text-sm font-semibold text-foreground">최근 4주 발행 현황</p>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={weeklyData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#888" }} />
-            <YAxis tick={{ fontSize: 11, fill: "#888" }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="week" tick={{ fontSize: 11, fill: "hsl(215 16% 47%)" }} />
+            <YAxis tick={{ fontSize: 11, fill: "hsl(215 16% 47%)" }} />
             <Tooltip
               contentStyle={{
-                background: "#0d1f3c",
-                border: "1px solid #237FFF",
+                background: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: 8,
                 fontSize: 12,
+                color: "hsl(var(--foreground))",
               }}
             />
             <Bar dataKey="count" fill="#237FFF" radius={[4, 4, 0, 0]} />
@@ -235,7 +236,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
             <button
               key={post.id}
               onClick={() => onViewPost(post)}
-              className="w-full flex items-center gap-3 glass-card p-3 text-left transition-colors hover:bg-white/[0.06]"
+              className="w-full flex items-center gap-3 glass-card p-3 text-left transition-colors hover:bg-secondary/50"
             >
               <div className="w-2 h-2 rounded-full shrink-0" style={{
                 backgroundColor: post.status === "게시완료" ? "#22C55E" : post.status === "완료" ? "#237FFF" : "#888",

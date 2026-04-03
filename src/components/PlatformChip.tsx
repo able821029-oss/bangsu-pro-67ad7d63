@@ -75,9 +75,9 @@ export function PlatformChip({ platform, selected, onClick }: PlatformChipProps)
 
   const style: React.CSSProperties = selected
     ? isInsta
-      ? { background: "white", border: "2px solid #E1306C", color: "#E1306C" }
+      ? { background: "hsl(var(--card))", border: "2px solid #E1306C", color: "#E1306C" }
       : { background: config.selectedBg, border: `2px solid ${config.selectedBorder}`, color: "white" }
-    : { background: "white", border: "1.5px solid #E5E7EB", color: "#1F2937" };
+    : { background: "hsl(var(--card))", border: "1.5px solid hsl(var(--border))", color: "hsl(var(--foreground))" };
 
   return (
     <button

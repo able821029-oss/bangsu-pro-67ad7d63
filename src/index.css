@@ -88,14 +88,14 @@
 
 @layer components {
   .glass-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     border-radius: 12px;
-    backdrop-filter: blur(8px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
   .chart-card {
-    background: rgba(35, 127, 255, 0.03);
-    border: 1px solid rgba(35, 127, 255, 0.15);
+    background: hsl(215 100% 50% / 0.04);
+    border: 1px solid hsl(215 100% 50% / 0.12);
     border-radius: 12px;
   }
 }
