@@ -412,15 +412,35 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
           </Button>
         )}
 
-        {/* Shorts */}
-        <Button variant="outline" className="w-full gap-2" onClick={() => {
-          toast({ title: "🎬 이 글 기반으로 영상을 생성합니다" });
-          onBack();
-          onNavigate?.("camera");
-        }}>
-          <Film className="w-5 h-5" />
-          쇼츠 영상 만들기
-        </Button>
+        {/* Shorts — only enabled if photos ≥2 AND text exists */}
+        {(() => {
+          const hasPhotos = post.photos.length >= 2;
+          const hasText = blocks.length > 0 && blocks.some(b => b.type === "text" && b.content);
+          const canCreate = hasPhotos && hasText;
+          const msg = !hasPhotos && !hasText
+            ? "사진과 글이 모두 필요합니다"
+            : !hasPhotos ? "사진을 2장 이상 추가해 주세요"
+            : !hasText ? "AI 글쓰기를 먼저 완료해 주세요" : null;
+          return (
+            <div>
+              <Button
+                variant={canCreate ? "outline" : "secondary"}
+                className="w-full gap-2"
+                disabled={!canCreate}
+                style={canCreate ? { background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white", border: "none" } : {}}
+                onClick={() => {
+                  toast({ title: "🎬 이 글 기반으로 영상을 생성합니다" });
+                  onBack();
+                  onNavigate?.("camera");
+                }}
+              >
+                <Film className="w-5 h-5" />
+                쇼츠 영상 만들기
+              </Button>
+              {msg && <p className="text-xs text-muted-foreground text-center mt-1">{msg}</p>}
+            </div>
+          );
+        })()}
 
         {/* Regenerate */}
         <Button variant="outline" className="w-full gap-2" onClick={handleRegenerate}>
