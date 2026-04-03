@@ -115,7 +115,7 @@ function VoiceCard({
       }}
     >
       {selected && (
-        <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "#237FFF" }}>
+        <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-primary">
           <Check className="w-3 h-3 text-white" />
         </div>
       )}
