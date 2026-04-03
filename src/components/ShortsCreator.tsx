@@ -154,9 +154,9 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [pendingNarration, setPendingNarration] = useState<{ texts: string[]; voiceConfig: VoiceConfig } | null>(null);
 
-  // Play TTS only when step transitions to "done"
+  // Play TTS only after the result screen is visible
   useEffect(() => {
-    if (step !== "done" || !pendingNarration) return;
+    if (step !== "done" || !videoUrl || !pendingNarration) return;
     const { texts, voiceConfig: vc } = pendingNarration;
     setPendingNarration(null);
 
@@ -165,7 +165,10 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       for (const text of texts) {
         if (cancelled || !text) continue;
         await new Promise<void>((resolve) => {
-          if (!window.speechSynthesis) { resolve(); return; }
+          if (!window.speechSynthesis) {
+            resolve();
+            return;
+          }
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = vc.lang;
           utterance.pitch = vc.pitch;
@@ -184,8 +187,12 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         });
       }
     })();
-    return () => { cancelled = true; speechSynthesis.cancel(); };
-  }, [step, pendingNarration]);
+
+    return () => {
+      cancelled = true;
+      if (window.speechSynthesis) speechSynthesis.cancel();
+    };
+  }, [step, videoUrl, pendingNarration]);
 
   const videoLimit = PLAN_LIMITS[subscription.plan] || 5;
   const [videoUsed] = useState(2);
