@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Camera, TrendingUp, Award, Upload, PenTool, ExternalLink } from "lucide-react";
+import { PublishSchedule } from "@/components/PublishSchedule";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
