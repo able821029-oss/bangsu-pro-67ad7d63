@@ -394,7 +394,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     return (
       <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold">🎬 쇼츠 영상 만들기</h1>
+          <h1 className="text-xl font-bold flex items-center gap-2"><Film className="w-5 h-5 text-primary" /> 쇼츠 영상 만들기</h1>
           <button onClick={onClose}><X className="w-6 h-6 text-muted-foreground" /></button>
         </div>
 
