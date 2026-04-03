@@ -349,12 +349,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         <Button variant="hero" size="xl" className="w-full" onClick={handleNext} disabled={photos.length === 0}>
           다음 →
         </Button>
-
-        {/* Shorts */}
-        <Button variant="outline" size="xl" className="w-full" onClick={() => setShowShorts(true)}>
-          <Film className="w-6 h-6" />
-          쇼츠 영상 만들기
-        </Button>
       </div>
     );
   }
