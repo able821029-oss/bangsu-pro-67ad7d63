@@ -134,7 +134,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     updatePostStatus(post.id, "게시완료");
     setCurrentStatus("게시완료");
     await saveToDb({ status: "게시완료" });
-    toast({ title: "✅ 게시완료로 변경되었습니다" });
+    toast({ title: "게시완료로 변경되었습니다" });
   };
 
   const handleRegenerate = () => {
