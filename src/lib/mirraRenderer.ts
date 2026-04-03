@@ -381,12 +381,13 @@ export async function renderMirraVideo(
     }
 
     // Web Speech API narration (browser TTS path)
-    if (!narrationBuffer && narrationEnabled && voiceConfig && scene.narration) {
-      // Fire and forget — speech plays in background while frames render
-      speakNarration(scene.narration, voiceConfig);
-      // Extend scene to give time for speech (~5 chars/sec for Korean)
+    // Delay speech until text appears on screen (subtitle starts at ~35% of scene)
+    const shouldSpeak = !narrationBuffer && narrationEnabled && voiceConfig && scene.narration;
+    let speechStartFrame = 0;
+    if (shouldSpeak) {
+      speechStartFrame = Math.floor(totalFrames * 0.3);
       const estimatedSpeechFrames = Math.ceil((scene.narration.length / 5) * FPS) + 15;
-      totalFrames = Math.max(totalFrames, estimatedSpeechFrames);
+      totalFrames = Math.max(totalFrames, speechStartFrame + estimatedSpeechFrames);
     }
 
     onProgress(si, scenes.length);
