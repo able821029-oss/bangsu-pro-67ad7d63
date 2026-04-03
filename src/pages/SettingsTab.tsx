@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   User, CreditCard, Ticket, Users, HelpCircle, MessageSquare, Bell,
-  ChevronRight, LogOut, Link2,
+  ChevronRight, LogOut, Link2, BarChart3,
 } from "lucide-react";
 import { ProfileSettings } from "@/pages/settings/ProfileSettings";
 import { PricingPlan } from "@/pages/settings/PricingPlan";
@@ -10,8 +10,9 @@ import { ReferralPage } from "@/pages/settings/ReferralPage";
 import { FaqPage } from "@/pages/settings/FaqPage";
 import { ContactPage } from "@/pages/settings/ContactPage";
 import { AnnouncementsPage } from "@/pages/settings/AnnouncementsPage";
+import { SeoPage } from "@/pages/settings/SeoPage";
 
-type SettingsPage = "menu" | "profile" | "pricing" | "coupon" | "referral" | "faq" | "contact" | "announcements";
+type SettingsPage = "menu" | "profile" | "pricing" | "coupon" | "referral" | "faq" | "contact" | "announcements" | "seo";
 
 const myInfoItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
   { id: "profile", label: "업체명 · 전화번호 · 지역", icon: User },
