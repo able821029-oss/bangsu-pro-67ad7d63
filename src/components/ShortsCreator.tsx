@@ -137,7 +137,7 @@ function VoiceCard({
 }
 
 export function ShortsCreator({ onClose }: { onClose: () => void }) {
-  const { photos, settings, subscription, addPhoto, removePhoto } = useAppStore();
+  const { photos, settings, subscription, addPhoto, removePhoto, posts } = useAppStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -423,10 +423,36 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         <UsageMeter used={videoUsed} max={videoLimit} plan={subscription.plan} />
 
         <div className="space-y-2">
-          <Button variant="hero" size="xl" className="w-full" onClick={handleGenerate}
-            disabled={photos.length < 2 || quotaExceeded}>
-            <Film className="w-6 h-6" /> 영상 생성 시작
-          </Button>
+          {(() => {
+            const hasPhotos = photos.length >= 2;
+            const latestPost = posts.length > 0 ? posts[0] : null;
+            const hasText = latestPost && latestPost.blocks.length > 0 && latestPost.blocks.some((b: any) => b.type === "text" && b.content);
+            const canGenerate = hasPhotos && hasText && !quotaExceeded;
+            const message = !hasPhotos && !hasText
+              ? "사진과 글이 모두 필요합니다"
+              : !hasPhotos
+              ? "사진을 2장 이상 추가해 주세요"
+              : !hasText
+              ? "AI 글쓰기를 먼저 완료해 주세요"
+              : null;
+            return (
+              <>
+                <Button
+                  size="xl"
+                  className="w-full"
+                  onClick={handleGenerate}
+                  disabled={!canGenerate}
+                  style={canGenerate ? { background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white" } : {}}
+                  variant={canGenerate ? "default" : "secondary"}
+                >
+                  <Film className="w-6 h-6" /> 영상 생성 시작
+                </Button>
+                {message && (
+                  <p className="text-xs text-muted-foreground text-center">{message}</p>
+                )}
+              </>
+            );
+          })()}
           <div className="flex justify-center">
             <TestModeBadge label="테스트 모드" inline />
           </div>

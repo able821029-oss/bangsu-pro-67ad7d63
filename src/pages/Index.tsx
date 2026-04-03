@@ -23,18 +23,19 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
       style={{ backgroundColor: '#001130', opacity, transition: 'opacity 0.8s ease-in' }}
     >
-      <svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg" className="w-16 h-12 mb-4">
+      <svg width="80" height="80" viewBox="0 0 64 64" fill="none" className="mb-4">
+        <rect width="64" height="64" rx="16" fill="#001130"/>
         <defs>
-          <linearGradient id="splashGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style={{ stopColor: '#237FFF' }} />
-            <stop offset="100%" style={{ stopColor: '#AB5EBE' }} />
+          <linearGradient id="splashSg" x1="14" y1="10" x2="50" y2="54" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#237FFF"/>
+            <stop offset="52%" stopColor="#6C5CE7"/>
+            <stop offset="100%" stopColor="#AB5EBE"/>
           </linearGradient>
         </defs>
-        <path d="M20,20 C20,13 13,8 8,12 C3,16 3,24 8,28 C13,32 20,27 20,20 C20,13 27,8 32,8 C40,8 45,14 45,20 C45,26 40,32 32,32 C27,32 20,27 20,20 Z" fill="none" stroke="url(#splashGrad)" strokeWidth="4" strokeLinecap="round"/>
-        <path d="M42,14 L46,18 L42,22" fill="none" stroke="url(#splashGrad)" strokeWidth="3" strokeLinecap="round"/>
+        <text x="8" y="52" fontFamily="Arial Black, Helvetica Neue, sans-serif" fontWeight="900" fontSize="52" fill="url(#splashSg)">S</text>
       </svg>
       <p className="text-white font-bold text-[28px]">SMS</p>
-      <p className="text-[12px] mt-1" style={{ color: '#AB5EBE' }}>Self Marketing Service</p>
+      <p className="text-[12px] mt-1" style={{ color: 'rgba(150,120,200,0.7)' }}>SELF MARKETING SERVICE</p>
     </div>
   );
 }

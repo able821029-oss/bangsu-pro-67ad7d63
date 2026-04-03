@@ -117,7 +117,20 @@ export function SettingsTab() {
         로그아웃
       </button>
 
-      <p className="text-center text-xs text-muted-foreground mt-6">SMS v1.0 | Self Marketing Service</p>
+      <div className="flex flex-col items-center gap-2 mt-6">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
+          <rect width="64" height="64" rx="16" fill="#001130"/>
+          <defs>
+            <linearGradient id="setSg" x1="14" y1="10" x2="50" y2="54" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#237FFF"/>
+              <stop offset="52%" stopColor="#6C5CE7"/>
+              <stop offset="100%" stopColor="#AB5EBE"/>
+            </linearGradient>
+          </defs>
+          <text x="8" y="52" fontFamily="Arial Black, Helvetica Neue, sans-serif" fontWeight="900" fontSize="52" fill="url(#setSg)">S</text>
+        </svg>
+        <p className="text-xs text-muted-foreground">SMS v1.0 | Self Marketing Service</p>
+      </div>
     </div>
   );
 }

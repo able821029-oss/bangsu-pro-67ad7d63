@@ -94,11 +94,20 @@ export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: Pay
             disabled={loading !== null}
             className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-all text-left disabled:opacity-50"
           >
-            <svg width="48" height="48" viewBox="0 0 56 56" fill="none" className="shrink-0">
-              <rect width="56" height="56" rx="14" fill="#FFCD00"/>
-              <circle cx="16" cy="28" r="3" fill="#3A1D1D"/>
-              <text x="20" y="33" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#3A1D1D">pay</text>
-            </svg>
+            <img
+              src="/kakaopay.png"
+              width="48" height="48"
+              className="shrink-0 rounded-xl object-contain"
+              alt="카카오페이"
+              onError={(e) => {
+                const el = e.currentTarget;
+                el.style.display = "none";
+                const fallback = document.createElement("div");
+                fallback.style.cssText = "width:48px;height:48px;border-radius:12px;background:#FFCD00;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#3A1D1D;flex-shrink:0;";
+                fallback.textContent = "pay";
+                el.parentElement?.insertBefore(fallback, el);
+              }}
+            />
             <div className="flex-1">
               <p className="font-semibold text-sm">카카오페이</p>
               <p className="text-xs text-muted-foreground">카카오톡으로 간편 결제</p>
@@ -112,11 +121,20 @@ export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: Pay
             disabled={loading !== null}
             className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-all text-left disabled:opacity-50"
           >
-            <svg width="48" height="48" viewBox="0 0 56 56" fill="none" className="shrink-0">
-              <rect width="56" height="56" rx="28" fill="white"/>
-              <path d="M28 8 C28 8 14 20 14 30 C14 37.7 20.3 44 28 44 C35.7 44 42 37.7 42 30 C42 20 28 8 28 8Z" fill="#1B64DA"/>
-              <path d="M36 12 C36 12 28 20 28 26 C28 29.3 30.7 32 34 32 C37.3 32 40 29.3 40 26 C40 20 36 12 36 12Z" fill="#4FA8FF"/>
-            </svg>
+            <img
+              src="/toss.png"
+              width="48" height="48"
+              className="shrink-0 rounded-full object-contain"
+              alt="토스페이"
+              onError={(e) => {
+                const el = e.currentTarget;
+                el.style.display = "none";
+                const fallback = document.createElement("div");
+                fallback.style.cssText = "width:48px;height:48px;border-radius:50%;background:#0064FF;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:white;flex-shrink:0;";
+                fallback.textContent = "toss";
+                el.parentElement?.insertBefore(fallback, el);
+              }}
+            />
             <div className="flex-1">
               <p className="font-semibold text-sm">토스페이</p>
               <p className="text-xs text-muted-foreground">신용카드 · 체크카드</p>
