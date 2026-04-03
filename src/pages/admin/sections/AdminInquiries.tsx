@@ -40,7 +40,7 @@ export function AdminInquiries() {
     setInquiries((prev) =>
       prev.map((i) => (i.id === selectedId ? { ...i, status: "답변완료" as const, reply: reply.trim() } : i))
     );
-    toast({ title: "✅ 답변이 전송되었습니다." });
+    toast({ title: "답변이 전송되었습니다." });
     setReply("");
     setSelectedId(null);
   };

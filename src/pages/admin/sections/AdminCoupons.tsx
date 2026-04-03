@@ -32,7 +32,7 @@ export function AdminCoupons() {
       ...prev,
       { id: crypto.randomUUID(), code: newCode.toUpperCase(), discount: newDiscount, expiresAt: newExpiry || "2026-12-31", usedCount: 0, totalIssued: 0 },
     ]);
-    toast({ title: "✅ 쿠폰이 생성되었습니다." });
+    toast({ title: "쿠폰이 생성되었습니다." });
     setNewCode("");
     setNewDiscount("");
     setNewExpiry("");

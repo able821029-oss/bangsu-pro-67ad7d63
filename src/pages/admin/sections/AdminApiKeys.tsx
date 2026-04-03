@@ -93,7 +93,7 @@ export function AdminApiKeys() {
   const updateKey = (id: string, value: string) => setKeys(prev => ({ ...prev, [id]: value }));
 
   const handleSave = () => {
-    toast({ title: "✅ API 키가 저장되었습니다." });
+    toast({ title: "API 키가 저장되었습니다." });
   };
 
   return (

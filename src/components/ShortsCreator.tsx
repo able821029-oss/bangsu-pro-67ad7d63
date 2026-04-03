@@ -347,7 +347,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         });
       }
 
-      toast({ title: "✅ 영상이 완성되었습니다!" });
+      toast({ title: "영상이 완성되었습니다!" });
 
 
     } catch (err: any) {
@@ -369,7 +369,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      toast({ title: "✅ 영상이 다운로드됩니다" });
+      toast({ title: "영상이 다운로드됩니다" });
     }
   };
 

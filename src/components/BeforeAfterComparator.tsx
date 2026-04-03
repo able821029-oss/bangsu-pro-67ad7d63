@@ -126,7 +126,7 @@ export function BeforeAfterComparator() {
     a.href = resultUrl;
     a.download = `before-after-${Date.now()}.png`;
     a.click();
-    toast.success("✅ 비교 이미지가 갤러리에 저장됐습니다");
+    toast.success("비교 이미지가 갤러리에 저장됐습니다");
   };
 
   const handleShare = async () => {

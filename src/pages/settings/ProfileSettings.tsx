@@ -20,7 +20,7 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
   };
 
   const handleSave = () => {
-    toast({ title: "✅ 프로필이 저장되었습니다." });
+    toast({ title: "프로필이 저장되었습니다." });
   };
 
   const handleConnect = (platform: string) => {

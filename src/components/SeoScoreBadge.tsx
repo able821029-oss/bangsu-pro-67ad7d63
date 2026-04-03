@@ -69,7 +69,7 @@ export function SeoScoreBadge({
         toast({ title: "개선 실패", description: data?.error || "다시 시도해주세요", variant: "destructive" });
       } else if (data && onImprove) {
         onImprove({ title: data.title, blocks: data.blocks, hashtags: data.hashtags });
-        toast({ title: "✅ SEO 최적화 완료", description: (data.changes || []).join(", ") });
+        toast({ title: "SEO 최적화 완료", description: (data.changes || []).join(", ") });
         setShowDetail(false);
       }
     } catch {

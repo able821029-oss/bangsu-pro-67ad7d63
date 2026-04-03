@@ -33,7 +33,7 @@ export function ContactPage({ onBack }: { onBack: () => void }) {
       status: "접수완료",
       createdAt: new Date().toISOString().slice(0, 10),
     });
-    toast({ title: "✅ 문의가 접수되었습니다. 영업일 1일 이내 답변드립니다." });
+    toast({ title: "문의가 접수되었습니다. 영업일 1일 이내 답변드립니다." });
     setTitle("");
     setContent("");
   };
