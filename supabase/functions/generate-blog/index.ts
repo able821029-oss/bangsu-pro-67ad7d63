@@ -7,28 +7,49 @@ const corsHeaders = {
 };
 
 const personaPrompts: Record<string, string> = {
-  "장인형": `당신은 30년 경력의 방수 장인입니다. 현장 경험에서 우러나오는 전문 지식과 꼼꼼한 시공 과정을 강조하세요. 말투는 무게감 있고 신뢰감을 주는 톤입니다.`,
-  "친근형": `당신은 동네에서 인정받는 친근한 방수 전문가입니다. 이웃집 아저씨처럼 편안한 말투로, 어려운 전문 용어 대신 쉬운 표현을 사용하세요.`,
-  "전문기업형": `당신은 체계적인 방수 전문 기업의 대표입니다. 공정별 상세 설명, 사용 자재 정보, 품질 보증 내용을 포함하세요. 격식체를 사용하세요.`,
+  "장인형": `당신은 30년 경력의 시공 장인입니다. 묵직하고 신뢰감 있는 어조로 작성하세요.
+"한 번 맡기면 10년이 다릅니다" 같은 장인 정신을 담은 표현을 사용하세요.
+현장 경험에서 우러나오는 전문 지식과 꼼꼼한 시공 과정을 강조하세요.`,
+  "친근형": `당신은 동네에서 인정받는 친근한 시공 전문가입니다.
+이웃처럼 친근한 어조를 사용하세요. 어려운 전문 용어 대신 쉬운 표현을 사용하세요.`,
+  "전문기업형": `당신은 체계적인 전문 시공 기업의 대표입니다.
+기업다운 전문적 어조를 사용하세요. 공정별 상세 설명, 사용 자재 정보, 품질 보증 내용을 포함하세요.`,
 };
 
-const platformPrompts: Record<string, string> = {
-  naver: `[네이버 블로그 형식]
-- 글자 수: 700~900자
-- 제목: 지역명 + 공사유형 + 핵심키워드
-- 본문 첫 문단: 핵심 키워드 2~3회 자연 삽입
-- 본문 중간: 시공 과정 단계별 설명
-- 소제목 활용, 줄바꿈 가독성
-- 해시태그 10개: #지역+방수공사 #공사유형 #방수업체추천 형태
-- SEO 키워드: 지역명, 공사유형, 방수업체, 시공후기`,
-  instagram: `[인스타그램 형식]
-- 글자 수: 150자 이내
-- 첫 줄: 훅 문장 (질문형/숫자)
-- 줄바꿈 2~3회
-- 해시태그 20개`,
-  tiktok: `[틱톡 형식]
+const seoRules = `[네이버 SEO 글쓰기 필수 규칙]
+① 제목: 25자 이내, 키워드 앞배치, {지역} {업종} {공사종류} 형식
+② 본문: 반드시 1,500자 이상 (최적 1,800~2,000자)
+③ 키워드: 메인 키워드 5~6회 자연 반복, 과도한 반복 금지
+④ 본문 구조 (소제목 필수):
+   [도입부-200자] 고객 공감 도입
+   [현장 소개-300자] 위치, 건물, 의뢰 배경
+   [시공 전 상태-300자] 문제점 상세, 전문 용어
+   [시공 과정-500자] 단계별 작업, 재료명·공법명
+   [시공 완료-200자] 마감 상태, 품질 보증
+   [마무리-200자] 전문성 강조, 문의 유도
+⑤ 전문성: 경력, 시공 건수, 자격증, A/S 보증 언급
+⑥ AI 글 티 제거: "~합니다" 반복 금지, 구어체 활용
+⑦ 해시태그: 지역+업종/업종단독/지역단독/시공종류/문제해결
+
+[품질 체크 — 출력 전 자가 점검]
+□ 제목 25자 이내? □ 지역명+업종 포함? □ 1,500자 이상?
+□ 키워드 5회+? □ 소제목 구조? □ 시공 과정 구체적?
+□ 해시태그 15개+? □ AI 글 티 없음?
+모든 항목 통과 후 출력.`;
+
+const platformFormats: Record<string, string> = {
+  naver: `[네이버 블로그 출력]
+- 1,800~2,000자 본문 (최소 1,500자)
+- 제목 25자 이내, 키워드 앞배치
+- 소제목 6단계 구조
+- 해시태그 15~20개`,
+  instagram: `[인스타그램 출력]
+- 150자 이내 캡션, 이모지 활용
+- 첫 줄: 후킹 문구
+- 해시태그 20~30개`,
+  tiktok: `[틱톡 출력]
 - 3줄 자막: 훅/과정/결과+CTA
-- 해시태그 5개`,
+- 해시태그 5~10개`,
 };
 
 serve(async (req) => {
@@ -47,7 +68,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const {
-      photos, // base64 image array [{dataUrl}]
+      photos,
       workType,
       persona,
       platform,
@@ -59,21 +80,26 @@ serve(async (req) => {
     } = body;
 
     const personaText = personaPrompts[persona] || personaPrompts["장인형"];
-    const platformText = platformPrompts[platform] || platformPrompts["naver"];
+    const platformText = platformFormats[platform] || platformFormats["naver"];
 
-    const systemPrompt = `${personaText}
+    const systemPrompt = `당신은 네이버 블로그 상위노출 전문가입니다.
+현장직 사장님의 시공 현장 사진과 정보를 바탕으로
+네이버 C-Rank + D.I.A+ 알고리즘에 최적화된 블로그 글을 작성합니다.
+
+${personaText}
+
+[업종 자동 판단 — 필수]
+첨부된 사진을 분석하여 업종을 자동 판단하라.
+(방수·토목·인테리어·간판·조경·철거·도장·타일·전기·설비 등)
+사진에서 공사 유형도 구체적으로 판단하여 제목과 본문에 삽입하라.
+
+${seoRules}
 
 ${platformText}
 
-[업종 자동 판단 — 필수]
-첨부된 사진을 분석하여 어떤 현장 업종인지 자동으로 판단하라.
-(방수·토목·인테리어·간판·조경·철거·도장·타일·전기·설비 등)
-판단한 업종을 글쓰기에 반영하고, 해당 업종의 SEO 키워드를 자동 적용하라.
-사진에서 공사 유형(옥상방수, 외벽방수, 균열보수 등)도 구체적으로 판단하여 제목과 본문에 삽입하라.
-
 [응답 형식 — 반드시 JSON으로 응답]
 {
-  "title": "글 제목",
+  "title": "SEO 최적화 제목 (25자 이내, 키워드 앞배치)",
   "detectedWorkType": "AI가 판단한 공사 유형",
   "blocks": [
     {"type": "text", "content": "본문 텍스트"},
@@ -82,7 +108,15 @@ ${platformText}
     {"type": "photo", "content": "photo-2", "caption": "사진 설명"},
     {"type": "text", "content": "마무리 텍스트"}
   ],
-  "hashtags": ["해시태그1", "해시태그2"]
+  "hashtags": ["해시태그1", "해시태그2"],
+  "seoScore": {
+    "titleLength": 0,
+    "contentLength": 0,
+    "keywordCount": 0,
+    "hashtagCount": 0,
+    "hasStructure": true,
+    "overall": 0
+  }
 }
 
 규칙:
@@ -90,11 +124,11 @@ ${platformText}
 - photo 블록의 content는 "photo-1", "photo-2" 등 순번
 - photo 블록 수는 제공된 사진 수에 맞춤
 - 업체명과 전화번호를 본문 마지막에 자연스럽게 삽입
+- seoScore에 SEO 자가 점검 결과 포함
 - JSON만 응답. 다른 텍스트 없이.`;
 
     const userContent: any[] = [];
 
-    // Add images (max 5)
     const photoSlice = (photos || []).slice(0, 5);
     for (let i = 0; i < photoSlice.length; i++) {
       const dataUrl = photoSlice[i].dataUrl || photoSlice[i];
@@ -123,6 +157,7 @@ ${platformText}
 - 첨부 사진: ${photoSlice.length}장
 
 사진을 분석하여 업종과 공사 유형을 자동 판단한 뒤 글을 작성해주세요.
+네이버 SEO 필수 규칙을 모두 준수하고, seoScore를 포함해주세요.
 JSON 형식으로만 응답해주세요.`,
     });
 
@@ -135,7 +170,7 @@ JSON 형식으로만 응답해주세요.`,
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
+        max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: "user", content: userContent }],
       }),
@@ -145,27 +180,29 @@ JSON 형식으로만 응답해주세요.`,
       const errText = await anthropicResponse.text();
       console.error("Claude API error:", anthropicResponse.status, errText);
 
-      // Fallback mock response for testing when Claude is unavailable
       const detectedType = workType || "시공";
+      const mockContent = `안녕하세요, ${companyName || "SMS"}입니다.\n\n${constructionDate || "오늘"} ${location || "현장"}에서 ${buildingType || "건물"} ${detectedType} 시공을 진행했습니다.\n\n■ 현장 소개\n${location || "현장"} ${buildingType || "건물"}에서 ${detectedType} 의뢰를 받았습니다.\n\n■ 시공 전 상태\n기존 방수층이 노후화되어 누수가 발생한 상태였습니다.\n\n■ 시공 과정\n${detectedType} 작업을 단계별로 꼼꼼하게 진행했습니다.\n\n■ 시공 완료\n깔끔하게 마무리하였습니다.\n\n■ 문의\n${companyName || "SMS"} ${phoneNumber || "전화문의"}`;
+
       const photoBlocks = photoSlice.flatMap((_, i) => [
         { type: "photo" as const, content: `photo-${i + 1}`, caption: `${detectedType} 시공 현장 사진 ${i + 1}` },
         { type: "text" as const, content: i === photoSlice.length - 1
-          ? `${companyName || "SMS"}에서 ${location || "현장"}의 ${buildingType || "건물"} ${detectedType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
-          : `${detectedType} 시공 ${i + 1}단계를 진행했습니다. 꼼꼼하게 작업하여 완벽한 처리를 완료했습니다.` },
+          ? `${companyName || "SMS"}에서 ${location || "현장"} ${detectedType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
+          : `${detectedType} 시공 ${i + 1}단계를 진행했습니다.` },
       ]);
 
       const mockResponse = {
-        title: `${location || "현장"} ${buildingType || ""} ${detectedType} 시공 완료`,
+        title: `${location || "현장"} ${detectedType} 시공 완료`,
         detectedWorkType: detectedType,
         blocks: [
-          { type: "text", content: `안녕하세요, ${companyName || "SMS"}입니다.\n${constructionDate || "오늘"} ${location || "현장"}에서 ${detectedType} 시공을 진행했습니다.` },
+          { type: "text", content: mockContent },
           ...photoBlocks,
         ],
         hashtags: platform === "instagram"
-          ? ["시공후기", detectedType, "인테리어", "집수리", "리모델링", "시공완료", ...(location ? [location.replace(/\s/g, ""), location + "시공"] : []), "SMS", "건물시공", "시공브이로그"]
+          ? ["시공후기", detectedType, "인테리어", "집수리", "리모델링", "시공완료", ...(location ? [location.replace(/\s/g, ""), location + "시공"] : []), "SMS", "건물시공"]
           : platform === "tiktok"
           ? ["시공브이로그", "집수리", detectedType, "시공전문"]
-          : [detectedType, "시공업체추천", ...(location ? [location + "시공"] : []), "시공후기", companyName || "SMS", "시공완료"],
+          : [detectedType, "시공업체추천", ...(location ? [location + "시공", location + detectedType] : []), "시공후기", companyName || "SMS", "시공완료", detectedType + "업체", detectedType + "전문", "시공현장", "건물시공", "누수해결", detectedType + "추천", "방수업체추천", "시공사례"],
+        seoScore: { titleLength: 15, contentLength: 500, keywordCount: 3, hashtagCount: 15, hasStructure: true, overall: 60 },
         isMock: true,
       };
 
@@ -177,7 +214,6 @@ JSON 형식으로만 응답해주세요.`,
     const claudeData = await anthropicResponse.json();
     const rawText = claudeData.content?.[0]?.text || "";
 
-    // Parse JSON from response (handle markdown code blocks)
     let parsed;
     try {
       const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/\{[\s\S]*\}/);
