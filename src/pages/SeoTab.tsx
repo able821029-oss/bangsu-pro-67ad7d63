@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { BarChart3, Loader2, Lightbulb, RefreshCw, ChevronDown, ChevronUp, FileText, Check, AlertTriangle, Search, TrendingUp } from "lucide-react";
+import {
+  BarChart3,
+  Loader2,
+  Lightbulb,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Check,
+  AlertTriangle,
+  Search,
+  TrendingUp,
+} from "lucide-react";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -24,7 +36,7 @@ const categoryIcons: Record<string, React.ElementType> = {
   "글 길이·구조": FileText,
   "키워드 최적화": Search,
   "이미지 활용": FileText,
-  "해시태그": TrendingUp,
+  해시태그: TrendingUp,
 };
 
 const seoTips = [
@@ -55,7 +67,9 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [isAnalyzingPosts, setIsAnalyzingPosts] = useState(false);
 
   const handleAnalyzeAllPosts = async () => {
-    const postsWithContent = posts.filter(p => p.blocks.length > 0 && p.blocks.some(b => b.type === "text" && b.content));
+    const postsWithContent = posts.filter(
+      (p) => p.blocks.length > 0 && p.blocks.some((b) => b.type === "text" && b.content),
+    );
     if (postsWithContent.length === 0) {
       toast({ title: "분석할 글이 없습니다", variant: "destructive" });
       return;
@@ -66,10 +80,22 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     for (const post of postsWithContent.slice(0, 5)) {
       try {
         const { data } = await supabase.functions.invoke("seo-analyze", {
-          body: { mode: "seo_score", title: post.title, blocks: post.blocks, hashtags: post.hashtags, location: "", workType: post.workType },
+          body: {
+            mode: "seo_score",
+            title: post.title,
+            blocks: post.blocks,
+            hashtags: post.hashtags,
+            location: "",
+            workType: post.workType,
+          },
         });
         if (data && !data.error) {
-          scores.push({ postId: post.id, totalScore: data.totalScore, checklist: data.checklist || [], loading: false });
+          scores.push({
+            postId: post.id,
+            totalScore: data.totalScore,
+            checklist: data.checklist || [],
+            loading: false,
+          });
         }
       } catch {}
     }
@@ -83,7 +109,7 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       const { data, error } = await supabase.functions.invoke("seo-analyze", {
         body: {
           mode: "blog_diagnosis",
-          posts: posts.map(p => ({ title: p.title, blocks: p.blocks, hashtags: p.hashtags, createdAt: p.createdAt })),
+          posts: posts.map((p) => ({ title: p.title, blocks: p.blocks, hashtags: p.hashtags, createdAt: p.createdAt })),
           companyName: settings.companyName,
         },
       });
@@ -111,9 +137,8 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     return "개선 필요";
   };
 
-  // Radar chart data from diagnosis or defaults
   const radarData = diagnosis
-    ? diagnosis.categories.map(c => ({ subject: c.name.replace("글 길이·구조", "글길이"), score: c.score }))
+    ? diagnosis.categories.map((c) => ({ subject: c.name.replace("글 길이·구조", "글길이"), score: c.score }))
     : [
         { subject: "전문성", score: 85 },
         { subject: "꾸준함", score: 60 },
@@ -152,26 +177,88 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
         <div className="glass-card p-5 text-center space-y-3">
           <BarChart3 className="w-12 h-12 text-primary mx-auto" />
           <p className="text-sm font-semibold">블로그 SEO 진단</p>
-          <p className="text-xs text-muted-foreground">작성한 글들을 AI가 분석하여<br />상위노출 가능성을 점검합니다</p>
+          <p className="text-xs text-muted-foreground">
+            작성한 글들을 AI가 분석하여
+            <br />
+            상위노출 가능성을 점검합니다
+          </p>
           <Button onClick={handleDiagnose} disabled={isLoading} className="w-full">
-            {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> 분석 중...</> : "블로그 진단하기"}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> 분석 중...
+              </>
+            ) : (
+              "블로그 진단하기"
+            )}
           </Button>
         </div>
       )}
 
-      {/* Radar Chart */}
+      {/* ✅ FIX: 레이더 차트 — 진단 전 empty state */}
       <div className="chart-card p-4 space-y-2">
         <p className="text-sm font-semibold text-foreground">항목별 SEO 분석</p>
-        <ResponsiveContainer width="100%" height={220}>
-          <RadarChart data={radarData}>
-            <PolarGrid stroke="rgba(255,255,255,0.1)" />
-            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "#888" }} />
-            <Radar dataKey="score" stroke="#237FFF" fill="#237FFF" fillOpacity={0.15} />
-          </RadarChart>
-        </ResponsiveContainer>
+
+        {!diagnosis ? (
+          // Empty state
+          <div className="flex flex-col items-center justify-center h-[220px] space-y-4">
+            <div className="relative w-36 h-36">
+              {/* 흐린 육각형 레이더 placeholder */}
+              <svg viewBox="0 0 100 100" className="w-full h-full opacity-15">
+                <polygon
+                  points="50,10 82,28 82,72 50,90 18,72 18,28"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-muted-foreground"
+                />
+                <polygon
+                  points="50,25 70,35 70,65 50,75 30,65 30,35"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="text-muted-foreground"
+                />
+                <polygon
+                  points="50,38 62,44 62,56 50,62 38,56 38,44"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                  className="text-muted-foreground"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <BarChart3 className="w-8 h-8 text-muted-foreground/40" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                블로그 진단하기를 눌러
+                <br />내 SEO 점수를 확인하세요
+              </p>
+              <Button size="sm" variant="outline" onClick={handleDiagnose} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                    분석 중...
+                  </>
+                ) : (
+                  "진단하기"
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={220}>
+            <RadarChart data={radarData}>
+              <PolarGrid stroke="rgba(255,255,255,0.1)" />
+              <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: "#888" }} />
+              <Radar dataKey="score" stroke="#237FFF" fill="#237FFF" fillOpacity={0.15} />
+            </RadarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
-      {/* Category Scores - 2 column grid */}
+      {/* Category Scores */}
       {diagnosis && (
         <div className="grid grid-cols-2 gap-3">
           {diagnosis.categories.map((cat, i) => {
@@ -199,7 +286,9 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       )}
       {showAdvice && diagnosis && (
         <div className="glass-card p-4 space-y-3">
-          <p className="text-sm font-semibold flex items-center gap-2"><Lightbulb className="w-4 h-4 text-primary" /> AI 개선 조언</p>
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <Lightbulb className="w-4 h-4 text-primary" /> AI 개선 조언
+          </p>
           <p className="text-sm text-muted-foreground">{diagnosis.overallAdvice}</p>
           {diagnosis.categories.map((cat, i) => (
             <div key={i} className="border-t border-border pt-2">
@@ -229,7 +318,13 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           <p className="text-sm font-semibold flex items-center gap-2">
             <FileText className="w-4 h-4 text-primary" /> 글별 SEO 품질 체크
           </p>
-          <Button size="sm" variant="ghost" onClick={handleAnalyzeAllPosts} disabled={isAnalyzingPosts} className="text-xs gap-1 h-7">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleAnalyzeAllPosts}
+            disabled={isAnalyzingPosts}
+            className="text-xs gap-1 h-7"
+          >
             {isAnalyzingPosts ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
             {postScores.length > 0 ? "재분석" : "자동 분석"}
           </Button>
@@ -243,29 +338,38 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
         {postScores.length > 0 && (
           <div className="divide-y divide-border">
             {postScores.map((ps) => {
-              const post = posts.find(p => p.id === ps.postId);
+              const post = posts.find((p) => p.id === ps.postId);
               if (!post) return null;
               return (
                 <div key={ps.postId} className="px-4 py-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium truncate flex-1 mr-2">{post.title}</p>
-                    <Badge className={`text-xs font-bold border shrink-0 ${
-                      ps.totalScore >= 80 ? "bg-green-500/10 text-green-600 border-green-500/30" :
-                      ps.totalScore >= 60 ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/30" :
-                      "bg-red-500/10 text-red-600 border-red-500/30"
-                    }`}>
+                    <Badge
+                      className={`text-xs font-bold border shrink-0 ${
+                        ps.totalScore >= 80
+                          ? "bg-green-500/10 text-green-600 border-green-500/30"
+                          : ps.totalScore >= 60
+                            ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/30"
+                            : "bg-red-500/10 text-red-600 border-red-500/30"
+                      }`}
+                    >
                       {ps.totalScore}점
                     </Badge>
                   </div>
                   {ps.checklist.length > 0 && (
                     <div className="space-y-1">
-                      {ps.checklist.filter(c => !c.passed).slice(0, 2).map((c, i) => (
-                        <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />
-                          <span>{c.label} ({c.current} → {c.recommend})</span>
-                        </div>
-                      ))}
-                      {ps.checklist.every(c => c.passed) && (
+                      {ps.checklist
+                        .filter((c) => !c.passed)
+                        .slice(0, 2)
+                        .map((c, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />
+                            <span>
+                              {c.label} ({c.current} → {c.recommend})
+                            </span>
+                          </div>
+                        ))}
+                      {ps.checklist.every((c) => c.passed) && (
                         <div className="flex items-center gap-1.5 text-xs text-green-600">
                           <Check className="w-3 h-3" /> 모든 항목 통과!
                         </div>
@@ -298,12 +402,16 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
               onClick={() => setExpandedTip(expandedTip === i ? null : i)}
               className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
             >
-              <span className="text-sm font-medium">{i + 1}. {tip.title}</span>
-              {expandedTip === i ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              <span className="text-sm font-medium">
+                {i + 1}. {tip.title}
+              </span>
+              {expandedTip === i ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              )}
             </button>
-            {expandedTip === i && (
-              <p className="px-4 pb-3 text-xs text-muted-foreground">{tip.detail}</p>
-            )}
+            {expandedTip === i && <p className="px-4 pb-3 text-xs text-muted-foreground">{tip.detail}</p>}
           </div>
         ))}
       </div>
