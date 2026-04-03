@@ -103,7 +103,7 @@ function VoiceCard({
   voice: VoiceOption; selected: boolean; onSelect: () => void;
   onPreview: () => void; isPlaying: boolean;
 }) {
-  const genderEmoji = voice.gender === "male" ? "👨" : "👩";
+  const genderIcon = voice.gender === "male" ? "M" : "F";
 
   return (
     <button
