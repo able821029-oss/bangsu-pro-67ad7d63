@@ -48,7 +48,7 @@ export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: Pay
 
       if (data?.test_mode) {
         toast({
-          title: "🔧 테스트 모드",
+          title: "테스트 모드",
           description: `카카오페이 테스트 결제가 시뮬레이션되었습니다. (${planName} ${amount.toLocaleString()}원)`,
         });
         onOpenChange(false);
