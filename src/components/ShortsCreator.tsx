@@ -311,7 +311,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       const scenes: MirraScene[] = scriptData?.scenes || [];
       if (scenes.length === 0) throw new Error("스크립트 생성 실패");
 
-      setProgressText("🎥 텍스트 애니메이션 렌더링 중...");
+      setProgressText("텍스트 애니메이션 렌더링 중...");
       setProgressPct(25);
 
       const voiceConfig = narrationEnabled && voice ? {
