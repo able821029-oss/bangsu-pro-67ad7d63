@@ -397,7 +397,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
               복사 후 {platformLabels[platform]} 열기
             </Button>
             {i === 0 && platform === "naver" && (
-              <p className="text-[11px] text-center mt-1 text-muted-foreground">📋 붙여넣기 → 사진 첨부 → 발행</p>
+              <p className="text-[11px] text-center mt-1 text-muted-foreground">붙여넣기 → 사진 첨부 → 발행</p>
             )}
           </div>
         ))}
