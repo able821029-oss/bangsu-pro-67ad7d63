@@ -465,9 +465,9 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
             onClick={() => { setSelectedVoice(null); speechSynthesis.cancel(); setPlayingVoice(null); }}
             className="w-full text-center py-2.5 rounded-xl text-sm font-medium transition-all"
             style={{
-              border: selectedVoice === null ? "2px solid #237FFF" : "0.5px solid #E5E7EB",
-              backgroundColor: selectedVoice === null ? "#EFF6FF" : "white",
-              color: selectedVoice === null ? "#237FFF" : "#6B7280",
+              border: selectedVoice === null ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",
+              backgroundColor: selectedVoice === null ? "hsl(215 100% 97%)" : "hsl(var(--card))",
+              color: selectedVoice === null ? "hsl(215 100% 50%)" : "hsl(var(--muted-foreground))",
             }}
           >
             🔇 나레이션 없음 — BGM만
