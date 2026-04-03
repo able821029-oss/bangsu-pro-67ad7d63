@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film, CheckCircle2, Loader2, Check, AlertTriangle, TrendingUp } from "lucide-react";
 import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useAppStore, BlogPost, Platform, ContentBlock } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,42 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
   const [newTagInput, setNewTagInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(post.status);
+  const [seoResult, setSeoResult] = useState<any>(null);
+  const [seoLoading, setSeoLoading] = useState(false);
+
+  // Auto-analyze SEO on mount if post has content
+  useEffect(() => {
+    if (blocks.length > 0 && blocks.some(b => b.type === "text" && b.content)) {
+      handleAutoSeoAnalyze();
+    }
+  }, []);
+
+  const handleAutoSeoAnalyze = async () => {
+    setSeoLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("seo-analyze", {
+        body: {
+          mode: "seo_score",
+          title,
+          blocks,
+          hashtags,
+          location: "",
+          workType: post.workType,
+        },
+      });
+      if (!error && !data?.error) {
+        setSeoResult(data);
+      }
+    } catch {} finally {
+      setSeoLoading(false);
+    }
+  };
+
+  const seoScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-500";
+    if (score >= 60) return "text-yellow-500";
+    return "text-red-500";
+  };
 
   const saveToDb = async (updates: Record<string, any>) => {
     setIsSaving(true);
@@ -278,7 +315,68 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
         )}
       </div>
 
-      {/* Meta */}
+      {/* SEO Score Visual Section */}
+      {(seoResult || seoLoading) && (
+        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <p className="text-sm font-semibold flex-1">SEO 점수 분석</p>
+            {seoResult && (
+              <button onClick={handleAutoSeoAnalyze} className="text-xs text-primary flex items-center gap-1">
+                <RefreshCw className="w-3 h-3" /> 재분석
+              </button>
+            )}
+          </div>
+
+          {seoLoading && !seoResult ? (
+            <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">SEO 분석 중...</span>
+            </div>
+          ) : seoResult ? (
+            <>
+              <div className="flex items-center gap-3">
+                <span className={`text-3xl font-extrabold ${seoScoreColor(seoResult.totalScore)}`}>
+                  {seoResult.totalScore}점
+                </span>
+                <div className="flex-1">
+                  <Progress value={seoResult.totalScore} className="h-2" />
+                </div>
+              </div>
+
+              {/* Checklist */}
+              {seoResult.checklist && (
+                <div className="space-y-1.5">
+                  {seoResult.checklist.map((item: any, i: number) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      {item.passed ? (
+                        <Check className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0 mt-0.5" />
+                      )}
+                      <span className="flex-1">{item.label}</span>
+                      <span className="text-muted-foreground">{item.current} → {item.recommend}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Items summary */}
+              {seoResult.items && (
+                <div className="grid grid-cols-2 gap-2">
+                  {seoResult.items.slice(0, 4).map((item: any, i: number) => (
+                    <div key={i} className="bg-secondary/50 rounded-lg px-2 py-1.5 text-xs">
+                      <span className="text-muted-foreground">{item.name}</span>
+                      <span className={`ml-1 font-bold ${seoScoreColor(item.score)}`}>{item.score}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : null}
+        </div>
+      )}
+
       <div className="bg-card rounded-[--radius] border border-border p-4 space-y-2 text-xs text-muted-foreground">
         <p>작성일: {post.createdAt}</p>
         <p>페르소나: {post.persona}</p>
