@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Check, X, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TestModeBadge } from "@/components/TestModeBadge";
 import { useAppStore } from "@/stores/appStore";
 import { CancelDialog } from "@/components/CancelDialog";
 
