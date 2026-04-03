@@ -1,13 +1,7 @@
 import { useState } from "react";
 import { CreditCard } from "lucide-react";
 import { TestModeBadge } from "@/components/TestModeBadge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,11 +12,60 @@ interface PaymentMethodSheetProps {
   amount: number;
 }
 
-const PLAN_AMOUNTS: Record<string, number> = {
-  "베이직": 9900,
-  "프로": 19900,
-  "무제한": 39900,
-};
+function KakaoPayLogo() {
+  return (
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        background: "#FFCD00",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <svg width="32" height="20" viewBox="0 0 80 48" fill="none">
+        <circle cx="16" cy="24" r="10" fill="#3A1D1D" />
+        <rect x="14" y="30" width="4" height="8" rx="1" fill="#FFCD00" />
+        <text x="32" y="32" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="22" fill="#3A1D1D">
+          pay
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+function TossPayLogo() {
+  return (
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        background: "#0064FF",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <svg width="36" height="20" viewBox="0 0 90 48" fill="none">
+        <text
+          x="2"
+          y="36"
+          fontFamily="Arial Black, Helvetica Neue, sans-serif"
+          fontWeight="900"
+          fontSize="32"
+          fill="#FFFFFF"
+        >
+          toss
+        </text>
+      </svg>
+    </div>
+  );
+}
 
 export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: PaymentMethodSheetProps) {
   const { toast } = useToast();
@@ -85,29 +128,18 @@ export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: Pay
         <div className="space-y-3">
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <p className="text-sm text-muted-foreground">선택한 플랜</p>
-            <p className="text-lg font-bold">{planName} — ₩{amount.toLocaleString()}/월</p>
+            <p className="text-lg font-bold">
+              {planName} — ₩{amount.toLocaleString()}/월
+            </p>
           </div>
 
-          {/* Kakao Pay */}
+          {/* 카카오페이 */}
           <button
             onClick={handleKakaoPay}
             disabled={loading !== null}
             className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-all text-left disabled:opacity-50"
           >
-            <img
-              src="/kakaopay.png"
-              width="48" height="48"
-              className="shrink-0 rounded-xl object-contain"
-              alt="카카오페이"
-              onError={(e) => {
-                const el = e.currentTarget;
-                el.style.display = "none";
-                const fallback = document.createElement("div");
-                fallback.style.cssText = "width:48px;height:48px;border-radius:12px;background:#FFCD00;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#3A1D1D;flex-shrink:0;";
-                fallback.textContent = "pay";
-                el.parentElement?.insertBefore(fallback, el);
-              }}
-            />
+            <KakaoPayLogo />
             <div className="flex-1">
               <p className="font-semibold text-sm">카카오페이</p>
               <p className="text-xs text-muted-foreground">카카오톡으로 간편 결제</p>
@@ -115,24 +147,13 @@ export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: Pay
             <TestModeBadge label="테스트" inline />
           </button>
 
-          {/* Toss Pay */}
+          {/* 토스페이 */}
           <button
             onClick={handleTossPay}
             disabled={loading !== null}
             className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-all text-left disabled:opacity-50"
           >
-            <div className="w-12 h-12 rounded-full bg-[#0064FF] flex items-center justify-center shrink-0 overflow-hidden">
-              <img
-                src="/toss.png"
-                width="32" height="32"
-                className="object-contain"
-                alt="토스페이"
-                onError={(e) => {
-                  const el = e.currentTarget;
-                  el.style.display = "none";
-                }}
-              />
-            </div>
+            <TossPayLogo />
             <div className="flex-1">
               <p className="font-semibold text-sm">토스페이</p>
               <p className="text-xs text-muted-foreground">신용카드 · 체크카드</p>
