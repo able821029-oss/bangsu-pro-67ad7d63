@@ -470,7 +470,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
               color: selectedVoice === null ? "hsl(215 100% 50%)" : "hsl(var(--muted-foreground))",
             }}
           >
-            🔇 나레이션 없음 — BGM만
+            <VolumeX className="w-4 h-4 inline mr-1" /> 나레이션 없음 — BGM만
           </button>
         </div>
 
