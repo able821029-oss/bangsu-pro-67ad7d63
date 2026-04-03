@@ -154,9 +154,9 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [pendingNarration, setPendingNarration] = useState<{ texts: string[]; voiceConfig: VoiceConfig } | null>(null);
 
-  // Play TTS only when step transitions to "done"
+  // Play TTS only after the result screen is visible
   useEffect(() => {
-    if (step !== "done" || !pendingNarration) return;
+    if (step !== "done" || !videoUrl || !pendingNarration) return;
     const { texts, voiceConfig: vc } = pendingNarration;
     setPendingNarration(null);
 
@@ -165,7 +165,10 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       for (const text of texts) {
         if (cancelled || !text) continue;
         await new Promise<void>((resolve) => {
-          if (!window.speechSynthesis) { resolve(); return; }
+          if (!window.speechSynthesis) {
+            resolve();
+            return;
+          }
           const utterance = new SpeechSynthesisUtterance(text);
           utterance.lang = vc.lang;
           utterance.pitch = vc.pitch;
@@ -184,8 +187,12 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         });
       }
     })();
-    return () => { cancelled = true; speechSynthesis.cancel(); };
-  }, [step, pendingNarration]);
+
+    return () => {
+      cancelled = true;
+      if (window.speechSynthesis) speechSynthesis.cancel();
+    };
+  }, [step, videoUrl, pendingNarration]);
 
   const videoLimit = PLAN_LIMITS[subscription.plan] || 5;
   const [videoUsed] = useState(2);
@@ -258,13 +265,19 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       toast({ title: "📱 아이폰 안내", description: "아이폰에서는 영상 자동 저장이 제한됩니다.\n제어센터 → 화면 기록 버튼으로 저장해 주세요." });
     }
 
-    speechSynthesis.cancel();
+    if (window.speechSynthesis) speechSynthesis.cancel();
     setPlayingVoice(null);
+    setPendingNarration(null);
+    setErrorMsg("");
+
+    if (videoUrl) {
+      URL.revokeObjectURL(videoUrl);
+      setVideoUrl(null);
+    }
 
     setStep("generating");
     setProgressText("🎬 AI 스크립트 생성 중...");
     setProgressPct(10);
-    setErrorMsg("");
 
     const narrationEnabled = selectedVoice !== null;
     const voice = VOICES.find(v => v.id === selectedVoice);
@@ -292,7 +305,6 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       setProgressText("🎥 텍스트 애니메이션 렌더링 중...");
       setProgressPct(25);
 
-      // Pass voice config for Web Speech API narration during recording
       const voiceConfig = narrationEnabled && voice ? {
         lang: voice.lang,
         pitch: voice.pitch,
@@ -311,21 +323,23 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
           setProgressPct(pct);
           setProgressText(`🎥 장면 렌더링 중... (${current}/${total})`);
         },
-        undefined, // no pre-rendered audio
+        undefined,
         voiceConfig,
       );
 
       const url = URL.createObjectURL(result.blob);
       setVideoUrl(url);
       setProgressPct(100);
+      setStep("done");
 
-      // Queue narration for playback after step becomes "done"
-      if (narrationEnabled && voiceConfig && result.narrationTexts.some(t => t)) {
-        setPendingNarration({ texts: result.narrationTexts, voiceConfig });
+      if (narrationEnabled && voiceConfig && result.narrationTexts.some(Boolean)) {
+        requestAnimationFrame(() => {
+          setPendingNarration({ texts: result.narrationTexts, voiceConfig });
+        });
       }
 
-      setStep("done");
       toast({ title: "✅ 영상이 완성되었습니다!" });
+
 
     } catch (err: any) {
       console.error("Shorts generation error:", err);
@@ -357,6 +371,9 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
 
   const handleReset = () => {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    setPendingNarration(null);
+    setPlayingVoice(null);
     setStep("config");
     setProgressPct(0);
     setVideoUrl(null);

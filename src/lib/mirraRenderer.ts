@@ -335,10 +335,22 @@ export async function renderMirraVideo(
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
-  const recordingDone = new Promise<Blob>((resolve) => {
+  const cleanupRecording = () => {
+    stream.getTracks().forEach((track) => track.stop());
+    if (audioCtx && audioCtx.state !== "closed") {
+      void audioCtx.close().catch(() => undefined);
+    }
+  };
+
+  const recordingDone = new Promise<Blob>((resolve, reject) => {
     recorder.onstop = () => {
+      cleanupRecording();
       const blobType = mimeType || `video/${ext}`;
       resolve(new Blob(chunks, { type: blobType }));
+    };
+    recorder.onerror = () => {
+      cleanupRecording();
+      reject(new Error("RECORDING_FAILED"));
     };
   });
 
@@ -427,8 +439,25 @@ export async function renderMirraVideo(
   }
 
   onProgress(scenes.length, scenes.length);
-  recorder.stop();
-  if (audioCtx) audioCtx.close();
-  const blob = await recordingDone;
+  if (recorder.state !== "inactive") {
+    try {
+      recorder.requestData();
+    } catch {
+      // ignore browsers that don't support manual flush
+    }
+    recorder.stop();
+  }
+
+  const blob = await Promise.race([
+    recordingDone,
+    new Promise<Blob>((resolve) => {
+      setTimeout(() => {
+        cleanupRecording();
+        const blobType = mimeType || `video/${ext}`;
+        resolve(new Blob(chunks, { type: blobType }));
+      }, 2000);
+    }),
+  ]);
+
   return { blob, narrationTexts };
 }
