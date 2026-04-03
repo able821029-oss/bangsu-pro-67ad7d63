@@ -13,9 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
 const personas: { id: Persona; label: string; desc: string }[] = [
-  { id: "장인형", label: "🔨 장인형", desc: "30년 경력의 장인 느낌" },
-  { id: "😊 친근형" as any, label: "😊 친근형", desc: "이웃집 아저씨같은 친근함" },
-  { id: "전문기업형", label: "🏢 전문기업형", desc: "체계적인 전문 기업 이미지" },
+  { id: "장인형", label: "장인형", desc: "30년 경력의 장인 느낌" },
+  { id: "친근형", label: "친근형", desc: "이웃집 아저씨같은 친근함" },
+  { id: "전문기업형", label: "전문기업형", desc: "체계적인 전문 기업 이미지" },
 ];
 
 type GeneratingStep = "analyzing" | "writing" | "done" | "error";
