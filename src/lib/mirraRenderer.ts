@@ -291,7 +291,7 @@ export async function renderMirraVideo(
   onProgress: (current: number, total: number) => void,
   narrationAudios?: (string | null)[],
   voiceConfig?: VoiceConfig,
-): Promise<Blob> {
+): Promise<{ blob: Blob; narrationTexts: string[] }> {
   // Pre-flight checks
   if (!isRecordingSupported()) {
     throw new Error("UNSUPPORTED");
