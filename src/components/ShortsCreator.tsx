@@ -110,8 +110,8 @@ function VoiceCard({
       onClick={onSelect}
       className="relative w-full text-left p-3 rounded-xl transition-all"
       style={{
-        border: selected ? "2px solid #237FFF" : "0.5px solid #E5E7EB",
-        backgroundColor: selected ? "#EFF6FF" : "white",
+        border: selected ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",
+        backgroundColor: selected ? "hsl(215 100% 97%)" : "hsl(var(--card))",
       }}
     >
       {selected && (
@@ -125,8 +125,8 @@ function VoiceCard({
         onClick={(e) => { e.stopPropagation(); onPreview(); }}
         className="mt-2 flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors"
         style={{
-          backgroundColor: isPlaying ? "#237FFF" : "#F3F4F6",
-          color: isPlaying ? "white" : "#6B7280",
+          backgroundColor: isPlaying ? "hsl(215 100% 50%)" : "hsl(var(--secondary))",
+          color: isPlaying ? "white" : "hsl(var(--muted-foreground))",
         }}
       >
         {isPlaying ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
@@ -465,9 +465,9 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
             onClick={() => { setSelectedVoice(null); speechSynthesis.cancel(); setPlayingVoice(null); }}
             className="w-full text-center py-2.5 rounded-xl text-sm font-medium transition-all"
             style={{
-              border: selectedVoice === null ? "2px solid #237FFF" : "0.5px solid #E5E7EB",
-              backgroundColor: selectedVoice === null ? "#EFF6FF" : "white",
-              color: selectedVoice === null ? "#237FFF" : "#6B7280",
+              border: selectedVoice === null ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",
+              backgroundColor: selectedVoice === null ? "hsl(215 100% 97%)" : "hsl(var(--card))",
+              color: selectedVoice === null ? "hsl(215 100% 50%)" : "hsl(var(--muted-foreground))",
             }}
           >
             🔇 나레이션 없음 — BGM만

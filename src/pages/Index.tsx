@@ -20,11 +20,11 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
-      style={{ backgroundColor: '#001130', opacity, transition: 'opacity 0.8s ease-in' }}
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background"
+      style={{ opacity, transition: 'opacity 0.8s ease-in' }}
     >
       <svg width="80" height="80" viewBox="0 0 64 64" fill="none" className="mb-4">
-        <rect width="64" height="64" rx="16" fill="#001130"/>
+        <rect width="64" height="64" rx="16" fill="hsl(215 100% 50%)"/>
         <defs>
           <linearGradient id="splashSg" x1="14" y1="10" x2="50" y2="54" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#237FFF"/>

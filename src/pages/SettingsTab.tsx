@@ -126,7 +126,7 @@ export function SettingsTab() {
 
       <div className="flex flex-col items-center gap-2 mt-6">
         <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
-          <rect width="64" height="64" rx="16" fill="#001130"/>
+          <rect width="64" height="64" rx="16" fill="hsl(215 100% 50%)"/>
           <defs>
             <linearGradient id="setSg" x1="14" y1="10" x2="50" y2="54" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stopColor="#237FFF"/>
