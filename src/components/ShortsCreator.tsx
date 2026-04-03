@@ -475,7 +475,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         </div>
 
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">🎵 배경 음악</p>
+          <p className="text-sm font-semibold flex items-center gap-1.5"><Music className="w-4 h-4 text-primary" /> 배경 음악</p>
           <div className="flex flex-wrap gap-2">
             {bgmOptions.map(b => (
               <Badge key={b.id} variant={bgm === b.id ? "chipActive" : "chip"}
