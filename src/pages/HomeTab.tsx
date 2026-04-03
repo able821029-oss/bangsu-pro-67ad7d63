@@ -82,7 +82,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2.5">
             <svg width="36" height="36" viewBox="0 0 64 64" fill="none" className="shrink-0">
-              <rect width="64" height="64" rx="16" fill="#001130"/>
+              <rect width="64" height="64" rx="16" fill="hsl(215 100% 50%)"/>
               <defs>
                 <linearGradient id="hSg" x1="14" y1="10" x2="50" y2="54" gradientUnits="userSpaceOnUse">
                   <stop offset="0%" stopColor="#237FFF"/>
