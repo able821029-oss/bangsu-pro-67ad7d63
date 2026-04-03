@@ -98,7 +98,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     setEditingBlockIdx(null);
     updatePost(post.id, { blocks: newBlocks });
     await saveToDb({ blocks: newBlocks });
-    toast({ title: "✅ 본문이 수정되었습니다." });
+    toast({ title: "본문이 수정되었습니다." });
   };
 
   const handleRemoveTag = (idx: number) => {
