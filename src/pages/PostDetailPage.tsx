@@ -157,7 +157,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     let text = title + "\n\n";
     blocks.forEach((block, idx) => {
       if (block.type === "text") text += block.content + "\n\n";
-      else text += `[📸 사진${idx + 1} 여기에 첨부]\n\n`;
+      else text += `[사진${idx + 1} 여기에 첨부]\n\n`;
     });
     text += hashtags.slice(0, 10).map(t => `#${t}`).join(" ");
     return text;
