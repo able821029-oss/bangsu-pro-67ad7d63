@@ -136,8 +136,9 @@ function VoiceCard({
   );
 }
 
-export function ShortsCreator({ onClose }: { onClose: () => void }) {
+export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => void; autoStart?: boolean }) {
   const { photos, settings, subscription, addPhoto, removePhoto, posts } = useAppStore();
+  const hasAutoStarted = useRef(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -225,6 +226,14 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
     speechSynthesis.addEventListener("voiceschanged", handler);
     return () => speechSynthesis.removeEventListener("voiceschanged", handler);
   }, []);
+
+  // Auto-start generation when opened with autoStart prop
+  useEffect(() => {
+    if (autoStart && !hasAutoStarted.current && photos.length >= 2) {
+      hasAutoStarted.current = true;
+      handleGenerate();
+    }
+  }, [autoStart]);
 
   const handlePreviewVoice = useCallback((voice: VoiceOption) => {
     // Stop any current speech
