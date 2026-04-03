@@ -110,8 +110,8 @@ function VoiceCard({
       onClick={onSelect}
       className="relative w-full text-left p-3 rounded-xl transition-all"
       style={{
-        border: selected ? "2px solid #237FFF" : "0.5px solid #E5E7EB",
-        backgroundColor: selected ? "#EFF6FF" : "white",
+        border: selected ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",
+        backgroundColor: selected ? "hsl(215 100% 97%)" : "hsl(var(--card))",
       }}
     >
       {selected && (
