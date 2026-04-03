@@ -121,20 +121,18 @@ export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: Pay
             disabled={loading !== null}
             className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-all text-left disabled:opacity-50"
           >
-            <img
-              src="/toss.png"
-              width="48" height="48"
-              className="shrink-0 rounded-full object-contain"
-              alt="토스페이"
-              onError={(e) => {
-                const el = e.currentTarget;
-                el.style.display = "none";
-                const fallback = document.createElement("div");
-                fallback.style.cssText = "width:48px;height:48px;border-radius:50%;background:#0064FF;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:white;flex-shrink:0;";
-                fallback.textContent = "toss";
-                el.parentElement?.insertBefore(fallback, el);
-              }}
-            />
+            <div className="w-12 h-12 rounded-full bg-[#0064FF] flex items-center justify-center shrink-0 overflow-hidden">
+              <img
+                src="/toss.png"
+                width="32" height="32"
+                className="object-contain"
+                alt="토스페이"
+                onError={(e) => {
+                  const el = e.currentTarget;
+                  el.style.display = "none";
+                }}
+              />
+            </div>
             <div className="flex-1">
               <p className="font-semibold text-sm">토스페이</p>
               <p className="text-xs text-muted-foreground">신용카드 · 체크카드</p>
