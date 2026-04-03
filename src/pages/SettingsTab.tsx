@@ -125,18 +125,21 @@ export function SettingsTab() {
       </button>
 
       <div className="flex flex-col items-center gap-2 mt-6">
-        <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
-          <rect width="64" height="64" rx="16" fill="hsl(215 100% 50%)"/>
+        <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
           <defs>
-            <linearGradient id="setSg" x1="14" y1="10" x2="50" y2="54" gradientUnits="userSpaceOnUse">
+            <linearGradient id="setSg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stopColor="#237FFF"/>
-              <stop offset="52%" stopColor="#6C5CE7"/>
               <stop offset="100%" stopColor="#AB5EBE"/>
             </linearGradient>
           </defs>
-          <text x="8" y="52" fontFamily="Arial Black, Helvetica Neue, sans-serif" fontWeight="900" fontSize="52" fill="url(#setSg)">S</text>
+          <rect width="64" height="64" rx="16" fill="url(#setSg)"/>
+          <text x="8" y="52" fontFamily="Arial Black, Helvetica Neue, sans-serif" fontWeight="900" fontSize="52" fill="#FFFFFF">S</text>
         </svg>
-        <p className="text-xs text-muted-foreground">SMS v1.0 | Self Marketing Service</p>
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="font-black text-base" style={{ background: "linear-gradient(90deg, #237FFF, #AB5EBE)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>SMS</span>
+          <span className="text-[9px] font-semibold text-muted-foreground tracking-widest uppercase">셀프마케팅서비스</span>
+          <p className="text-[10px] text-muted-foreground mt-1">v1.0</p>
+        </div>
       </div>
     </div>
   );

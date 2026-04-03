@@ -230,21 +230,11 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
                 <BarChart3 className="w-8 h-8 text-muted-foreground/40" />
               </div>
             </div>
-            <div className="text-center space-y-2">
+            <div className="text-center">
               <p className="text-sm text-muted-foreground">
-                블로그 진단하기를 눌러
+                위 <span className="text-primary font-medium">블로그 진단하기</span> 버튼을 눌러
                 <br />내 SEO 점수를 확인하세요
               </p>
-              <Button size="sm" variant="outline" onClick={handleDiagnose} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                    분석 중...
-                  </>
-                ) : (
-                  "진단하기"
-                )}
-              </Button>
             </div>
           </div>
         ) : (

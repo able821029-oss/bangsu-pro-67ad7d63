@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useAppStore } from "@/stores/appStore";
 import { Button } from "@/components/ui/button";
 import type { TabId } from "@/components/BottomNav";
@@ -11,7 +11,7 @@ export function PublishSchedule({ onNavigate }: { onNavigate: (tab: TabId) => vo
 
   const weekStatus = useMemo(() => {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0=Sun
+    const dayOfWeek = now.getDay();
     const monday = new Date(now);
     monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
     monday.setHours(0, 0, 0, 0);
@@ -38,15 +38,19 @@ export function PublishSchedule({ onNavigate }: { onNavigate: (tab: TabId) => vo
           <div key={i} className="flex flex-col items-center gap-1 flex-1">
             <span className="text-xs text-muted-foreground">{day.label}</span>
             <div
-              className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg ${
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                 day.published
-                  ? "bg-green-500/20 border border-green-500/40"
+                  ? "bg-primary/15 border-2 border-primary"
                   : day.isPast
-                  ? "bg-secondary border border-border"
+                  ? "bg-red-500/10 border-2 border-red-500/50"
                   : "bg-secondary/50 border border-dashed border-border"
               }`}
             >
-              {day.published ? <Check className="w-4 h-4 text-green-500" /> : null}
+              {day.published ? (
+                <Check className="w-5 h-5 text-primary" strokeWidth={3} />
+              ) : day.isPast ? (
+                <X className="w-4 h-4 text-red-500" strokeWidth={2.5} />
+              ) : null}
             </div>
           </div>
         ))}
@@ -56,8 +60,8 @@ export function PublishSchedule({ onNavigate }: { onNavigate: (tab: TabId) => vo
       </p>
       {latestMissed && publishedCount < 3 && (
         <div className="space-y-2">
-          <p className="text-xs text-primary text-center font-medium">
-            → {latestMissed}요일 발행을 놓쳤어요!
+          <p className="text-xs text-red-500 text-center font-semibold">
+            ✕ {latestMissed}요일 발행을 놓쳤어요!
           </p>
           <Button size="sm" className="w-full" onClick={() => onNavigate("camera")}>
             지금 글 작성하기

@@ -25,6 +25,7 @@ import { useAppStore, BlogPost, Platform, ContentBlock } from "@/stores/appStore
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { TabId } from "@/components/BottomNav";
+import { ShortsCreator } from "@/components/ShortsCreator";
 
 const platformLabels: Record<Platform, string> = {
   naver: "네이버 블로그",
@@ -65,6 +66,7 @@ export function PostDetailPage({
   const [seoResult, setSeoResult] = useState<any>(null);
   const [seoLoading, setSeoLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showShortsCreator, setShowShortsCreator] = useState(false);
 
   const isPremium = subscription.plan === "프로" || subscription.plan === "무제한";
 
@@ -522,7 +524,7 @@ export function PostDetailPage({
       </div>
 
       {/* 액션 버튼 */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {orderedPlatforms.map((platform, i) => (
           <div key={platform}>
             <Button
@@ -552,70 +554,35 @@ export function PostDetailPage({
           </Button>
         )}
 
-        {/* 쇼츠 영상 — 플랜 잠금 + 루프 차단 */}
+        {/* 쇼츠 영상 — 테스트 모드 (플랜 체크 없이 바로 실행) */}
         {(() => {
           const hasPhotos = post.photos.length >= 2;
-          const hasText = blocks.length > 0 && blocks.some((b) => b.type === "text" && b.content);
-          const canCreate = hasPhotos && hasText;
-
-          if (!isPremium) {
-            return (
-              <div>
-                <Button
-                  variant="secondary"
-                  className="w-full gap-2 opacity-70"
-                  onClick={() => setShowUpgradeModal(true)}
-                >
-                  <Lock className="w-4 h-4" />
-                  쇼츠 영상 만들기
-                  <span className="ml-auto text-xs bg-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full">프로+</span>
-                </Button>
-                <p className="text-xs text-muted-foreground text-center mt-1.5">
-                  프로 · 무제한 플랜에서 사용 가능합니다
-                </p>
-              </div>
-            );
-          }
-
-          const msg =
-            !hasPhotos && !hasText
-              ? "사진 2장 이상 + AI 글쓰기 완료 시 활성화됩니다"
-              : !hasPhotos
-                ? "사진을 2장 이상 추가해 주세요"
-                : !hasText
-                  ? "AI 글쓰기를 먼저 완료해 주세요"
-                  : null;
-
+          const canCreate = hasPhotos;
           return (
             <div>
               <Button
-                variant={canCreate ? "outline" : "secondary"}
+                variant="outline"
                 className="w-full gap-2"
-                disabled={!canCreate}
-                style={
-                  canCreate
-                    ? {
-                        background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)",
-                        color: "white",
-                        border: "none",
-                      }
-                    : {}
-                }
-                onClick={() => {
-                  toast({
-                    title: "쇼츠 영상 기능 준비 중",
-                    description: "곧 출시됩니다. 조금만 기다려 주세요!",
-                    duration: 3000,
-                  });
-                }}
+                style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white", border: "none" }}
+                onClick={() => setShowShortsCreator(true)}
               >
                 <Film className="w-5 h-5" />
                 쇼츠 영상 만들기
+                <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full">테스트</span>
               </Button>
-              {msg && <p className="text-xs text-muted-foreground text-center mt-1.5">{msg}</p>}
+              {!hasPhotos && (
+                <p className="text-xs text-muted-foreground text-center mt-1.5">사진을 2장 이상 추가해 주세요</p>
+              )}
             </div>
           );
         })()}
+
+        {/* ShortsCreator 오버레이 */}
+        {showShortsCreator && (
+          <div className="fixed inset-0 z-[80] bg-background overflow-y-auto">
+            <ShortsCreator onClose={() => setShowShortsCreator(false)} />
+          </div>
+        )}
 
         {/* 업그레이드 모달 */}
         {showUpgradeModal && (
