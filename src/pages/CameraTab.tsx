@@ -230,7 +230,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
   };
 
   if (showShorts) {
-    return <ShortsCreator onClose={() => setShowShorts(false)} />;
+    return <ShortsCreator onClose={() => setShowShorts(false)} autoStart />;
   }
 
   if (isGenerating) {

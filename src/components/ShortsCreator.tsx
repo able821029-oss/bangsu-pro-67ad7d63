@@ -227,6 +227,14 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     return () => speechSynthesis.removeEventListener("voiceschanged", handler);
   }, []);
 
+  // Auto-start generation when opened with autoStart prop
+  useEffect(() => {
+    if (autoStart && !hasAutoStarted.current && photos.length >= 2) {
+      hasAutoStarted.current = true;
+      handleGenerate();
+    }
+  }, [autoStart]);
+
   const handlePreviewVoice = useCallback((voice: VoiceOption) => {
     // Stop any current speech
     speechSynthesis.cancel();
