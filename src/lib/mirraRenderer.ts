@@ -367,6 +367,9 @@ export async function renderMirraVideo(
     const isEnding = si === scenes.length - 1 && !scene.photo;
     const photoImg = scene.photo ? imageMap[scene.photo] : null;
 
+    // Cancel any lingering speech from previous scene
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+
     // Pre-rendered audio narration (ElevenLabs path)
     const narrationBuffer = narrationBuffers[si] || null;
     if (narrationBuffer && audioCtx) {
@@ -380,12 +383,12 @@ export async function renderMirraVideo(
       } catch { /* audio playback error */ }
     }
 
-    // Web Speech API narration (browser TTS path)
-    // Delay speech until text appears on screen (subtitle starts at ~35% of scene)
+    // Web Speech API narration — fire when title text becomes visible (15%)
     const shouldSpeak = !narrationBuffer && narrationEnabled && voiceConfig && scene.narration;
+    const speechStartProgress = 0.15;
     let speechStartFrame = 0;
     if (shouldSpeak) {
-      speechStartFrame = Math.floor(totalFrames * 0.3);
+      speechStartFrame = Math.floor(totalFrames * speechStartProgress);
       const estimatedSpeechFrames = Math.ceil((scene.narration.length / 5) * FPS) + 15;
       totalFrames = Math.max(totalFrames, speechStartFrame + estimatedSpeechFrames);
     }
@@ -393,14 +396,16 @@ export async function renderMirraVideo(
     onProgress(si, scenes.length);
 
     let speechFired = false;
+    const sceneStartTime = performance.now();
 
     for (let f = 0; f < totalFrames; f++) {
-      // Fire TTS when we reach the text-visible frame
+      const t = f / totalFrames;
+
+      // Fire TTS synced to wall-clock so speech doesn't race ahead of video
       if (shouldSpeak && !speechFired && f >= speechStartFrame) {
         speechFired = true;
         speakNarration(scene.narration, voiceConfig!);
       }
-      const t = f / totalFrames;
 
       drawGradientBg(ctx, scene.bg_colors || ["#001130", "#0d2847"]);
       drawGridPattern(ctx, Math.min(t * 3, 1));
@@ -431,7 +436,10 @@ export async function renderMirraVideo(
         drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 130, subtitleProgress);
       }
 
-      await new Promise(r => setTimeout(r, 1000 / FPS));
+      // Throttle to real-time: wait until wall-clock catches up
+      const expectedTime = sceneStartTime + (f + 1) * (1000 / FPS);
+      const waitMs = expectedTime - performance.now();
+      await new Promise(r => setTimeout(r, Math.max(waitMs, 0)));
     }
   }
 
