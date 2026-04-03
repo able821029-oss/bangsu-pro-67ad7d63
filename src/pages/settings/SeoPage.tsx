@@ -137,7 +137,7 @@ export function SeoPage({ onBack }: { onBack: () => void }) {
           </Button>
           {showAdvice && (
             <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-              <p className="text-sm font-semibold">💡 AI 개선 조언</p>
+              <p className="text-sm font-semibold flex items-center gap-1.5"><Lightbulb className="w-4 h-4 text-primary" /> AI 개선 조언</p>
               <p className="text-sm text-muted-foreground">{diagnosis.overallAdvice}</p>
               {diagnosis.categories.map((cat, i) => (
                 <div key={i} className="border-t border-border pt-2">
