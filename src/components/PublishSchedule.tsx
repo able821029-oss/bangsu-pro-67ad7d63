@@ -31,7 +31,7 @@ export function PublishSchedule({ onNavigate }: { onNavigate: (tab: TabId) => vo
 
   return (
     <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-      <p className="text-sm font-semibold">📅 이번 주 발행 현황</p>
+      <p className="text-sm font-semibold">이번 주 발행 현황</p>
       <div className="flex justify-between gap-2">
         {weekStatus.map((day, i) => (
           <div key={i} className="flex flex-col items-center gap-1 flex-1">
