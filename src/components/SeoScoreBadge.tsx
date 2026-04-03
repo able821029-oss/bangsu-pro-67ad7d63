@@ -85,7 +85,7 @@ export function SeoScoreBadge({
     return "bg-red-500/10 text-red-600 border-red-500/30";
   };
 
-  const scoreEmoji = (score: number) => (score >= 80 ? "🟢" : score >= 60 ? "🟡" : "🔴");
+  const scoreEmoji = (score: number) => (score >= 80 ? "●" : score >= 60 ? "●" : "●");
 
   return (
     <>
