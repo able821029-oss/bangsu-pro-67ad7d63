@@ -4,7 +4,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 const announcements = [
   {
     id: "0",
-    title: "SMS 앱 출시를 환영합니다 🎉",
+    title: "SMS 앱 출시를 환영합니다",
     date: "2026-04-03",
     content: "현장 사진 한 장으로 블로그 글 완성!\n\n버전 1.0 | 2026년 4월\n\nSMS(Self Marketing Service)는 방수공사 전문 사장님들을 위한 블로그 자동 글쓰기 앱입니다. 사진만 찍으면 AI가 전문적인 시공 블로그 글을 작성해 드립니다.",
   },
