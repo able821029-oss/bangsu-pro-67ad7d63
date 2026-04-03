@@ -178,7 +178,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
   const handleCopyAndOpen = async (platform: Platform) => {
     try {
       await navigator.clipboard.writeText(getClipboardText(platform));
-      toast({ title: `✅ ${platformLabels[platform]}용 글이 복사되었습니다!` });
+      toast({ title: `${platformLabels[platform]}용 글이 복사되었습니다!` });
     } catch {
       toast({ title: "클립보드 복사 실패", variant: "destructive" });
     }
