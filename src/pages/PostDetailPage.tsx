@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film, CheckCircle2, Loader2, Check, AlertTriangle, TrendingUp } from "lucide-react";
 import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useAppStore, BlogPost, Platform, ContentBlock } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
