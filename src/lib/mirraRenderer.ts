@@ -429,5 +429,6 @@ export async function renderMirraVideo(
   onProgress(scenes.length, scenes.length);
   recorder.stop();
   if (audioCtx) audioCtx.close();
-  return recordingDone;
+  const blob = await recordingDone;
+  return { blob, narrationTexts };
 }
