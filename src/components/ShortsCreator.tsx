@@ -371,6 +371,9 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
 
   const handleReset = () => {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    setPendingNarration(null);
+    setPlayingVoice(null);
     setStep("config");
     setProgressPct(0);
     setVideoUrl(null);
