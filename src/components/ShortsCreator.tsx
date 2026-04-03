@@ -425,7 +425,8 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         <div className="space-y-2">
           {(() => {
             const hasPhotos = photos.length >= 2;
-            const hasText = blocks.length > 0 && blocks.some((b: any) => b.type === "text" && b.content);
+            const latestPost = posts.length > 0 ? posts[0] : null;
+            const hasText = latestPost && latestPost.blocks.length > 0 && latestPost.blocks.some((b: any) => b.type === "text" && b.content);
             const canGenerate = hasPhotos && hasText && !quotaExceeded;
             const message = !hasPhotos && !hasText
               ? "사진과 글이 모두 필요합니다"
