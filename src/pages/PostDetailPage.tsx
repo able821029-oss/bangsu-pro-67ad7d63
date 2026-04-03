@@ -120,7 +120,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
 
   const handleFinishHashtags = () => {
     setEditingHashtags(false);
-    toast({ title: "✅ 해시태그가 저장되었습니다." });
+    toast({ title: "해시태그가 저장되었습니다." });
   };
 
   const handleTempSave = async () => {
