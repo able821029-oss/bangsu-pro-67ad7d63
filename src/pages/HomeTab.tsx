@@ -1,4 +1,4 @@
-```tsx
+tsx
 import { useState } from "react";
 import { Camera, TrendingUp, Award, PenLine, FileText, ChevronRight, Film } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
