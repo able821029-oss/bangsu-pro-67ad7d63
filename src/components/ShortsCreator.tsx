@@ -285,7 +285,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     }
 
     setStep("generating");
-    setProgressText("🎬 AI 스크립트 생성 중...");
+    setProgressText("AI 스크립트 생성 중...");
     setProgressPct(10);
 
     const narrationEnabled = selectedVoice !== null;
