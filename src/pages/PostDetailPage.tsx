@@ -127,7 +127,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     updatePost(post.id, { title, blocks, hashtags, status: "작성중" });
     setCurrentStatus("작성중");
     await saveToDb({ title, blocks, hashtags, status: "작성중" });
-    toast({ title: "✅ 임시저장 완료", duration: 2000 });
+    toast({ title: "임시저장 완료", duration: 2000 });
   };
 
   const handleMarkPublished = async () => {
