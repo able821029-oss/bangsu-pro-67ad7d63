@@ -11,31 +11,41 @@ import { BlogPost } from "@/stores/appStore";
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const [opacity, setOpacity] = useState(0);
-
   useEffect(() => {
     requestAnimationFrame(() => setOpacity(1));
     const timer = setTimeout(onDone, 1600);
     return () => clearTimeout(timer);
   }, [onDone]);
-
   return (
     <div
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background"
-      style={{ opacity, transition: 'opacity 0.8s ease-in' }}
+      style={{ opacity, transition: "opacity 0.8s ease-in" }}
     >
+      {/* ✅ FIX: 그라데이션 배경 + 흰색 S */}
       <svg width="80" height="80" viewBox="0 0 64 64" fill="none" className="mb-4">
-        <rect width="64" height="64" rx="16" fill="hsl(215 100% 50%)"/>
         <defs>
-          <linearGradient id="splashSg" x1="14" y1="10" x2="50" y2="54" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#237FFF"/>
-            <stop offset="52%" stopColor="#6C5CE7"/>
-            <stop offset="100%" stopColor="#AB5EBE"/>
+          <linearGradient id="splashSg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#237FFF" />
+            <stop offset="100%" stopColor="#AB5EBE" />
           </linearGradient>
         </defs>
-        <text x="8" y="52" fontFamily="Arial Black, Helvetica Neue, sans-serif" fontWeight="900" fontSize="52" fill="url(#splashSg)">S</text>
+        <rect width="64" height="64" rx="16" fill="url(#splashSg)" />
+        <text
+          x="8"
+          y="52"
+          fontFamily="Arial Black, Helvetica Neue, sans-serif"
+          fontWeight="900"
+          fontSize="52"
+          fill="#FFFFFF"
+        >
+          S
+        </text>
       </svg>
       <p className="text-foreground font-bold text-[28px]">SMS</p>
-      <p className="text-[12px] mt-1 text-muted-foreground">SELF MARKETING SERVICE</p>
+      {/* ✅ FIX: 셀프마케팅서비스 텍스트 선명하게 */}
+      <p className="text-[11px] mt-1 font-semibold tracking-widest" style={{ color: "rgba(180,180,200,0.9)" }}>
+        셀프마케팅서비스
+      </p>
     </div>
   );
 }
@@ -44,19 +54,15 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [viewingPost, setViewingPost] = useState<BlogPost | null>(null);
   const [showSplash, setShowSplash] = useState(true);
-
   const handleViewPost = (post: BlogPost) => {
     setViewingPost(post);
   };
-
   const handleBackFromPost = () => {
     setViewingPost(null);
   };
-
   if (showSplash) {
     return <SplashScreen onDone={() => setShowSplash(false)} />;
   }
-
   if (viewingPost) {
     return (
       <div className="min-h-screen bg-background">
@@ -64,7 +70,6 @@ const Index = () => {
       </div>
     );
   }
-
   const renderTab = () => {
     switch (activeTab) {
       case "home":
@@ -79,7 +84,6 @@ const Index = () => {
         return <SettingsTab />;
     }
   };
-
   return (
     <div className="min-h-screen bg-background">
       {renderTab()}
@@ -88,5 +92,4 @@ const Index = () => {
     </div>
   );
 };
-
 export default Index;
