@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film } from "lucide-react";
+import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film, CheckCircle2 } from "lucide-react";
 import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,15 +14,15 @@ const platformLabels: Record<Platform, string> = {
   tiktok: "틱톡",
 };
 
-const statusColor: Record<string, "success" | "warning" | "info" | "default"> = {
-  "게시완료": "success",
+const statusBadgeVariant: Record<string, "default" | "info" | "success"> = {
+  "작성중": "default",
+  "AI생성중": "default",
   "완료": "info",
-  "작성중": "warning",
-  "AI생성중": "warning",
+  "게시완료": "success",
 };
 
 export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; onBack: () => void; onNavigate?: (tab: TabId) => void }) {
-  const { updatePost } = useAppStore();
+  const { updatePost, updatePostStatus } = useAppStore();
   const { toast } = useToast();
   const [title, setTitle] = useState(post.title);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -33,6 +33,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
   const [editingHashtags, setEditingHashtags] = useState(false);
   const [newTagInput, setNewTagInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(post.status);
 
   const saveToDb = async (updates: Record<string, any>) => {
     setIsSaving(true);
@@ -87,8 +88,16 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
 
   const handleTempSave = async () => {
     updatePost(post.id, { title, blocks, hashtags, status: "작성중" });
+    setCurrentStatus("작성중");
     await saveToDb({ title, blocks, hashtags, status: "작성중" });
     toast({ title: "✅ 임시저장 완료", duration: 2000 });
+  };
+
+  const handleMarkPublished = async () => {
+    updatePostStatus(post.id, "게시완료");
+    setCurrentStatus("게시완료");
+    await saveToDb({ status: "게시완료" });
+    toast({ title: "✅ 게시완료로 변경되었습니다" });
   };
 
   const handleRegenerate = () => {
@@ -139,7 +148,6 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     window.location.href = deeplinks[platform];
   };
 
-  // Order platforms: naver first (main CTA)
   const orderedPlatforms = ["naver", "instagram", "tiktok"].filter(p =>
     post.platforms.includes(p as Platform)
   ) as Platform[];
@@ -161,7 +169,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
             saveToDb(improved);
           }}
         />
-        <Badge variant={statusColor[post.status] || "default"}>{post.status}</Badge>
+        <Badge variant={statusBadgeVariant[currentStatus] || "default"}>{currentStatus}</Badge>
       </div>
 
       {/* Title */}
@@ -197,14 +205,15 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
         </div>
       )}
 
-      {/* Content Blocks */}
+      {/* Content Blocks — full body display with inline editing */}
       <div className="space-y-3">
+        <p className="text-sm font-semibold">본문</p>
         {blocks.map((block, idx) =>
           block.type === "text" ? (
             <div key={idx} className="bg-card rounded-[--radius] border border-border p-4 relative group">
               {editingBlockIdx === idx ? (
                 <div className="space-y-2">
-                  <textarea className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[100px] text-foreground resize-none" value={editText} onChange={(e) => setEditText(e.target.value)} />
+                  <textarea className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[120px] text-foreground resize-none" value={editText} onChange={(e) => setEditText(e.target.value)} />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleSaveEdit}>저장</Button>
                     <Button size="sm" variant="outline" onClick={() => setEditingBlockIdx(null)}>취소</Button>
@@ -226,6 +235,9 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
               </div>
             </div>
           )
+        )}
+        {blocks.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">본문이 없습니다</p>
         )}
       </div>
 
@@ -273,9 +285,9 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
         <p>플랫폼: {post.platforms.map(p => platformLabels[p]).join(", ")}</p>
       </div>
 
-      {/* ─── Action Buttons (ordered by priority) ─── */}
+      {/* ─── Action Buttons ─── */}
       <div className="space-y-3">
-        {/* ① Platform CTA buttons — only selected platforms */}
+        {/* Platform CTA buttons */}
         {orderedPlatforms.map((platform, i) => (
           <div key={platform}>
             <Button
@@ -292,10 +304,17 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
           </div>
         ))}
 
-        {/* Divider */}
         {orderedPlatforms.length > 0 && <div className="border-t border-border" />}
 
-        {/* ④ Shorts */}
+        {/* Mark as published */}
+        {currentStatus !== "게시완료" && (
+          <Button variant="outline" className="w-full gap-2 text-green-600 border-green-500/30 hover:bg-green-500/10" onClick={handleMarkPublished}>
+            <CheckCircle2 className="w-5 h-5" />
+            발행 완료로 표시
+          </Button>
+        )}
+
+        {/* Shorts */}
         <Button variant="outline" className="w-full gap-2" onClick={() => {
           toast({ title: "🎬 이 글 기반으로 영상을 생성합니다" });
           onBack();
@@ -305,13 +324,13 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
           쇼츠 영상 만들기
         </Button>
 
-        {/* ⑤ Regenerate */}
+        {/* Regenerate */}
         <Button variant="outline" className="w-full gap-2" onClick={handleRegenerate}>
           <RefreshCw className="w-4 h-4" />
           AI 재생성
         </Button>
 
-        {/* ⑥ Temp save — small */}
+        {/* Temp save */}
         <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" onClick={handleTempSave}>
           <Save className="w-4 h-4" />
           임시저장

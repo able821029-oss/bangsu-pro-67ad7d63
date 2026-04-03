@@ -14,7 +14,7 @@ const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
 const personas: { id: Persona; label: string; desc: string }[] = [
   { id: "장인형", label: "🔨 장인형", desc: "30년 경력의 장인 느낌" },
-  { id: "친근형", label: "😊 친근형", desc: "이웃집 아저씨같은 친근함" },
+  { id: "😊 친근형" as any, label: "😊 친근형", desc: "이웃집 아저씨같은 친근함" },
   { id: "전문기업형", label: "🏢 전문기업형", desc: "체계적인 전문 기업 이미지" },
 ];
 
@@ -35,18 +35,25 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
   const [location, setLocation] = useState("");
   const [constructionDate, setConstructionDate] = useState(new Date().toISOString().slice(0, 10));
   const [isLocating, setIsLocating] = useState(false);
+  const [gpsTimedOut, setGpsTimedOut] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
   const [progress, setProgress] = useState(0);
   const [showShorts, setShowShorts] = useState(false);
 
-  // Auto-detect GPS location on mount
+  // Auto-detect GPS location on mount with 10s timeout
   useEffect(() => {
     if (!location && navigator.geolocation) {
       setIsLocating(true);
+      const timeoutId = setTimeout(() => {
+        setIsLocating(false);
+        setGpsTimedOut(true);
+      }, 10000);
+
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
+          clearTimeout(timeoutId);
           try {
             const { latitude, longitude } = pos.coords;
             const res = await fetch(
@@ -57,13 +64,17 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
             const loc = addr?.borough || addr?.suburb || addr?.city_district || addr?.city || addr?.town || "";
             if (loc) setLocation(loc);
           } catch {
-            // silently fail
+            setGpsTimedOut(true);
           } finally {
             setIsLocating(false);
           }
         },
-        () => setIsLocating(false),
-        { timeout: 5000 }
+        () => {
+          clearTimeout(timeoutId);
+          setIsLocating(false);
+          setGpsTimedOut(true);
+        },
+        { timeout: 10000 }
       );
     }
   }, []);
@@ -190,6 +201,34 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     }
   };
 
+  const handleRetryGps = () => {
+    if (!navigator.geolocation) return;
+    setIsLocating(true);
+    setGpsTimedOut(false);
+    const timeoutId = setTimeout(() => {
+      setIsLocating(false);
+      setGpsTimedOut(true);
+    }, 10000);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        clearTimeout(timeoutId);
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=ko`
+          );
+          const data = await res.json();
+          const addr = data.address;
+          const loc = addr?.borough || addr?.suburb || addr?.city_district || addr?.city || addr?.town || "";
+          if (loc) setLocation(loc);
+        } catch {} finally { setIsLocating(false); }
+      },
+      () => { clearTimeout(timeoutId); setIsLocating(false); setGpsTimedOut(true); },
+      { timeout: 10000 }
+    );
+  };
+
   if (showShorts) {
     return <ShortsCreator onClose={() => setShowShorts(false)} />;
   }
@@ -263,12 +302,15 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
           </div>
         </div>
 
-        {/* Location + Date (minimal) */}
+        {/* Location + Date */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground flex items-center gap-1">
               <MapPin className="w-3 h-3" /> 시공 위치
             </label>
+            {gpsTimedOut && !location && (
+              <p className="text-xs text-yellow-500">⚠️ 위치 감지 실패 — 직접 입력해 주세요</p>
+            )}
             <div className="flex gap-2">
               <input
                 className="flex-1 bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
@@ -277,26 +319,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
                 onChange={(e) => setLocation(e.target.value)}
               />
               <button
-                onClick={() => {
-                  if (!navigator.geolocation) return;
-                  setIsLocating(true);
-                  navigator.geolocation.getCurrentPosition(
-                    async (pos) => {
-                      try {
-                        const { latitude, longitude } = pos.coords;
-                        const res = await fetch(
-                          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=ko`
-                        );
-                        const data = await res.json();
-                        const addr = data.address;
-                        const loc = addr?.borough || addr?.suburb || addr?.city_district || addr?.city || addr?.town || "";
-                        if (loc) setLocation(loc);
-                      } catch {} finally { setIsLocating(false); }
-                    },
-                    () => setIsLocating(false),
-                    { timeout: 5000 }
-                  );
-                }}
+                onClick={handleRetryGps}
                 className="bg-primary/10 text-primary rounded-lg px-3 py-2 text-xs font-medium shrink-0"
               >
                 {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : "📍 자동"}
@@ -322,8 +345,8 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
         {/* Before/After */}
         <BeforeAfterComparator />
 
-        {/* Next */}
-        <Button variant="hero" size="xl" className="w-full" onClick={handleNext}>
+        {/* Next — disabled when no photos */}
+        <Button variant="hero" size="xl" className="w-full" onClick={handleNext} disabled={photos.length === 0}>
           다음 →
         </Button>
 

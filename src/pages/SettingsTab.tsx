@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   User, CreditCard, Ticket, Users, HelpCircle, MessageSquare, Bell,
-  ChevronRight, LogOut, Link2, BarChart3,
+  ChevronRight, LogOut, BarChart3,
 } from "lucide-react";
 import { ProfileSettings } from "@/pages/settings/ProfileSettings";
 import { PricingPlan } from "@/pages/settings/PricingPlan";
@@ -10,16 +10,22 @@ import { ReferralPage } from "@/pages/settings/ReferralPage";
 import { FaqPage } from "@/pages/settings/FaqPage";
 import { ContactPage } from "@/pages/settings/ContactPage";
 import { AnnouncementsPage } from "@/pages/settings/AnnouncementsPage";
-import { SeoPage } from "@/pages/settings/SeoPage";
+import { useAppStore, Persona } from "@/stores/appStore";
+import { useToast } from "@/hooks/use-toast";
 
-type SettingsPage = "menu" | "profile" | "pricing" | "coupon" | "referral" | "faq" | "contact" | "announcements" | "seo";
+type SettingsPage = "menu" | "profile" | "pricing" | "coupon" | "referral" | "faq" | "contact" | "announcements";
+
+const personas: { id: Persona; label: string }[] = [
+  { id: "장인형", label: "🔨 장인형" },
+  { id: "친근형", label: "😊 친근형" },
+  { id: "전문기업형", label: "🏢 전문기업형" },
+];
 
 const myInfoItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
   { id: "profile", label: "업체명 · 전화번호 · 지역", icon: User },
 ];
 
 const appSettingsItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
-  { id: "seo", label: "블로그 상위노출 관리", icon: BarChart3 },
   { id: "pricing", label: "요금제 확인", icon: CreditCard },
   { id: "coupon", label: "쿠폰·혜택", icon: Ticket },
   { id: "referral", label: "지인 소개", icon: Users },
@@ -30,6 +36,8 @@ const appSettingsItems: { id: SettingsPage; label: string; icon: React.ElementTy
 
 export function SettingsTab() {
   const [page, setPage] = useState<SettingsPage>("menu");
+  const { selectedPersona, setSelectedPersona } = useAppStore();
+  const { toast } = useToast();
 
   if (page !== "menu") {
     const PageComponent: Record<string, React.FC<{ onBack: () => void }>> = {
@@ -40,7 +48,6 @@ export function SettingsTab() {
       faq: FaqPage,
       contact: ContactPage,
       announcements: AnnouncementsPage,
-      seo: SeoPage,
     };
     const Component = PageComponent[page];
     return Component ? <Component onBack={() => setPage("menu")} /> : null;
@@ -75,6 +82,33 @@ export function SettingsTab() {
       <h1 className="text-xl font-bold">⚙️ 설정</h1>
 
       {renderGroup("내 정보", myInfoItems)}
+
+      {/* Default Persona */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground px-1">기본 페르소나</p>
+        <div className="bg-card rounded-xl border border-border p-4">
+          <div className="flex gap-2">
+            {personas.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  setSelectedPersona(p.id);
+                  toast({ title: `✅ 기본 페르소나: ${p.label}` });
+                }}
+                className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all ${
+                  selectedPersona === p.id
+                    ? "bg-primary/10 text-primary border-2 border-primary"
+                    : "bg-secondary text-muted-foreground border-2 border-transparent"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 text-center">촬영 탭에서 기본 선택됩니다</p>
+        </div>
+      </div>
+
       {renderGroup("앱 설정", appSettingsItems)}
 
       {/* Logout */}

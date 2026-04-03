@@ -1,7 +1,7 @@
-import { Home, Camera, Upload, Settings } from "lucide-react";
+import { Home, Camera, Upload, Settings, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type TabId = "home" | "camera" | "publish" | "settings";
+export type TabId = "home" | "camera" | "publish" | "seo" | "settings";
 
 interface BottomNavProps {
   activeTab: TabId;
@@ -12,6 +12,7 @@ const tabs: { id: TabId; label: string; icon: React.ElementType; isCenter?: bool
   { id: "home", label: "홈", icon: Home },
   { id: "camera", label: "촬영", icon: Camera },
   { id: "publish", label: "발행현황", icon: Upload, isCenter: true },
+  { id: "seo", label: "상위노출", icon: TrendingUp },
   { id: "settings", label: "설정", icon: Settings },
 ];
 
@@ -64,8 +65,8 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                   isActive ? "text-[#237FFF]" : "text-[#6B7E99]"
                 )}
               >
-                <Icon className={cn("w-6 h-6", isActive && "drop-shadow-[0_0_8px_#237FFF]")} />
-                <span className="text-xs font-medium">{tab.label}</span>
+                <Icon className={cn("w-5 h-5", isActive && "drop-shadow-[0_0_8px_#237FFF]")} />
+                <span className="text-[10px] font-medium">{tab.label}</span>
               </button>
             );
           })}

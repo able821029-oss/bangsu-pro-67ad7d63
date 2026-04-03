@@ -4,6 +4,7 @@ import { InstallBanner } from "@/components/InstallBanner";
 import { HomeTab } from "@/pages/HomeTab";
 import { CameraTab } from "@/pages/CameraTab";
 import { PublishTab } from "@/pages/PublishTab";
+import { SeoTab } from "@/pages/SeoTab";
 import { SettingsTab } from "@/pages/SettingsTab";
 import { PostDetailPage } from "@/pages/PostDetailPage";
 import { BlogPost } from "@/stores/appStore";
@@ -71,6 +72,8 @@ const Index = () => {
         return <CameraTab onNavigate={setActiveTab} onViewPost={handleViewPost} />;
       case "publish":
         return <PublishTab onNavigate={setActiveTab} onViewPost={handleViewPost} />;
+      case "seo":
+        return <SeoTab onNavigate={setActiveTab} />;
       case "settings":
         return <SettingsTab />;
     }
