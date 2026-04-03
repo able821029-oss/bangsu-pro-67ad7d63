@@ -402,8 +402,8 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold flex items-center gap-1.5"><Camera className="w-4 h-4 text-primary" /> 사진 추가하기</p>
           {photos.length < 2 && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
-              ⚠️ 사진이 2장 이상 필요합니다 (현재 {photos.length}장)
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 shrink-0" /> 사진이 2장 이상 필요합니다 (현재 {photos.length}장)
             </div>
           )}
 
