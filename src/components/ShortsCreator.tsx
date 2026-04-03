@@ -73,7 +73,7 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
   return (
     <div className="bg-card rounded-[--radius] border border-border p-4 space-y-2">
       <div className="flex justify-between items-baseline">
-        <p className="text-sm font-semibold">🎬 이번 달 영상</p>
+        <p className="text-sm font-semibold flex items-center gap-1.5"><Film className="w-4 h-4 text-primary" /> 이번 달 영상</p>
         <p className="text-sm font-bold" style={{ color: barColor }}>{used} / {max}개</p>
       </div>
       <div className="w-full bg-secondary rounded-full h-2.5">
