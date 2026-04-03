@@ -16,7 +16,7 @@ export function AdminPersonas() {
   const [tab, setTab] = useState<PromptTab>("persona");
 
   const handleSave = () => {
-    toast({ title: "✅ 프롬프트가 저장되었습니다." });
+    toast({ title: "프롬프트가 저장되었습니다." });
   };
 
   const platformLabels: Record<PlatformKey, string> = { naver: "네이버", instagram: "인스타그램", tiktok: "틱톡" };

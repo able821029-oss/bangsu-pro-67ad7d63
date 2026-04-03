@@ -28,7 +28,7 @@ export function AdminPlans() {
   };
 
   const handleSave = () => {
-    toast({ title: "✅ 요금제가 저장되었습니다." });
+    toast({ title: "요금제가 저장되었습니다." });
   };
 
   return (

@@ -18,7 +18,7 @@ export function CancelDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   const [selectedReason, setSelectedReason] = useState("");
 
   const handleCoupon = () => {
-    toast({ title: "🎉 1개월 50% 할인 쿠폰이 지급되었습니다!" });
+    toast({ title: "1개월 50% 할인 쿠폰이 지급되었습니다!" });
     onOpenChange(false);
     setStep("offer");
   };

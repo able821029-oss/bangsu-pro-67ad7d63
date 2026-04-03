@@ -74,12 +74,12 @@ const API_KEYS: ApiKeyConfig[] = [
 function getStatusIndicator(color: string, value: string) {
   // Determine actual status based on value
   if (!value || value === "") {
-    return { dot: "🔴", label: "미설정", desc: "해당 기능 비활성" };
+    return { dot: "●", dotColor: "text-red-500", label: "미설정", desc: "해당 기능 비활성" };
   }
   if (value.startsWith("test_") || value.includes("placeholder") || value.includes("sandbox")) {
-    return { dot: "🟡", label: "테스트", desc: "테스트 모드 작동" };
+    return { dot: "●", dotColor: "text-yellow-500", label: "테스트", desc: "테스트 모드 작동" };
   }
-  return { dot: "🟢", label: "운영", desc: "실제 서비스 작동" };
+  return { dot: "●", dotColor: "text-green-500", label: "운영", desc: "실제 서비스 작동" };
 }
 
 export function AdminApiKeys() {
@@ -93,7 +93,7 @@ export function AdminApiKeys() {
   const updateKey = (id: string, value: string) => setKeys(prev => ({ ...prev, [id]: value }));
 
   const handleSave = () => {
-    toast({ title: "✅ API 키가 저장되었습니다." });
+    toast({ title: "API 키가 저장되었습니다." });
   };
 
   return (
@@ -104,8 +104,8 @@ export function AdminApiKeys() {
 
       <div className="bg-card rounded-xl border border-border p-4 space-y-5">
         {/* Sandbox notice */}
-        <div className="rounded-lg p-3 text-sm" style={{ backgroundColor: "#FFF7ED", border: "1px solid #FDBA74" }}>
-          <p className="font-semibold" style={{ color: "#F97316" }}>🔧 현재 샌드박스 환경</p>
+        <div className="rounded-lg p-3 text-sm bg-warning/10 border border-warning/30">
+          <p className="font-semibold text-warning">현재 샌드박스 환경</p>
           <p className="text-xs text-muted-foreground mt-1">
             모든 결제·과금이 발생하지 않는 테스트 모드입니다.
             운영 전환 시 각 키를 실제 키로 교체하세요.
@@ -122,7 +122,7 @@ export function AdminApiKeys() {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">{apiKey.label}</label>
                 <span className="text-xs flex items-center gap-1">
-                  {status.dot} <span className="text-muted-foreground">{status.label} — {status.desc}</span>
+                  <span className={status.dotColor}>{status.dot}</span> <span className="text-muted-foreground">{status.label} — {status.desc}</span>
                 </span>
               </div>
               <div className="flex gap-2">

@@ -1,22 +1,23 @@
 import { useState } from "react";
-import { ArrowLeft, BarChart3, Loader2, Lightbulb, RefreshCw } from "lucide-react";
+import { ArrowLeft, BarChart3, Loader2, Lightbulb, RefreshCw, CheckCircle2, AlertCircle, XCircle, Pin, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAppStore } from "@/stores/appStore";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-const statusEmoji: Record<string, string> = { good: "🟢", warning: "🟡", bad: "🔴" };
+const statusIcons: Record<string, React.ElementType> = { good: CheckCircle2, warning: AlertCircle, bad: XCircle };
+const statusColors: Record<string, string> = { good: "text-green-500", warning: "text-yellow-500", bad: "text-red-500" };
 const statusLabel: Record<string, string> = { good: "좋음", warning: "보통", bad: "개선 필요" };
 
 const seoTips = [
-  "💡 제목은 키워드를 앞에 — '강남구 옥상방수'로 시작",
-  "💡 글 길이 1,500자 이상 유지",
-  "💡 현장 사진 최소 6장 포함",
-  "💡 주 2~3회 꾸준히 발행",
-  "💡 비슷한 공사 글을 모아 카테고리 통일",
-  "💡 AI 글 그대로 복붙 금지 — 반드시 약간 수정",
-  "💡 발행 직후 수정 최소화 (하루 2~3회 이내)",
+  "제목은 키워드를 앞에 — '강남구 옥상방수'로 시작",
+  "글 길이 1,500자 이상 유지",
+  "현장 사진 최소 6장 포함",
+  "주 2~3회 꾸준히 발행",
+  "비슷한 공사 글을 모아 카테고리 통일",
+  "AI 글 그대로 복붙 금지 — 반드시 약간 수정",
+  "발행 직후 수정 최소화 (하루 2~3회 이내)",
 ];
 
 interface DiagnosisResult {
@@ -79,7 +80,7 @@ export function SeoPage({ onBack }: { onBack: () => void }) {
         <button onClick={onBack} className="p-2 -ml-2 rounded-[--radius] hover:bg-secondary">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-bold flex-1">📈 블로그 상위노출 관리</h1>
+        <h1 className="text-xl font-bold flex-1 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-primary" /> 블로그 상위노출 관리</h1>
       </div>
 
       {/* Score Card */}
@@ -121,7 +122,7 @@ export function SeoPage({ onBack }: { onBack: () => void }) {
             <div key={i} className={`flex items-center gap-3 px-4 py-3 ${i < diagnosis.categories.length - 1 ? "border-b border-border" : ""}`}>
               <span className="flex-1 text-sm font-medium">{cat.name}</span>
               <span className={`text-sm font-bold ${scoreColor(cat.score)}`}>{cat.score}</span>
-              <span className="text-sm">{statusEmoji[cat.status]} {statusLabel[cat.status]}</span>
+              <span className="text-sm">{(() => { const Icon = statusIcons[cat.status]; return Icon ? <Icon className={`w-4 h-4 inline ${statusColors[cat.status]}`} /> : null; })()} {statusLabel[cat.status]}</span>
             </div>
           ))}
         </div>
@@ -136,7 +137,7 @@ export function SeoPage({ onBack }: { onBack: () => void }) {
           </Button>
           {showAdvice && (
             <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-              <p className="text-sm font-semibold">💡 AI 개선 조언</p>
+              <p className="text-sm font-semibold flex items-center gap-1.5"><Lightbulb className="w-4 h-4 text-primary" /> AI 개선 조언</p>
               <p className="text-sm text-muted-foreground">{diagnosis.overallAdvice}</p>
               {diagnosis.categories.map((cat, i) => (
                 <div key={i} className="border-t border-border pt-2">
@@ -151,7 +152,7 @@ export function SeoPage({ onBack }: { onBack: () => void }) {
 
       {/* SEO Tips */}
       <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-        <p className="text-sm font-semibold">📌 네이버 SEO 핵심 팁</p>
+        <p className="text-sm font-semibold flex items-center gap-1.5"><Pin className="w-4 h-4 text-primary" /> 네이버 SEO 핵심 팁</p>
         <div className="space-y-2">
           {seoTips.map((tip, i) => (
             <p key={i} className="text-xs text-muted-foreground">{tip}</p>

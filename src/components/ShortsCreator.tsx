@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus } from "lucide-react";
+import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus, Music, VolumeX, Mic, AlertTriangle } from "lucide-react";
 import { TestModeBadge } from "@/components/TestModeBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,16 +33,16 @@ const VOICES: VoiceOption[] = [
   { id: "female_bright", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female", lang: "ko-KR", pitch: 1.2, rate: 1.0, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
 ];
 
-const videoStyles: { id: VideoStyle; label: string; desc: string; emoji: string }[] = [
-  { id: "시공일지형", label: "시공일지형", desc: "시공 전→중→후 순서", emoji: "📋" },
-  { id: "홍보형", label: "홍보형", desc: "완료컷 강조 + 업체 정보", emoji: "📢" },
-  { id: "Before/After형", label: "Before/After형", desc: "전후 비교 중심", emoji: "🔄" },
+const videoStyles: { id: VideoStyle; label: string; desc: string; icon: string }[] = [
+  { id: "시공일지형", label: "시공일지형", desc: "시공 전→중→후 순서", icon: "clipboard" },
+  { id: "홍보형", label: "홍보형", desc: "완료컷 강조 + 업체 정보", icon: "megaphone" },
+  { id: "Before/After형", label: "Before/After형", desc: "전후 비교 중심", icon: "refresh" },
 ];
 
-const bgmOptions: { id: BgmType; label: string; emoji: string }[] = [
-  { id: "upbeat", label: "경쾌한", emoji: "🎵" },
-  { id: "calm", label: "잔잔한", emoji: "🎶" },
-  { id: "none", label: "없음", emoji: "🔇" },
+const bgmOptions: { id: BgmType; label: string; icon: string }[] = [
+  { id: "upbeat", label: "경쾌한", icon: "music" },
+  { id: "calm", label: "잔잔한", icon: "volume2" },
+  { id: "none", label: "없음", icon: "volumeX" },
 ];
 
 const PLAN_LIMITS: Record<string, number> = {
@@ -73,7 +73,7 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
   return (
     <div className="bg-card rounded-[--radius] border border-border p-4 space-y-2">
       <div className="flex justify-between items-baseline">
-        <p className="text-sm font-semibold">🎬 이번 달 영상</p>
+        <p className="text-sm font-semibold flex items-center gap-1.5"><Film className="w-4 h-4 text-primary" /> 이번 달 영상</p>
         <p className="text-sm font-bold" style={{ color: barColor }}>{used} / {max}개</p>
       </div>
       <div className="w-full bg-secondary rounded-full h-2.5">
@@ -103,7 +103,7 @@ function VoiceCard({
   voice: VoiceOption; selected: boolean; onSelect: () => void;
   onPreview: () => void; isPlaying: boolean;
 }) {
-  const genderEmoji = voice.gender === "male" ? "👨" : "👩";
+  const genderIcon = voice.gender === "male" ? "M" : "F";
 
   return (
     <button
@@ -119,7 +119,7 @@ function VoiceCard({
           <Check className="w-3 h-3 text-white" />
         </div>
       )}
-      <p className="text-sm font-semibold text-foreground">{genderEmoji} {voice.label}</p>
+      <p className="text-sm font-semibold text-foreground">{genderIcon} {voice.label}</p>
       <p className="text-xs text-muted-foreground mt-0.5">{voice.desc}</p>
       <button
         onClick={(e) => { e.stopPropagation(); onPreview(); }}
@@ -285,7 +285,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     }
 
     setStep("generating");
-    setProgressText("🎬 AI 스크립트 생성 중...");
+    setProgressText("AI 스크립트 생성 중...");
     setProgressPct(10);
 
     const narrationEnabled = selectedVoice !== null;
@@ -311,7 +311,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       const scenes: MirraScene[] = scriptData?.scenes || [];
       if (scenes.length === 0) throw new Error("스크립트 생성 실패");
 
-      setProgressText("🎥 텍스트 애니메이션 렌더링 중...");
+      setProgressText("텍스트 애니메이션 렌더링 중...");
       setProgressPct(25);
 
       const voiceConfig = narrationEnabled && voice ? {
@@ -330,7 +330,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         (current, total) => {
           const pct = 25 + Math.round((current / total) * 70);
           setProgressPct(pct);
-          setProgressText(`🎥 장면 렌더링 중... (${current}/${total})`);
+          setProgressText(`장면 렌더링 중... (${current}/${total})`);
         },
         undefined,
         voiceConfig,
@@ -347,7 +347,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         });
       }
 
-      toast({ title: "✅ 영상이 완성되었습니다!" });
+      toast({ title: "영상이 완성되었습니다!" });
 
 
     } catch (err: any) {
@@ -369,7 +369,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      toast({ title: "✅ 영상이 다운로드됩니다" });
+      toast({ title: "영상이 다운로드됩니다" });
     }
   };
 
@@ -394,16 +394,16 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     return (
       <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold">🎬 쇼츠 영상 만들기</h1>
+          <h1 className="text-xl font-bold flex items-center gap-2"><Film className="w-5 h-5 text-primary" /> 쇼츠 영상 만들기</h1>
           <button onClick={onClose}><X className="w-6 h-6 text-muted-foreground" /></button>
         </div>
 
         {/* Photo upload area */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">📷 사진 추가하기</p>
+          <p className="text-sm font-semibold flex items-center gap-1.5"><Camera className="w-4 h-4 text-primary" /> 사진 추가하기</p>
           {photos.length < 2 && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
-              ⚠️ 사진이 2장 이상 필요합니다 (현재 {photos.length}장)
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 shrink-0" /> 사진이 2장 이상 필요합니다 (현재 {photos.length}장)
             </div>
           )}
 
@@ -435,12 +435,12 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
 
         <div ref={styleRef} className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">🎥 영상 스타일</p>
+          <p className="text-sm font-semibold flex items-center gap-1.5"><Film className="w-4 h-4 text-primary" /> 영상 스타일</p>
           <div className="space-y-2">
             {videoStyles.map(s => (
               <button key={s.id} onClick={() => setVideoStyle(s.id)}
                 className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${videoStyle === s.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
-                <p className="font-semibold text-sm">{s.emoji} {s.label}</p>
+                <p className="font-semibold text-sm">{s.label}</p>
                 <p className="text-xs text-muted-foreground">{s.desc}</p>
               </button>
             ))}
@@ -448,7 +448,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         </div>
 
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">🎙️ 나레이션 목소리</p>
+          <p className="text-sm font-semibold flex items-center gap-1.5"><Mic className="w-4 h-4 text-primary" /> 나레이션 목소리</p>
           <div className="grid grid-cols-2 gap-2">
             {VOICES.map(v => (
               <VoiceCard
@@ -470,17 +470,17 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
               color: selectedVoice === null ? "hsl(215 100% 50%)" : "hsl(var(--muted-foreground))",
             }}
           >
-            🔇 나레이션 없음 — BGM만
+            <VolumeX className="w-4 h-4 inline mr-1" /> 나레이션 없음 — BGM만
           </button>
         </div>
 
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">🎵 배경 음악</p>
+          <p className="text-sm font-semibold flex items-center gap-1.5"><Music className="w-4 h-4 text-primary" /> 배경 음악</p>
           <div className="flex flex-wrap gap-2">
             {bgmOptions.map(b => (
               <Badge key={b.id} variant={bgm === b.id ? "chipActive" : "chip"}
                 className="text-sm px-4 py-2 cursor-pointer" onClick={() => setBgm(b.id)}>
-                {b.emoji} {b.label}
+                {b.label}
               </Badge>
             ))}
           </div>
@@ -550,8 +550,8 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
   if (step === "done") {
     return (
       <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto flex flex-col items-center">
-        <div className="w-20 h-20 rounded-full bg-[#22C55E]/20 flex items-center justify-center">
-          <CheckCircle2 className="w-10 h-10 text-[#22C55E]" />
+        <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center">
+          <CheckCircle2 className="w-10 h-10 text-success" />
         </div>
         <h2 className="text-xl font-bold">영상이 완성되었습니다!</h2>
 

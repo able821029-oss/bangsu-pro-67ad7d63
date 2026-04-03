@@ -39,7 +39,7 @@ export function TestModeBadge({ label = "테스트 모드", inline = false }: Te
         style={{ backgroundColor: "#FFF7ED", color: "#F97316", border: "1px solid #FDBA74" }}
       >
         <Wrench className="w-3.5 h-3.5" />
-        🔧 {label}
+        {label}
       </button>
       <TestModeDialog open={open} onOpenChange={setOpen} />
     </>
@@ -52,7 +52,7 @@ function TestModeDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Wrench className="w-5 h-5" style={{ color: "#F97316" }} />
+            <Wrench className="w-5 h-5 text-warning" />
             테스트 모드
           </DialogTitle>
         </DialogHeader>

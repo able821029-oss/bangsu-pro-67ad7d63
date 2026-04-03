@@ -63,7 +63,7 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
 
       {/* Annual Discount Badge */}
       <div className="bg-success/10 border border-success/30 rounded-[--radius] px-4 py-3 text-center">
-        <p className="text-sm font-semibold text-success">🎉 연간 결제 시 2개월 무료!</p>
+        <p className="text-sm font-semibold text-success">연간 결제 시 2개월 무료!</p>
       </div>
 
       {/* Plan Cards */}

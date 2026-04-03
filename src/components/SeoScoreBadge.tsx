@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Sparkles, Check, AlertTriangle, X } from "lucide-react";
+import { Loader2, Sparkles, Check, AlertTriangle, X, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,7 +69,7 @@ export function SeoScoreBadge({
         toast({ title: "개선 실패", description: data?.error || "다시 시도해주세요", variant: "destructive" });
       } else if (data && onImprove) {
         onImprove({ title: data.title, blocks: data.blocks, hashtags: data.hashtags });
-        toast({ title: "✅ SEO 최적화 완료", description: (data.changes || []).join(", ") });
+        toast({ title: "SEO 최적화 완료", description: (data.changes || []).join(", ") });
         setShowDetail(false);
       }
     } catch {
@@ -85,7 +85,7 @@ export function SeoScoreBadge({
     return "bg-red-500/10 text-red-600 border-red-500/30";
   };
 
-  const scoreEmoji = (score: number) => (score >= 80 ? "🟢" : score >= 60 ? "🟡" : "🔴");
+  const scoreEmoji = (score: number) => (score >= 80 ? "●" : score >= 60 ? "●" : "●");
 
   return (
     <>
@@ -161,7 +161,7 @@ export function SeoScoreBadge({
                   </div>
                   <p className="text-xs text-muted-foreground">{item.detail}</p>
                   {item.status !== "good" && (
-                    <p className="text-xs text-primary">💡 {item.suggestion}</p>
+                    <p className="text-xs text-primary flex items-center gap-1"><Lightbulb className="w-3 h-3" /> {item.suggestion}</p>
                   )}
                 </div>
               ))}
