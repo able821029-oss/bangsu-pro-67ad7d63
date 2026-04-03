@@ -151,6 +151,16 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-bold flex-1">글 상세</h1>
+        <SeoScoreBadge
+          post={post}
+          onImprove={(improved) => {
+            setTitle(improved.title);
+            setBlocks(improved.blocks);
+            setHashtags(improved.hashtags);
+            updatePost(post.id, improved);
+            saveToDb(improved);
+          }}
+        />
         <Badge variant={statusColor[post.status] || "default"}>{post.status}</Badge>
       </div>
 

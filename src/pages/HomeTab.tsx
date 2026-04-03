@@ -180,6 +180,9 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         </div>
       </div>
 
+      {/* Publish Schedule */}
+      <PublishSchedule onNavigate={onNavigate} />
+
       {/* Recent Posts — tap goes directly to PostDetail */}
       <div>
         <h2 className="text-lg font-bold mb-3">최근 작성글</h2>

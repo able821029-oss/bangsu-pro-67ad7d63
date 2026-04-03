@@ -311,6 +311,14 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
           </div>
         </div>
 
+        {/* Keyword Recommender */}
+        <KeywordRecommender
+          location={location}
+          onSelectKeyword={(kw) => {
+            toast({ title: `✅ "${kw}" 키워드가 반영됩니다` });
+          }}
+        />
+
         {/* Before/After */}
         <BeforeAfterComparator />
 
