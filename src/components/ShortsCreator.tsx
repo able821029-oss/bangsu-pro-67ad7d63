@@ -330,7 +330,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         (current, total) => {
           const pct = 25 + Math.round((current / total) * 70);
           setProgressPct(pct);
-          setProgressText(`🎥 장면 렌더링 중... (${current}/${total})`);
+          setProgressText(`장면 렌더링 중... (${current}/${total})`);
         },
         undefined,
         voiceConfig,
