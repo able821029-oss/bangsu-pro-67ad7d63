@@ -35,6 +35,42 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
   const [newTagInput, setNewTagInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(post.status);
+  const [seoResult, setSeoResult] = useState<any>(null);
+  const [seoLoading, setSeoLoading] = useState(false);
+
+  // Auto-analyze SEO on mount if post has content
+  useEffect(() => {
+    if (blocks.length > 0 && blocks.some(b => b.type === "text" && b.content)) {
+      handleAutoSeoAnalyze();
+    }
+  }, []);
+
+  const handleAutoSeoAnalyze = async () => {
+    setSeoLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("seo-analyze", {
+        body: {
+          mode: "seo_score",
+          title,
+          blocks,
+          hashtags,
+          location: "",
+          workType: post.workType,
+        },
+      });
+      if (!error && !data?.error) {
+        setSeoResult(data);
+      }
+    } catch {} finally {
+      setSeoLoading(false);
+    }
+  };
+
+  const seoScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-500";
+    if (score >= 60) return "text-yellow-500";
+    return "text-red-500";
+  };
 
   const saveToDb = async (updates: Record<string, any>) => {
     setIsSaving(true);
