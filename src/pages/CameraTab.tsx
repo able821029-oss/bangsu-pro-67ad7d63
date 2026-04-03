@@ -322,7 +322,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
                 onClick={handleRetryGps}
                 className="bg-primary/10 text-primary rounded-lg px-3 py-2 text-xs font-medium shrink-0"
               >
-                {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : "📍 자동"}
+                {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><MapPin className="w-3 h-3" /> 자동</>}
               </button>
             </div>
           </div>
