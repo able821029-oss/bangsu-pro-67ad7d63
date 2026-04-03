@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Check, X, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TestModeBadge } from "@/components/TestModeBadge";
 import { useAppStore } from "@/stores/appStore";
 import { CancelDialog } from "@/components/CancelDialog";
 
@@ -111,9 +112,12 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
             </div>
 
             {subscription.plan !== plan.name && (
-              <Button size="sm" variant={plan.highlight ? "default" : "outline"} className="w-full mt-3">
-                {plan.price === "₩0" ? "무료로 시작" : "업그레이드"}
-              </Button>
+              <div className="flex items-center gap-2 mt-3">
+                <Button size="sm" variant={plan.highlight ? "default" : "outline"} className="flex-1">
+                  {plan.price === "₩0" ? "무료로 시작" : "업그레이드"}
+                </Button>
+                {plan.price !== "₩0" && <TestModeBadge label="테스트" inline />}
+              </div>
             )}
           </div>
         ))}

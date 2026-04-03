@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus } from "lucide-react";
+import { TestModeBadge } from "@/components/TestModeBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
@@ -421,10 +422,15 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
 
         <UsageMeter used={videoUsed} max={videoLimit} plan={subscription.plan} />
 
-        <Button variant="hero" size="xl" className="w-full" onClick={handleGenerate}
-          disabled={photos.length < 2 || quotaExceeded}>
-          <Film className="w-6 h-6" /> 영상 생성 시작
-        </Button>
+        <div className="space-y-2">
+          <Button variant="hero" size="xl" className="w-full" onClick={handleGenerate}
+            disabled={photos.length < 2 || quotaExceeded}>
+            <Film className="w-6 h-6" /> 영상 생성 시작
+          </Button>
+          <div className="flex justify-center">
+            <TestModeBadge label="테스트 모드" inline />
+          </div>
+        </div>
       </div>
     );
   }
