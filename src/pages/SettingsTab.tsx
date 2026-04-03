@@ -40,6 +40,7 @@ export function SettingsTab() {
       faq: FaqPage,
       contact: ContactPage,
       announcements: AnnouncementsPage,
+      seo: SeoPage,
     };
     const Component = PageComponent[page];
     return Component ? <Component onBack={() => setPage("menu")} /> : null;
