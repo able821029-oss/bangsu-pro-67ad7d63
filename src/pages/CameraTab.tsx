@@ -39,7 +39,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
   const [progress, setProgress] = useState(0);
-  const [showShorts, setShowShorts] = useState(false);
+  
 
   // Auto-detect GPS location on mount with 10s timeout
   useEffect(() => {
