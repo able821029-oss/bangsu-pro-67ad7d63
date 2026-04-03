@@ -147,7 +147,7 @@ export function BeforeAfterComparator() {
 
   return (
     <div className="bg-card rounded-[--radius] border border-border p-4 space-y-4">
-      <p className="text-sm font-semibold">🔄 Before / After 비교 이미지</p>
+      <p className="text-sm font-semibold">Before / After 비교 이미지</p>
 
       <div className="grid grid-cols-2 gap-3">
         {/* Before */}

@@ -104,8 +104,8 @@ export function AdminApiKeys() {
 
       <div className="bg-card rounded-xl border border-border p-4 space-y-5">
         {/* Sandbox notice */}
-        <div className="rounded-lg p-3 text-sm" style={{ backgroundColor: "#FFF7ED", border: "1px solid #FDBA74" }}>
-          <p className="font-semibold" style={{ color: "#F97316" }}>🔧 현재 샌드박스 환경</p>
+        <div className="rounded-lg p-3 text-sm bg-warning/10 border border-warning/30">
+          <p className="font-semibold text-warning">현재 샌드박스 환경</p>
           <p className="text-xs text-muted-foreground mt-1">
             모든 결제·과금이 발생하지 않는 테스트 모드입니다.
             운영 전환 시 각 키를 실제 키로 교체하세요.
