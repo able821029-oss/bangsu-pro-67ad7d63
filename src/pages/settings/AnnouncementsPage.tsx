@@ -20,7 +20,7 @@ export function AnnouncementsPage({ onBack }: { onBack: () => void }) {
         <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-secondary">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-bold">📢 공지사항</h1>
+        <h1 className="text-xl font-bold flex items-center gap-2"><Bell className="w-5 h-5 text-primary" /> 공지사항</h1>
       </div>
 
       <div className="bg-card rounded-[--radius] border border-border overflow-hidden">
