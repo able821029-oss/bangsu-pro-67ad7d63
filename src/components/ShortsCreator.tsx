@@ -541,24 +541,36 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
   if (step === "done") {
     return (
       <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto flex flex-col items-center">
-        <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center">
-          <CheckCircle2 className="w-10 h-10 text-success" />
+        <div className="w-20 h-20 rounded-full bg-[#22C55E]/20 flex items-center justify-center">
+          <CheckCircle2 className="w-10 h-10 text-[#22C55E]" />
         </div>
         <h2 className="text-xl font-bold">영상이 완성되었습니다!</h2>
-        {videoUrl && (
-          <video src={videoUrl} controls className="w-full max-w-xs rounded-xl border border-border aspect-[9/16]" />
+
+        {videoUrl ? (
+          <video
+            src={videoUrl}
+            controls
+            autoPlay
+            playsInline
+            className="w-full max-w-xs rounded-xl border border-border aspect-[9/16]"
+          />
+        ) : (
+          <div className="w-full max-w-xs rounded-xl border border-border aspect-[9/16] flex items-center justify-center bg-card">
+            <p className="text-sm text-muted-foreground">미리보기를 불러오는 중...</p>
+          </div>
         )}
+
         <div className="w-full max-w-xs space-y-3">
-          <Button className="w-full" onClick={handleDownload}>
+          <Button className="w-full" onClick={handleDownload} disabled={!videoUrl}>
             <Download className="w-5 h-5" /> 갤러리에 저장
           </Button>
           <Button variant="outline" className="w-full" style={{ borderColor: "#000", color: "#000" }}
             onClick={() => handleDeeplink("tiktok")}>
-            🎵 틱톡 앱 열기
+            틱톡 앱 열기
           </Button>
           <Button variant="outline" className="w-full" style={{ borderColor: "#E1306C", color: "#E1306C" }}
             onClick={() => handleDeeplink("instagram")}>
-            📷 인스타 릴스 열기
+            인스타 릴스 열기
           </Button>
           <Button variant="secondary" className="w-full" onClick={handleReset}>
             <RotateCcw className="w-5 h-5" /> 다시 만들기
