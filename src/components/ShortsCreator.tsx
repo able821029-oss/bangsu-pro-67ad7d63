@@ -435,7 +435,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
 
         <div ref={styleRef} className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">🎥 영상 스타일</p>
+          <p className="text-sm font-semibold flex items-center gap-1.5"><Film className="w-4 h-4 text-primary" /> 영상 스타일</p>
           <div className="space-y-2">
             {videoStyles.map(s => (
               <button key={s.id} onClick={() => setVideoStyle(s.id)}
