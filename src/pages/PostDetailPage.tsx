@@ -67,6 +67,8 @@ export function PostDetailPage({
   const [seoLoading, setSeoLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showShortsCreator, setShowShortsCreator] = useState(false);
+  const [uploadGuide, setUploadGuide] = useState<Platform | null>(null);
+  const [returnPrompt, setReturnPrompt] = useState(false);
 
   const isPremium = subscription.plan === "프로" || subscription.plan === "무제한";
 
@@ -74,6 +76,19 @@ export function PostDetailPage({
     if (blocks.length > 0 && blocks.some((b) => b.type === "text" && b.content)) {
       handleAutoSeoAnalyze();
     }
+  }, []);
+
+  // SNS 앱에서 복귀 감지
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!document.hidden && sessionStorage.getItem("sms-publishing")) {
+        sessionStorage.removeItem("sms-publishing");
+        setReturnPrompt(true);
+        setTimeout(() => setReturnPrompt(false), 5000);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
   const handleAutoSeoAnalyze = async () => {
@@ -255,10 +270,15 @@ export function PostDetailPage({
   const handleCopyAndOpen = async (platform: Platform) => {
     try {
       await navigator.clipboard.writeText(getClipboardText(platform));
-      toast({ title: `${platformLabels[platform]}용 글이 복사되었습니다!` });
+      setUploadGuide(platform);
     } catch {
       toast({ title: "클립보드 복사 실패", variant: "destructive" });
     }
+  };
+
+  const handleOpenPlatform = (platform: Platform) => {
+    sessionStorage.setItem("sms-publishing", "true");
+    setUploadGuide(null);
     window.location.href = deeplinks[platform];
   };
 
@@ -266,8 +286,94 @@ export function PostDetailPage({
     post.platforms.includes(p as Platform),
   ) as Platform[];
 
+  const platformIcons: Record<Platform, string> = {
+    naver: "🟢", instagram: "🟣", tiktok: "⬛",
+  };
+
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
+
+      {/* SNS 복귀 감지 토스트 */}
+      {returnPrompt && (
+        <div
+          className="fixed top-4 left-4 right-4 z-[90] max-w-lg mx-auto"
+          style={{ animation: "fadeUp .3s ease-out" }}
+        >
+          <div className="bg-green-600 text-white rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <p className="text-sm font-semibold flex-1">SMS로 돌아왔습니다! 발행 완료로 표시하시겠어요?</p>
+            <button
+              onClick={() => { handleMarkPublished(); setReturnPrompt(false); }}
+              className="text-xs font-bold bg-white/20 px-2 py-1 rounded-lg"
+            >완료</button>
+          </div>
+        </div>
+      )}
+
+      {/* 업로드 안내 오버레이 */}
+      {uploadGuide && (
+        <div className="fixed inset-0 z-[85] flex items-end justify-center" onClick={() => setUploadGuide(null)}>
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            className="relative w-full max-w-lg bg-card rounded-t-2xl p-5 pb-8 space-y-4"
+            onClick={e => e.stopPropagation()}
+            style={{ animation: "slideUp .3s ease-out" }}
+          >
+            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto" />
+
+            {/* 복사 완료 표시 */}
+            <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl p-3">
+              <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-green-600">클립보드 복사 완료!</p>
+                <p className="text-xs text-muted-foreground">{platformLabels[uploadGuide]}에 붙여넣기 하세요</p>
+              </div>
+            </div>
+
+            {/* 업로드 순서 */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground">업로드 순서</p>
+              {uploadGuide === "naver" ? (
+                <div className="space-y-1.5 text-sm">
+                  <p>① 아래 버튼으로 네이버 블로그 열기</p>
+                  <p>② 새 글 작성 → 본문 영역 길게 터치 → 붙여넣기</p>
+                  <p>③ 현장 사진 첨부 후 발행</p>
+                  <p>④ SMS 앱으로 돌아오기</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5 text-sm">
+                  <p>① 아래 버튼으로 {platformLabels[uploadGuide]} 열기</p>
+                  <p>② 새 게시물 → 붙여넣기 → 사진 선택</p>
+                  <p>③ 업로드 완료 후 SMS 앱으로 복귀</p>
+                </div>
+              )}
+            </div>
+
+            {/* SMS 복귀 안내 */}
+            <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 flex items-center gap-2">
+              <svg width="24" height="24" viewBox="0 0 64 64" fill="none">
+                <defs><linearGradient id="retSg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#237FFF"/><stop offset="100%" stopColor="#AB5EBE"/></linearGradient></defs>
+                <rect width="64" height="64" rx="14" fill="url(#retSg)"/>
+                <text x="8" y="52" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="52" fill="#FFFFFF">S</text>
+              </svg>
+              <p className="text-xs text-muted-foreground flex-1">
+                업로드 후 <span className="text-primary font-semibold">SMS 아이콘</span>을 탭하거나<br/>
+                스마트폰 뒤로가기로 SMS로 돌아오세요
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => setUploadGuide(null)}>취소</Button>
+              <Button
+                onClick={() => handleOpenPlatform(uploadGuide)}
+                style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)", color: "white" }}
+              >
+                {platformLabels[uploadGuide]} 열기 →
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 -ml-2 rounded-[--radius] hover:bg-secondary">
           <ArrowLeft className="w-5 h-5" />
