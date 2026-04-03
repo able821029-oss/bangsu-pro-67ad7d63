@@ -180,15 +180,16 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         <p className="text-sm font-semibold text-foreground">최근 4주 발행 현황</p>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={weeklyData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="week" tick={{ fontSize: 11, fill: "#888" }} />
-            <YAxis tick={{ fontSize: 11, fill: "#888" }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="week" tick={{ fontSize: 11, fill: "hsl(215 16% 47%)" }} />
+            <YAxis tick={{ fontSize: 11, fill: "hsl(215 16% 47%)" }} />
             <Tooltip
               contentStyle={{
-                background: "#0d1f3c",
-                border: "1px solid #237FFF",
+                background: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: 8,
                 fontSize: 12,
+                color: "hsl(var(--foreground))",
               }}
             />
             <Bar dataKey="count" fill="#237FFF" radius={[4, 4, 0, 0]} />
