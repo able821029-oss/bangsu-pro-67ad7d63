@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { renderMirraVideo, isRecordingSupported, isIOSDevice, type MirraScene } from "@/lib/mirraRenderer";
+import { renderMirraVideo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
 type BgmType = "upbeat" | "calm" | "none";
@@ -152,6 +152,40 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [pendingNarration, setPendingNarration] = useState<{ texts: string[]; voiceConfig: VoiceConfig } | null>(null);
+
+  // Play TTS only when step transitions to "done"
+  useEffect(() => {
+    if (step !== "done" || !pendingNarration) return;
+    const { texts, voiceConfig: vc } = pendingNarration;
+    setPendingNarration(null);
+
+    let cancelled = false;
+    (async () => {
+      for (const text of texts) {
+        if (cancelled || !text) continue;
+        await new Promise<void>((resolve) => {
+          if (!window.speechSynthesis) { resolve(); return; }
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = vc.lang;
+          utterance.pitch = vc.pitch;
+          utterance.rate = vc.rate;
+          const voices = speechSynthesis.getVoices();
+          const koVoices = voices.filter(v => v.lang.startsWith("ko"));
+          for (const hint of vc.voiceNameHint) {
+            const match = koVoices.find(v => v.name.includes(hint));
+            if (match) { utterance.voice = match; break; }
+          }
+          if (!utterance.voice && koVoices[0]) utterance.voice = koVoices[0];
+          const timeout = setTimeout(() => resolve(), 15000);
+          utterance.onend = () => { clearTimeout(timeout); resolve(); };
+          utterance.onerror = () => { clearTimeout(timeout); resolve(); };
+          speechSynthesis.speak(utterance);
+        });
+      }
+    })();
+    return () => { cancelled = true; speechSynthesis.cancel(); };
+  }, [step, pendingNarration]);
 
   const videoLimit = PLAN_LIMITS[subscription.plan] || 5;
   const [videoUsed] = useState(2);
@@ -284,35 +318,14 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       const url = URL.createObjectURL(result.blob);
       setVideoUrl(url);
       setProgressPct(100);
+
+      // Queue narration for playback after step becomes "done"
+      if (narrationEnabled && voiceConfig && result.narrationTexts.some(t => t)) {
+        setPendingNarration({ texts: result.narrationTexts, voiceConfig });
+      }
+
       setStep("done");
       toast({ title: "✅ 영상이 완성되었습니다!" });
-
-      // Play narration AFTER rendering is complete
-      if (narrationEnabled && voiceConfig && result.narrationTexts.length > 0) {
-        for (const text of result.narrationTexts) {
-          if (text) {
-            await new Promise<void>((resolve) => {
-              if (!window.speechSynthesis) { resolve(); return; }
-              const utterance = new SpeechSynthesisUtterance(text);
-              utterance.lang = voiceConfig.lang;
-              utterance.pitch = voiceConfig.pitch;
-              utterance.rate = voiceConfig.rate;
-              const voices = speechSynthesis.getVoices();
-              const koVoices = voices.filter(v => v.lang.startsWith("ko"));
-              for (const hint of voiceConfig.voiceNameHint) {
-                const match = koVoices.find(v => v.name.includes(hint));
-                if (match) { utterance.voice = match; break; }
-              }
-              if (!utterance.voice && koVoices[0]) utterance.voice = koVoices[0];
-              utterance.onend = () => resolve();
-              utterance.onerror = () => resolve();
-              const timeout = setTimeout(() => resolve(), 15000);
-              utterance.onend = () => { clearTimeout(timeout); resolve(); };
-              speechSynthesis.speak(utterance);
-            });
-          }
-        }
-      }
 
     } catch (err: any) {
       console.error("Shorts generation error:", err);
