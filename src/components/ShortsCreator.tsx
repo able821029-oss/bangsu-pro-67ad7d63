@@ -137,7 +137,7 @@ function VoiceCard({
 }
 
 export function ShortsCreator({ onClose }: { onClose: () => void }) {
-  const { photos, settings, subscription, addPhoto, removePhoto } = useAppStore();
+  const { photos, settings, subscription, addPhoto, removePhoto, posts } = useAppStore();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
