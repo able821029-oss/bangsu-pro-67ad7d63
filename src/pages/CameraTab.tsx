@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Camera, ImagePlus, X, Sparkles, MapPin, CalendarDays, CheckCircle2, Loader2, Film } from "lucide-react";
 import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { ShortsCreator } from "@/components/ShortsCreator";
+import { KeywordRecommender } from "@/components/KeywordRecommender";
 import { PlatformChip } from "@/components/PlatformChip";
 import { Button } from "@/components/ui/button";
 import { useAppStore, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
@@ -309,6 +310,14 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
             <input type="date" className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground" value={constructionDate} onChange={(e) => setConstructionDate(e.target.value)} />
           </div>
         </div>
+
+        {/* Keyword Recommender */}
+        <KeywordRecommender
+          location={location}
+          onSelectKeyword={(kw) => {
+            toast({ title: `✅ "${kw}" 키워드가 반영됩니다` });
+          }}
+        />
 
         {/* Before/After */}
         <BeforeAfterComparator />
