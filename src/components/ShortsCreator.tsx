@@ -119,7 +119,7 @@ function VoiceCard({
           <Check className="w-3 h-3 text-white" />
         </div>
       )}
-      <p className="text-sm font-semibold text-foreground">{genderEmoji} {voice.label}</p>
+      <p className="text-sm font-semibold text-foreground">{genderIcon} {voice.label}</p>
       <p className="text-xs text-muted-foreground mt-0.5">{voice.desc}</p>
       <button
         onClick={(e) => { e.stopPropagation(); onPreview(); }}
