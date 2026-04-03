@@ -21,9 +21,9 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     <nav className="fixed bottom-0 left-0 right-0 z-50 safe-bottom">
       <div
         className="h-4 pointer-events-none"
-        style={{ background: "linear-gradient(to bottom, rgba(238,242,248,0), #001130)" }}
+        style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--nav-background)))" }}
       />
-      <div style={{ backgroundColor: '#001130' }}>
+      <div className="bg-[hsl(var(--nav-background))] border-t border-border">
         <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
