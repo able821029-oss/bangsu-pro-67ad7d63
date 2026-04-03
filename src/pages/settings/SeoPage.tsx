@@ -6,17 +6,18 @@ import { useAppStore } from "@/stores/appStore";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-const statusEmoji: Record<string, string> = { good: "🟢", warning: "🟡", bad: "🔴" };
+const statusIcons: Record<string, React.ElementType> = { good: CheckCircle2, warning: AlertCircle, bad: XCircle };
+const statusColors: Record<string, string> = { good: "text-green-500", warning: "text-yellow-500", bad: "text-red-500" };
 const statusLabel: Record<string, string> = { good: "좋음", warning: "보통", bad: "개선 필요" };
 
 const seoTips = [
-  "💡 제목은 키워드를 앞에 — '강남구 옥상방수'로 시작",
-  "💡 글 길이 1,500자 이상 유지",
-  "💡 현장 사진 최소 6장 포함",
-  "💡 주 2~3회 꾸준히 발행",
-  "💡 비슷한 공사 글을 모아 카테고리 통일",
-  "💡 AI 글 그대로 복붙 금지 — 반드시 약간 수정",
-  "💡 발행 직후 수정 최소화 (하루 2~3회 이내)",
+  "제목은 키워드를 앞에 — '강남구 옥상방수'로 시작",
+  "글 길이 1,500자 이상 유지",
+  "현장 사진 최소 6장 포함",
+  "주 2~3회 꾸준히 발행",
+  "비슷한 공사 글을 모아 카테고리 통일",
+  "AI 글 그대로 복붙 금지 — 반드시 약간 수정",
+  "발행 직후 수정 최소화 (하루 2~3회 이내)",
 ];
 
 interface DiagnosisResult {
