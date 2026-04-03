@@ -3,24 +3,25 @@ import { ArrowLeft, Check, X, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TestModeBadge } from "@/components/TestModeBadge";
+import { PaymentMethodSheet } from "@/components/PaymentMethodSheet";
 import { useAppStore } from "@/stores/appStore";
 import { CancelDialog } from "@/components/CancelDialog";
 
 const plans = [
   {
-    name: "무료", price: "₩0", monthly: "5건", platforms: "네이버만", persona: "1종", photos: "2장", highlight: false,
+    name: "무료", price: "₩0", amount: 0, monthly: "5건", platforms: "네이버만", persona: "1종", photos: "2장", highlight: false,
     features: { seo: false, photoAuto: false, persona3: false, admin: false },
   },
   {
-    name: "베이직", price: "₩9,900", monthly: "50건", platforms: "3개", persona: "3종", photos: "5장", highlight: false,
+    name: "베이직", price: "₩9,900", amount: 9900, monthly: "50건", platforms: "3개", persona: "3종", photos: "5장", highlight: false,
     features: { seo: true, photoAuto: false, persona3: true, admin: false },
   },
   {
-    name: "프로", price: "₩19,900", monthly: "150건", platforms: "전체", persona: "전체", photos: "10장", highlight: true,
+    name: "프로", price: "₩19,900", amount: 19900, monthly: "150건", platforms: "전체", persona: "전체", photos: "10장", highlight: true,
     features: { seo: true, photoAuto: true, persona3: true, admin: false },
   },
   {
-    name: "무제한", price: "₩39,900", monthly: "무제한", platforms: "전체", persona: "전체", photos: "10장", highlight: false,
+    name: "무제한", price: "₩39,900", amount: 39900, monthly: "무제한", platforms: "전체", persona: "전체", photos: "10장", highlight: false,
     features: { seo: true, photoAuto: true, persona3: true, admin: true },
   },
 ] as const;
@@ -35,6 +36,7 @@ const featureLabels = [
 export function PricingPlan({ onBack }: { onBack: () => void }) {
   const subscription = useAppStore((s) => s.subscription);
   const [showCancel, setShowCancel] = useState(false);
+  const [paymentPlan, setPaymentPlan] = useState<{ name: string; amount: number } | null>(null);
 
   return (
     <div className="pb-24 max-w-lg mx-auto">
@@ -113,7 +115,12 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
 
             {subscription.plan !== plan.name && (
               <div className="flex items-center gap-2 mt-3">
-                <Button size="sm" variant={plan.highlight ? "default" : "outline"} className="flex-1">
+                <Button
+                  size="sm"
+                  variant={plan.highlight ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => plan.amount > 0 ? setPaymentPlan({ name: plan.name, amount: plan.amount }) : null}
+                >
                   {plan.price === "₩0" ? "무료로 시작" : "업그레이드"}
                 </Button>
                 {plan.price !== "₩0" && <TestModeBadge label="테스트" inline />}
@@ -131,6 +138,15 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
       )}
 
       <CancelDialog open={showCancel} onOpenChange={setShowCancel} />
+
+      {paymentPlan && (
+        <PaymentMethodSheet
+          open={!!paymentPlan}
+          onOpenChange={(v) => !v && setPaymentPlan(null)}
+          planName={paymentPlan.name}
+          amount={paymentPlan.amount}
+        />
+      )}
       </div>
     </div>
   );

@@ -53,6 +53,22 @@ const API_KEYS: ApiKeyConfig[] = [
     statusLabel: "미설정",
     statusColor: "red",
   },
+  {
+    id: "kakao_cid",
+    label: "카카오페이 CID",
+    envName: "KAKAO_CID",
+    defaultValue: "TCSUBSCRIP",
+    statusLabel: "테스트 모드",
+    statusColor: "yellow",
+  },
+  {
+    id: "kakao_admin",
+    label: "카카오페이 Admin 키",
+    envName: "KAKAO_ADMIN_KEY",
+    defaultValue: "",
+    statusLabel: "미설정",
+    statusColor: "red",
+  },
 ];
 
 function getStatusIndicator(color: string, value: string) {
