@@ -480,7 +480,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
             {bgmOptions.map(b => (
               <Badge key={b.id} variant={bgm === b.id ? "chipActive" : "chip"}
                 className="text-sm px-4 py-2 cursor-pointer" onClick={() => setBgm(b.id)}>
-                {b.emoji} {b.label}
+                {b.label}
               </Badge>
             ))}
           </div>
