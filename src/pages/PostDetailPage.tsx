@@ -429,7 +429,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
                 disabled={!canCreate}
                 style={canCreate ? { background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white", border: "none" } : {}}
                 onClick={() => {
-                  toast({ title: "🎬 이 글 기반으로 영상을 생성합니다" });
+                  toast({ title: "이 글 기반으로 영상을 생성합니다" });
                   onBack();
                   onNavigate?.("camera");
                 }}

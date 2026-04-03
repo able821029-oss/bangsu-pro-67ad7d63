@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Camera, ImagePlus, X, Sparkles, MapPin, CalendarDays, CheckCircle2, Loader2, Film } from "lucide-react";
+import { Camera, ImagePlus, X, Sparkles, MapPin, CalendarDays, CheckCircle2, Loader2, Film, PenLine } from "lucide-react";
 import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { ShortsCreator } from "@/components/ShortsCreator";
 import { KeywordRecommender } from "@/components/KeywordRecommender";
