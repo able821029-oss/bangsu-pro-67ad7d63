@@ -44,7 +44,7 @@ export function PublishTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId
   const handleUpload = async (post: BlogPost, platform: Platform) => {
     try {
       await navigator.clipboard.writeText(getClipboardText(post));
-      toast({ title: `✅ "${post.title}" 복사 완료!` });
+      toast({ title: `"${post.title}" 복사 완료!` });
     } catch {
       toast({ title: "클립보드 복사 실패", variant: "destructive" });
     }

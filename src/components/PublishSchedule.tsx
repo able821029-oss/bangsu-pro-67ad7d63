@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Check } from "lucide-react";
 import { useAppStore } from "@/stores/appStore";
 import { Button } from "@/components/ui/button";
 import type { TabId } from "@/components/BottomNav";

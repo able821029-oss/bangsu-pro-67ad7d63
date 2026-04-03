@@ -65,7 +65,7 @@ export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: Pay
   const handleTossPay = async () => {
     setLoading("toss");
     toast({
-      title: "🔧 테스트 모드",
+      title: "테스트 모드",
       description: `토스페이먼츠 테스트 결제가 시뮬레이션되었습니다. (${planName} ${amount.toLocaleString()}원)`,
     });
     setLoading(null);
