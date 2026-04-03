@@ -2,7 +2,7 @@
 // Cross-browser compatible (Android Chrome, iOS Safari, Desktop)
 
 const W = 1080, H = 1920;
-const FPS = 25;
+const FPS = 30;
 
 export interface MirraScene {
   duration: number;
@@ -88,10 +88,14 @@ function drawTitle(
   const p = easeOut(Math.min(progress * 1.5, 1));
   ctx.save();
   ctx.globalAlpha = p;
-  ctx.font = 'bold 64px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.font = 'bold 68px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
   ctx.fillStyle = "#FFFFFF";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  // 텍스트 그림자 효과
+  ctx.shadowColor = "rgba(0,0,0,0.8)";
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 4;
 
   let dx = 0, dy = 0, scale = 1;
   switch (anim) {
@@ -131,15 +135,28 @@ function drawSubtitleTyping(
   if (!visible) return;
 
   ctx.save();
-  ctx.font = '38px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  ctx.fillStyle = accentColor;
+  ctx.font = 'bold 42px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+
+  // 배경 박스
+  const tw = ctx.measureText(visible).width;
+  const pad = 28;
+  const bx = W / 2 - tw / 2 - pad;
+  const bw = tw + pad * 2;
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.beginPath();
+  ctx.roundRect(bx, y - 28, bw, 56, 12);
+  ctx.fill();
+
+  ctx.fillStyle = accentColor;
+  ctx.shadowColor = "rgba(0,0,0,0.6)";
+  ctx.shadowBlur = 8;
   ctx.fillText(visible, W / 2, y);
 
   if (typingProgress < 1 && Math.floor(typingProgress * 10) % 2 === 0) {
-    const cursorX = W / 2 + ctx.measureText(visible).width / 2 + 4;
-    ctx.fillRect(cursorX, y - 16, 3, 32);
+    const cursorX = W / 2 + tw / 2 + 6;
+    ctx.fillRect(cursorX, y - 18, 3, 36);
   }
   ctx.restore();
 }
@@ -175,7 +192,7 @@ function drawPhotoWithOverlay(
     sy = (img.height - sh) / 2;
   }
 
-  const scale = 1.0 + 0.05 * progress;
+  const scale = 1.0 + 0.08 * progress;
   const dw = W * scale;
   const dh = photoH * scale;
   const dx = (W - dw) / 2;

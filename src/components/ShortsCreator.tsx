@@ -10,7 +10,7 @@ import { renderMirraVideo, isRecordingSupported, isIOSDevice, type MirraScene, t
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
 type BgmType = "upbeat" | "calm" | "none";
-type ShortsStep = "config" | "generating" | "done" | "error";
+type ShortsStep = "config" | "generating" | "done" | "error" | "ios_guide";
 
 interface VoiceOption {
   id: string;
@@ -195,9 +195,10 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     };
   }, [step, videoUrl, pendingNarration]);
 
-  const videoLimit = PLAN_LIMITS[subscription.plan] || 5;
-  const [videoUsed] = useState(2);
-  const quotaExceeded = videoUsed >= videoLimit;
+  // ✅ 테스트 모드: 쿼터 제한 없음
+  const videoLimit = 999;
+  const [videoUsed] = useState(0);
+  const quotaExceeded = false;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -271,7 +272,8 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     }
 
     if (isIOSDevice()) {
-      toast({ title: "📱 아이폰 안내", description: "아이폰에서는 영상 자동 저장이 제한됩니다.\n제어센터 → 화면 기록 버튼으로 저장해 주세요." });
+      setStep("ios_guide");
+      return;
     }
 
     if (window.speechSynthesis) speechSynthesis.cancel();
@@ -285,7 +287,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     }
 
     setStep("generating");
-    setProgressText("AI 스크립트 생성 중...");
+    setProgressText("📝 현장 사진 분석 중...");
     setProgressPct(10);
 
     const narrationEnabled = selectedVoice !== null;
@@ -311,7 +313,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       const scenes: MirraScene[] = scriptData?.scenes || [];
       if (scenes.length === 0) throw new Error("스크립트 생성 실패");
 
-      setProgressText("텍스트 애니메이션 렌더링 중...");
+      setProgressText("🎬 텍스트 애니메이션 합성 중...");
       setProgressPct(25);
 
       const voiceConfig = narrationEnabled && voice ? {
@@ -330,7 +332,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         (current, total) => {
           const pct = 25 + Math.round((current / total) * 70);
           setProgressPct(pct);
-          setProgressText(`장면 렌더링 중... (${current}/${total})`);
+          setProgressText(`🖼️ 장면 렌더링 중... ${current}/${total}컷`);
         },
         undefined,
         voiceConfig,
@@ -491,15 +493,9 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         <div className="space-y-2">
           {(() => {
             const hasPhotos = photos.length >= 2;
-            const latestPost = posts.length > 0 ? posts[0] : null;
-            const hasText = latestPost && latestPost.blocks.length > 0 && latestPost.blocks.some((b: any) => b.type === "text" && b.content);
-            const canGenerate = hasPhotos && hasText && !quotaExceeded;
-            const message = !hasPhotos && !hasText
-              ? "사진과 글이 모두 필요합니다"
-              : !hasPhotos
-              ? "사진을 2장 이상 추가해 주세요"
-              : !hasText
-              ? "AI 글쓰기를 먼저 완료해 주세요"
+            const canGenerate = hasPhotos && !quotaExceeded;
+            const message = !hasPhotos
+              ? "현장 사진을 2장 이상 추가해 주세요"
               : null;
             return (
               <>
@@ -586,6 +582,42 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           </Button>
           <Button variant="ghost" className="w-full" onClick={onClose}>돌아가기</Button>
         </div>
+      </div>
+    );
+  }
+
+  // ─── iOS Guide ───
+  if (step === "ios_guide") {
+    return (
+      <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[70vh] text-center">
+        <div className="text-5xl">📱</div>
+        <h2 className="text-xl font-bold">아이폰 화면 녹화 안내</h2>
+        <p className="text-sm text-muted-foreground">
+          아이폰(iOS)은 브라우저에서 영상 저장이 제한됩니다.<br/>
+          아래 순서로 화면 녹화로 저장하세요.
+        </p>
+        <div className="w-full bg-card border border-border rounded-2xl p-4 space-y-3 text-left">
+          {[
+            "아이폰 설정 → 제어 센터 → 화면 기록 추가",
+            "SMS 앱으로 돌아와 아래 '영상 재생 시작' 버튼 클릭",
+            "화면 상단 오른쪽 아래로 스와이프 → 제어 센터 열기",
+            "화면 기록 버튼(⏺) 3초 누르기 → 녹화 시작",
+            "SMS로 돌아와 영상 재생 — 완료 후 녹화 중지",
+          ].map((step, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i+1}</span>
+              <p className="text-sm">{step}</p>
+            </div>
+          ))}
+        </div>
+        <Button
+          className="w-full"
+          style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)", color: "white" }}
+          onClick={() => { setStep("config"); handleGenerate(); }}
+        >
+          <Film className="w-5 h-5" /> 영상 재생 시작
+        </Button>
+        <Button variant="ghost" className="w-full" onClick={onClose}>취소</Button>
       </div>
     );
   }
