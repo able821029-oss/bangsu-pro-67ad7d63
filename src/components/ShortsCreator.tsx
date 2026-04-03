@@ -318,26 +318,14 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
       const url = URL.createObjectURL(result.blob);
       setVideoUrl(url);
       setProgressPct(100);
+
+      // Queue narration for playback after step becomes "done"
+      if (narrationEnabled && voiceConfig && result.narrationTexts.some(t => t)) {
+        setPendingNarration({ texts: result.narrationTexts, voiceConfig });
+      }
+
       setStep("done");
       toast({ title: "✅ 영상이 완성되었습니다!" });
-
-      // Play narration AFTER rendering is complete
-      if (narrationEnabled && voiceConfig && result.narrationTexts.length > 0) {
-        for (const text of result.narrationTexts) {
-          if (text) {
-            await new Promise<void>((resolve) => {
-              if (!window.speechSynthesis) { resolve(); return; }
-              const utterance = new SpeechSynthesisUtterance(text);
-              utterance.lang = voiceConfig.lang;
-              utterance.pitch = voiceConfig.pitch;
-              utterance.rate = voiceConfig.rate;
-              const voices = speechSynthesis.getVoices();
-              const koVoices = voices.filter(v => v.lang.startsWith("ko"));
-              for (const hint of voiceConfig.voiceNameHint) {
-                const match = koVoices.find(v => v.name.includes(hint));
-                if (match) { utterance.voice = match; break; }
-              }
-              if (!utterance.voice && koVoices[0]) utterance.voice = koVoices[0];
               utterance.onend = () => resolve();
               utterance.onerror = () => resolve();
               const timeout = setTimeout(() => resolve(), 15000);
