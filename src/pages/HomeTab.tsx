@@ -65,24 +65,23 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 flex items-center justify-center shrink-0">
-          <svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg" className="w-10 h-7">
-            <defs>
-              <linearGradient id="smsGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" style={{ stopColor: '#237FFF' }} />
-                <stop offset="100%" style={{ stopColor: '#AB5EBE' }} />
-              </linearGradient>
-            </defs>
-            <path d="M20,20 C20,13 13,8 8,12 C3,16 3,24 8,28 C13,32 20,27 20,20 C20,13 27,8 32,8 C40,8 45,14 45,20 C45,26 40,32 32,32 C27,32 20,27 20,20 Z" fill="none" stroke="url(#smsGrad)" strokeWidth="4" strokeLinecap="round"/>
-            <path d="M42,14 L46,18 L42,22" fill="none" stroke="url(#smsGrad)" strokeWidth="3" strokeLinecap="round"/>
-          </svg>
-        </div>
-        <div>
-          <h1 className="text-xl font-extrabold tracking-tight" style={{ color: '#001130' }}>
-            {settings.companyName || "SMS"}
-          </h1>
-          <p className="text-xs font-medium" style={{ color: '#237FFF' }}>Self Marketing Service</p>
-        </div>
+        <svg width="120" height="36" viewBox="0 0 140 36" fill="none" className="shrink-0">
+          <defs>
+            <linearGradient id="ih" x1="0" y1="4" x2="32" y2="34" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#237FFF"/>
+              <stop offset="52%" stopColor="#6C5CE7"/>
+              <stop offset="100%" stopColor="#AB5EBE"/>
+            </linearGradient>
+            <linearGradient id="th" x1="40" y1="8" x2="140" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#237FFF"/>
+              <stop offset="100%" stopColor="#AB5EBE"/>
+            </linearGradient>
+          </defs>
+          <rect width="34" height="34" rx="9" fill="#001130" x="0" y="1"/>
+          <text x="3" y="28" fontFamily="Arial Black, Helvetica Neue, sans-serif" fontWeight="900" fontSize="30" fill="url(#ih)">S</text>
+          <text x="44" y="24" fontFamily="Arial Black, Helvetica Neue, sans-serif" fontWeight="900" fontSize="20" fill="url(#th)">SMS</text>
+          <text x="45" y="34" fontFamily="Arial, sans-serif" fontSize="7" letterSpacing="2" fill="rgba(150,120,200,0.55)">SELF MARKETING</text>
+        </svg>
       </div>
 
       {/* Quick Start */}
