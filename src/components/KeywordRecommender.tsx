@@ -71,7 +71,7 @@ export function KeywordRecommender({
   return (
     <div className="bg-card rounded-[--radius] border border-border p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">🔍 키워드 추천</p>
+        <p className="text-sm font-semibold flex items-center gap-1"><Search className="w-4 h-4 text-primary" /> 키워드 추천</p>
         <button onClick={() => setShow(false)}>
           <X className="w-4 h-4 text-muted-foreground" />
         </button>
