@@ -266,7 +266,7 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         voiceNameHint: voice.voiceNameHint,
       } : undefined;
 
-      const blob = await renderMirraVideo(
+      const result = await renderMirraVideo(
         photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
         scenes,
         settings.companyName,
@@ -281,11 +281,38 @@ export function ShortsCreator({ onClose }: { onClose: () => void }) {
         voiceConfig,
       );
 
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(result.blob);
       setVideoUrl(url);
       setProgressPct(100);
       setStep("done");
       toast({ title: "✅ 영상이 완성되었습니다!" });
+
+      // Play narration AFTER rendering is complete
+      if (narrationEnabled && voiceConfig && result.narrationTexts.length > 0) {
+        for (const text of result.narrationTexts) {
+          if (text) {
+            await new Promise<void>((resolve) => {
+              if (!window.speechSynthesis) { resolve(); return; }
+              const utterance = new SpeechSynthesisUtterance(text);
+              utterance.lang = voiceConfig.lang;
+              utterance.pitch = voiceConfig.pitch;
+              utterance.rate = voiceConfig.rate;
+              const voices = speechSynthesis.getVoices();
+              const koVoices = voices.filter(v => v.lang.startsWith("ko"));
+              for (const hint of voiceConfig.voiceNameHint) {
+                const match = koVoices.find(v => v.name.includes(hint));
+                if (match) { utterance.voice = match; break; }
+              }
+              if (!utterance.voice && koVoices[0]) utterance.voice = koVoices[0];
+              utterance.onend = () => resolve();
+              utterance.onerror = () => resolve();
+              const timeout = setTimeout(() => resolve(), 15000);
+              utterance.onend = () => { clearTimeout(timeout); resolve(); };
+              speechSynthesis.speak(utterance);
+            });
+          }
+        }
+      }
 
     } catch (err: any) {
       console.error("Shorts generation error:", err);

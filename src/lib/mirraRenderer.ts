@@ -291,7 +291,7 @@ export async function renderMirraVideo(
   onProgress: (current: number, total: number) => void,
   narrationAudios?: (string | null)[],
   voiceConfig?: VoiceConfig,
-): Promise<Blob> {
+): Promise<{ blob: Blob; narrationTexts: string[] }> {
   // Pre-flight checks
   if (!isRecordingSupported()) {
     throw new Error("UNSUPPORTED");
@@ -360,21 +360,26 @@ export async function renderMirraVideo(
     }
   }
 
-  // Render each scene
+  // Collect narration texts for post-render playback
+  const narrationTexts: string[] = [];
+
+  // Render each scene (video only — no TTS during render)
   for (let si = 0; si < scenes.length; si++) {
     const scene = scenes[si];
-    let totalFrames = scene.duration || 90;
+    const totalFrames = scene.duration || 90;
     const isEnding = si === scenes.length - 1 && !scene.photo;
     const photoImg = scene.photo ? imageMap[scene.photo] : null;
 
-    // Cancel any lingering speech from previous scene
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    // Collect narration text for later
+    if (narrationEnabled && scene.narration) {
+      narrationTexts.push(scene.narration);
+    } else {
+      narrationTexts.push("");
+    }
 
-    // Pre-rendered audio narration (ElevenLabs path)
+    // Pre-rendered audio narration (ElevenLabs path) — plays into recording stream
     const narrationBuffer = narrationBuffers[si] || null;
     if (narrationBuffer && audioCtx) {
-      const audioFrames = Math.ceil(narrationBuffer.duration * FPS) + 15;
-      totalFrames = Math.max(totalFrames, audioFrames);
       try {
         const source = audioCtx.createBufferSource();
         source.buffer = narrationBuffer;
@@ -383,29 +388,10 @@ export async function renderMirraVideo(
       } catch { /* audio playback error */ }
     }
 
-    // Web Speech API narration — fire when title text becomes visible (15%)
-    const shouldSpeak = !narrationBuffer && narrationEnabled && voiceConfig && scene.narration;
-    const speechStartProgress = 0.15;
-    let speechStartFrame = 0;
-    if (shouldSpeak) {
-      speechStartFrame = Math.floor(totalFrames * speechStartProgress);
-      const estimatedSpeechFrames = Math.ceil((scene.narration.length / 5) * FPS) + 15;
-      totalFrames = Math.max(totalFrames, speechStartFrame + estimatedSpeechFrames);
-    }
-
     onProgress(si, scenes.length);
-
-    let speechFired = false;
-    const sceneStartTime = performance.now();
 
     for (let f = 0; f < totalFrames; f++) {
       const t = f / totalFrames;
-
-      // Fire TTS synced to wall-clock so speech doesn't race ahead of video
-      if (shouldSpeak && !speechFired && f >= speechStartFrame) {
-        speechFired = true;
-        speakNarration(scene.narration, voiceConfig!);
-      }
 
       drawGradientBg(ctx, scene.bg_colors || ["#001130", "#0d2847"]);
       drawGridPattern(ctx, Math.min(t * 3, 1));
@@ -436,15 +422,13 @@ export async function renderMirraVideo(
         drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 130, subtitleProgress);
       }
 
-      // Throttle to real-time: wait until wall-clock catches up
-      const expectedTime = sceneStartTime + (f + 1) * (1000 / FPS);
-      const waitMs = expectedTime - performance.now();
-      await new Promise(r => setTimeout(r, Math.max(waitMs, 0)));
+      await new Promise(r => setTimeout(r, 1000 / FPS));
     }
   }
 
   onProgress(scenes.length, scenes.length);
   recorder.stop();
   if (audioCtx) audioCtx.close();
-  return recordingDone;
+  const blob = await recordingDone;
+  return { blob, narrationTexts };
 }
