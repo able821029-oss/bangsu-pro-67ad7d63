@@ -440,7 +440,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
             {videoStyles.map(s => (
               <button key={s.id} onClick={() => setVideoStyle(s.id)}
                 className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${videoStyle === s.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
-                <p className="font-semibold text-sm">{s.emoji} {s.label}</p>
+                <p className="font-semibold text-sm">{s.label}</p>
                 <p className="text-xs text-muted-foreground">{s.desc}</p>
               </button>
             ))}
