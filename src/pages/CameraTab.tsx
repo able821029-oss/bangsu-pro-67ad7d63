@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from "react";
-import { Camera, ImagePlus, X, Sparkles, MapPin, CalendarDays, CheckCircle2, Loader2, Film, PenLine } from "lucide-react";
+import { Camera, ImagePlus, X, Sparkles, MapPin, CalendarDays, CheckCircle2, Loader2, PenLine } from "lucide-react";
 import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
-import { ShortsCreator } from "@/components/ShortsCreator";
 import { KeywordRecommender } from "@/components/KeywordRecommender";
 import { PlatformChip } from "@/components/PlatformChip";
 import { Button } from "@/components/ui/button";
@@ -40,7 +39,7 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
   const [progress, setProgress] = useState(0);
-  const [showShorts, setShowShorts] = useState(false);
+  
 
   // Auto-detect GPS location on mount with 10s timeout
   useEffect(() => {
@@ -229,9 +228,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
     );
   };
 
-  if (showShorts) {
-    return <ShortsCreator onClose={() => setShowShorts(false)} autoStart />;
-  }
 
   if (isGenerating) {
     return (
@@ -394,12 +390,6 @@ export function CameraTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId)
       <Button variant="hero" size="xl" className="w-full" onClick={handleStartAI}>
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
-      </Button>
-
-      {/* Shorts — only in step 2 */}
-      <Button variant="outline" size="xl" className="w-full" onClick={() => setShowShorts(true)}>
-        <Film className="w-6 h-6" />
-        쇼츠 영상 만들기
       </Button>
     </div>
   );
