@@ -236,7 +236,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
             <button
               key={post.id}
               onClick={() => onViewPost(post)}
-              className="w-full flex items-center gap-3 glass-card p-3 text-left transition-colors hover:bg-white/[0.06]"
+              className="w-full flex items-center gap-3 glass-card p-3 text-left transition-colors hover:bg-secondary/50"
             >
               <div className="w-2 h-2 rounded-full shrink-0" style={{
                 backgroundColor: post.status === "게시완료" ? "#22C55E" : post.status === "완료" ? "#237FFF" : "#888",
