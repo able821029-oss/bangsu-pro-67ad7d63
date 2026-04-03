@@ -34,8 +34,8 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         </defs>
         <text x="8" y="52" fontFamily="Arial Black, Helvetica Neue, sans-serif" fontWeight="900" fontSize="52" fill="url(#splashSg)">S</text>
       </svg>
-      <p className="text-white font-bold text-[28px]">SMS</p>
-      <p className="text-[12px] mt-1" style={{ color: 'rgba(150,120,200,0.7)' }}>SELF MARKETING SERVICE</p>
+      <p className="text-foreground font-bold text-[28px]">SMS</p>
+      <p className="text-[12px] mt-1 text-muted-foreground">SELF MARKETING SERVICE</p>
     </div>
   );
 }

@@ -573,7 +573,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           <Button className="w-full" onClick={handleDownload} disabled={!videoUrl}>
             <Download className="w-5 h-5" /> 갤러리에 저장
           </Button>
-          <Button variant="outline" className="w-full" style={{ borderColor: "#000", color: "#000" }}
+          <Button variant="outline" className="w-full"
             onClick={() => handleDeeplink("tiktok")}>
             틱톡 앱 열기
           </Button>

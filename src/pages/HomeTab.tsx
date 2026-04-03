@@ -166,7 +166,7 @@ export function HomeTab({ onNavigate, onViewPost }: { onNavigate: (tab: TabId) =
         <div className="glass-card p-4 text-center">
           <p className="text-[28px] font-bold text-foreground">3</p>
           <p className="text-xs text-muted-foreground">영상 제작</p>
-          <p className="text-xs text-[#888] mt-1">- 이번달</p>
+          <p className="text-xs text-muted-foreground mt-1">- 이번달</p>
         </div>
         <div className="glass-card p-4 text-center">
           <p className="text-[28px] font-bold text-foreground">{subscription.consecutiveMonths}개월</p>
