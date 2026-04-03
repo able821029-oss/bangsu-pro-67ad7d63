@@ -125,8 +125,8 @@ function VoiceCard({
         onClick={(e) => { e.stopPropagation(); onPreview(); }}
         className="mt-2 flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors"
         style={{
-          backgroundColor: isPlaying ? "#237FFF" : "#F3F4F6",
-          color: isPlaying ? "white" : "#6B7280",
+          backgroundColor: isPlaying ? "hsl(215 100% 50%)" : "hsl(var(--secondary))",
+          color: isPlaying ? "white" : "hsl(var(--muted-foreground))",
         }}
       >
         {isPlaying ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
