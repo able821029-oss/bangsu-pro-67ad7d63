@@ -122,7 +122,7 @@ export function SeoPage({ onBack }: { onBack: () => void }) {
             <div key={i} className={`flex items-center gap-3 px-4 py-3 ${i < diagnosis.categories.length - 1 ? "border-b border-border" : ""}`}>
               <span className="flex-1 text-sm font-medium">{cat.name}</span>
               <span className={`text-sm font-bold ${scoreColor(cat.score)}`}>{cat.score}</span>
-              <span className="text-sm">{statusEmoji[cat.status]} {statusLabel[cat.status]}</span>
+              <span className="text-sm">{(() => { const Icon = statusIcons[cat.status]; return Icon ? <Icon className={`w-4 h-4 inline ${statusColors[cat.status]}`} /> : null; })()} {statusLabel[cat.status]}</span>
             </div>
           ))}
         </div>
