@@ -267,7 +267,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
             <div key={idx} className="bg-primary/10 border-2 border-dashed border-primary/30 rounded-[--radius] p-4 flex items-center gap-3">
               <Camera className="w-6 h-6 text-primary" />
               <div className="flex-1">
-                <p className="font-semibold text-sm text-primary">📸 사진{idx + 1} 여기 업로드 ▲</p>
+                <p className="font-semibold text-sm text-primary">사진{idx + 1} 여기 업로드</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{block.caption}</p>
               </div>
             </div>
