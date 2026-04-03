@@ -39,7 +39,7 @@ export function TestModeBadge({ label = "테스트 모드", inline = false }: Te
         style={{ backgroundColor: "#FFF7ED", color: "#F97316", border: "1px solid #FDBA74" }}
       >
         <Wrench className="w-3.5 h-3.5" />
-        🔧 {label}
+        {label}
       </button>
       <TestModeDialog open={open} onOpenChange={setOpen} />
     </>
