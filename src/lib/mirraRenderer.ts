@@ -392,7 +392,14 @@ export async function renderMirraVideo(
 
     onProgress(si, scenes.length);
 
+    let speechFired = false;
+
     for (let f = 0; f < totalFrames; f++) {
+      // Fire TTS when we reach the text-visible frame
+      if (shouldSpeak && !speechFired && f >= speechStartFrame) {
+        speechFired = true;
+        speakNarration(scene.narration, voiceConfig!);
+      }
       const t = f / totalFrames;
 
       drawGradientBg(ctx, scene.bg_colors || ["#001130", "#0d2847"]);
