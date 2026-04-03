@@ -80,7 +80,7 @@ export function SeoPage({ onBack }: { onBack: () => void }) {
         <button onClick={onBack} className="p-2 -ml-2 rounded-[--radius] hover:bg-secondary">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-bold flex-1">📈 블로그 상위노출 관리</h1>
+        <h1 className="text-xl font-bold flex-1 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-primary" /> 블로그 상위노출 관리</h1>
       </div>
 
       {/* Score Card */}
