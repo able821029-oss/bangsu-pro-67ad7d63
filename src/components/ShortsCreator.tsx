@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { renderMirraVideo, isRecordingSupported, isIOSDevice, type MirraScene } from "@/lib/mirraRenderer";
+import { renderMirraVideo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
 type BgmType = "upbeat" | "calm" | "none";
