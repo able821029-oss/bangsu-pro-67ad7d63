@@ -204,10 +204,11 @@ export function HomeTab({
           <p className="text-xs text-muted-foreground">게시 완료</p>
           <p className="text-xs text-[#22C55E] mt-1">▲ 2 지난달</p>
         </button>
-        <button onClick={() => onNavigate("publish")} className="glass-card p-4 text-center w-full">
-          <p className="text-[28px] font-bold text-foreground">3</p>
-          <p className="text-xs text-muted-foreground">영상 제작</p>
-          <p className="text-xs text-muted-foreground mt-1">- 이번달</p>
+<button onClick={() => onNavigate("publish")} className="glass-card p-4 text-center w-full">
+  <p className="text-[28px] font-bold text-foreground">3</p>
+  <p className="text-xs text-muted-foreground">영상 제작</p>
+  <p className="text-xs text-muted-foreground mt-1">🔒 프로+</p>
+</button>
         </button>
         <button onClick={() => setShowBadgeSheet(true)} className="glass-card p-4 text-center w-full">
           <p className="text-[28px] font-bold text-foreground">{subscription.consecutiveMonths}개월</p>
