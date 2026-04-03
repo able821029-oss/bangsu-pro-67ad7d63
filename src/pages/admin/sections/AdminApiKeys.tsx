@@ -122,7 +122,7 @@ export function AdminApiKeys() {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">{apiKey.label}</label>
                 <span className="text-xs flex items-center gap-1">
-                  {status.dot} <span className="text-muted-foreground">{status.label} — {status.desc}</span>
+                  <span className={status.dotColor}>{status.dot}</span> <span className="text-muted-foreground">{status.label} — {status.desc}</span>
                 </span>
               </div>
               <div className="flex gap-2">
