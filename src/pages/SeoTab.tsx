@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { BarChart3, Loader2, Lightbulb, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { BarChart3, Loader2, Lightbulb, RefreshCw, ChevronDown, ChevronUp, FileText, Check, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { KeywordRecommender } from "@/components/KeywordRecommender";
 import { PublishSchedule } from "@/components/PublishSchedule";
 import { useAppStore } from "@/stores/appStore";
