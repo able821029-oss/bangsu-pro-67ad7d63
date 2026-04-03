@@ -68,6 +68,51 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          amount: number
+          billing_key: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          kakao_sid: string | null
+          partner_order_id: string | null
+          payment_method: string
+          plan: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          billing_key?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          kakao_sid?: string | null
+          partner_order_id?: string | null
+          payment_method?: string
+          plan?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          billing_key?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          kakao_sid?: string | null
+          partner_order_id?: string | null
+          payment_method?: string
+          plan?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       videos: {
         Row: {
           created_at: string
