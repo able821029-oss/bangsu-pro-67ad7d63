@@ -448,7 +448,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         </div>
 
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold">🎙️ 나레이션 목소리</p>
+          <p className="text-sm font-semibold flex items-center gap-1.5"><Mic className="w-4 h-4 text-primary" /> 나레이션 목소리</p>
           <div className="grid grid-cols-2 gap-2">
             {VOICES.map(v => (
               <VoiceCard
