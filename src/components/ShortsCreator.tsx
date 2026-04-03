@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus, ClipboardList, Megaphone, RefreshCw, Music, VolumeX, Volume2, Mic } from "lucide-react";
+import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus, Music, VolumeX, Mic, AlertTriangle } from "lucide-react";
 import { TestModeBadge } from "@/components/TestModeBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
