@@ -1,5 +1,21 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Edit3, Hash, Camera, Copy, RefreshCw, Save, X, Plus, Film, CheckCircle2, Loader2, Check, AlertTriangle, TrendingUp } from "lucide-react";
+import {
+  ArrowLeft,
+  Edit3,
+  Hash,
+  Camera,
+  Copy,
+  RefreshCw,
+  Save,
+  X,
+  Plus,
+  Film,
+  CheckCircle2,
+  Loader2,
+  Check,
+  AlertTriangle,
+  TrendingUp,
+} from "lucide-react";
 import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,13 +32,21 @@ const platformLabels: Record<Platform, string> = {
 };
 
 const statusBadgeVariant: Record<string, "default" | "info" | "success"> = {
-  "작성중": "default",
-  "AI생성중": "default",
-  "완료": "info",
-  "게시완료": "success",
+  작성중: "default",
+  AI생성중: "default",
+  완료: "info",
+  게시완료: "success",
 };
 
-export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; onBack: () => void; onNavigate?: (tab: TabId) => void }) {
+export function PostDetailPage({
+  post,
+  onBack,
+  onNavigate,
+}: {
+  post: BlogPost;
+  onBack: () => void;
+  onNavigate?: (tab: TabId) => void;
+}) {
   const { updatePost, updatePostStatus } = useAppStore();
   const { toast } = useToast();
   const [title, setTitle] = useState(post.title);
@@ -34,13 +58,13 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
   const [editingHashtags, setEditingHashtags] = useState(false);
   const [newTagInput, setNewTagInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false); // ✅ 추가
   const [currentStatus, setCurrentStatus] = useState(post.status);
   const [seoResult, setSeoResult] = useState<any>(null);
   const [seoLoading, setSeoLoading] = useState(false);
 
-  // Auto-analyze SEO on mount if post has content
   useEffect(() => {
-    if (blocks.length > 0 && blocks.some(b => b.type === "text" && b.content)) {
+    if (blocks.length > 0 && blocks.some((b) => b.type === "text" && b.content)) {
       handleAutoSeoAnalyze();
     }
   }, []);
@@ -61,7 +85,8 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
       if (!error && !data?.error) {
         setSeoResult(data);
       }
-    } catch {} finally {
+    } catch {
+    } finally {
       setSeoLoading(false);
     }
   };
@@ -123,10 +148,10 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     toast({ title: "해시태그가 저장되었습니다." });
   };
 
+  // ✅ FIX: 임시저장 — status 변경 없이 내용만 저장
   const handleTempSave = async () => {
-    updatePost(post.id, { title, blocks, hashtags, status: "작성중" });
-    setCurrentStatus("작성중");
-    await saveToDb({ title, blocks, hashtags, status: "작성중" });
+    updatePost(post.id, { title, blocks, hashtags });
+    await saveToDb({ title, blocks, hashtags });
     toast({ title: "임시저장 완료", duration: 2000 });
   };
 
@@ -137,21 +162,65 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     toast({ title: "게시완료로 변경되었습니다" });
   };
 
-  const handleRegenerate = () => {
-    toast({ title: "같은 설정으로 AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
+  // ✅ FIX: AI 재생성 — 확인 모달 + 실제 API 호출
+  const handleRegenerate = async () => {
+    if (currentStatus === "게시완료") {
+      const confirmed = window.confirm("재생성하면 현재 본문이 교체됩니다.\n계속하시겠습니까?");
+      if (!confirmed) return;
+    }
+    setIsRegenerating(true);
+    toast({ title: "AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-blog", {
+        body: {
+          photos: post.photos.slice(0, 5).map((p) => ({ dataUrl: p.dataUrl })),
+          persona: post.persona,
+          platform: post.platforms[0],
+          location: "",
+          buildingType: "AI자동판단",
+          constructionDate: post.createdAt,
+        },
+      });
+      if (!error && !data?.error) {
+        setTitle(data.title);
+        setBlocks(data.blocks);
+        setHashtags(data.hashtags);
+        updatePost(post.id, { title: data.title, blocks: data.blocks, hashtags: data.hashtags });
+        await saveToDb({ title: data.title, blocks: data.blocks, hashtags: data.hashtags });
+        toast({ title: "AI 재생성 완료" });
+      } else {
+        toast({ title: "재생성 실패", description: "다시 시도해주세요", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "재생성 실패", variant: "destructive" });
+    } finally {
+      setIsRegenerating(false);
+    }
   };
 
   const getClipboardText = (platform: Platform) => {
     if (platform === "instagram") {
-      const textContent = blocks.filter(b => b.type === "text").map(b => b.content).join(" ");
+      const textContent = blocks
+        .filter((b) => b.type === "text")
+        .map((b) => b.content)
+        .join(" ");
       const caption = textContent.slice(0, 150);
-      const tags = hashtags.slice(0, 20).map(t => `#${t}`).join(" ");
+      const tags = hashtags
+        .slice(0, 20)
+        .map((t) => `#${t}`)
+        .join(" ");
       return caption + "\n\n" + tags;
     }
     if (platform === "tiktok") {
-      const textContent = blocks.filter(b => b.type === "text").map(b => b.content).join("\n");
+      const textContent = blocks
+        .filter((b) => b.type === "text")
+        .map((b) => b.content)
+        .join("\n");
       const lines = textContent.split(/\n+/).filter(Boolean).slice(0, 3);
-      const tags = hashtags.slice(0, 5).map(t => `#${t}`).join(" ");
+      const tags = hashtags
+        .slice(0, 5)
+        .map((t) => `#${t}`)
+        .join(" ");
       return lines.join("\n") + "\n\n" + tags;
     }
     let text = title + "\n\n";
@@ -159,7 +228,10 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
       if (block.type === "text") text += block.content + "\n\n";
       else text += `[사진${idx + 1} 여기에 첨부]\n\n`;
     });
-    text += hashtags.slice(0, 10).map(t => `#${t}`).join(" ");
+    text += hashtags
+      .slice(0, 10)
+      .map((t) => `#${t}`)
+      .join(" ");
     return text;
   };
 
@@ -185,8 +257,8 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
     window.location.href = deeplinks[platform];
   };
 
-  const orderedPlatforms = ["naver", "instagram", "tiktok"].filter(p =>
-    post.platforms.includes(p as Platform)
+  const orderedPlatforms = ["naver", "instagram", "tiktok"].filter((p) =>
+    post.platforms.includes(p as Platform),
   ) as Platform[];
 
   return (
@@ -214,10 +286,26 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
         <label className="text-xs text-muted-foreground mb-1 block">제목</label>
         {isEditingTitle ? (
           <div className="space-y-2">
-            <input className="w-full bg-secondary rounded-lg px-3 py-2 text-lg font-bold outline-none text-foreground" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
+            <input
+              className="w-full bg-secondary rounded-lg px-3 py-2 text-lg font-bold outline-none text-foreground"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              autoFocus
+            />
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleSaveTitle}>저장</Button>
-              <Button size="sm" variant="outline" onClick={() => { setIsEditingTitle(false); setTitle(post.title); }}>취소</Button>
+              <Button size="sm" onClick={handleSaveTitle}>
+                저장
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setIsEditingTitle(false);
+                  setTitle(post.title);
+                }}
+              >
+                취소
+              </Button>
             </div>
           </div>
         ) : (
@@ -234,7 +322,10 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
           <p className="text-sm font-semibold mb-2">첨부 사진 ({post.photos.length}장)</p>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {post.photos.map((photo) => (
-              <div key={photo.id} className="shrink-0 w-24 h-24 rounded-[--radius] overflow-hidden border-2 border-border">
+              <div
+                key={photo.id}
+                className="shrink-0 w-24 h-24 rounded-[--radius] overflow-hidden border-2 border-border"
+              >
                 <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
@@ -242,7 +333,7 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
         </div>
       )}
 
-      {/* Content Blocks — full body display with inline editing */}
+      {/* Content Blocks */}
       <div className="space-y-3">
         <p className="text-sm font-semibold">본문</p>
         {blocks.map((block, idx) =>
@@ -250,31 +341,60 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
             <div key={idx} className="bg-card rounded-[--radius] border border-border p-4 relative group">
               {editingBlockIdx === idx ? (
                 <div className="space-y-2">
-                  <textarea className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[120px] text-foreground resize-none" value={editText} onChange={(e) => setEditText(e.target.value)} />
+                  <textarea
+                    className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[120px] text-foreground resize-none"
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                  />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveEdit}>저장</Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingBlockIdx(null)}>취소</Button>
+                    <Button size="sm" onClick={handleSaveEdit}>
+                      저장
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingBlockIdx(null)}>
+                      취소
+                    </Button>
                   </div>
                 </div>
               ) : (
-                <button onClick={() => { setEditingBlockIdx(idx); setEditText(block.content); }} className="w-full text-left">
+                <button
+                  onClick={() => {
+                    setEditingBlockIdx(idx);
+                    setEditText(block.content);
+                  }}
+                  className="w-full text-left"
+                >
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{block.content}</p>
                   <Edit3 className="w-4 h-4 text-muted-foreground absolute top-2 right-2 opacity-60" />
                 </button>
               )}
             </div>
           ) : (
-            <div key={idx} className="bg-primary/10 border-2 border-dashed border-primary/30 rounded-[--radius] p-4 flex items-center gap-3">
+            <div
+              key={idx}
+              className="bg-primary/10 border-2 border-dashed border-primary/30 rounded-[--radius] p-4 flex items-center gap-3"
+            >
               <Camera className="w-6 h-6 text-primary" />
               <div className="flex-1">
                 <p className="font-semibold text-sm text-primary">사진{idx + 1} 여기 업로드</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{block.caption}</p>
               </div>
             </div>
-          )
+          ),
         )}
+
+        {/* ✅ FIX: 본문 없음 — 안내 + 재생성 버튼 */}
         {blocks.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">본문이 없습니다</p>
+          <div className="text-center py-8 space-y-3 bg-card rounded-[--radius] border border-border">
+            <p className="text-sm text-muted-foreground">아직 본문이 생성되지 않았습니다</p>
+            <Button size="sm" variant="outline" onClick={handleRegenerate} disabled={isRegenerating}>
+              {isRegenerating ? (
+                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+              ) : (
+                <RefreshCw className="w-3 h-3 mr-1" />
+              )}
+              AI 글쓰기 시작
+            </Button>
+          </div>
         )}
       </div>
 
@@ -293,29 +413,49 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
               {hashtags.map((tag, i) => (
                 <Badge key={i} variant="secondary" className="text-sm gap-1 pr-1">
                   #{tag}
-                  <button onClick={() => handleRemoveTag(i)} className="ml-1 p-0.5 hover:bg-destructive/20 rounded-full">
+                  <button
+                    onClick={() => handleRemoveTag(i)}
+                    className="ml-1 p-0.5 hover:bg-destructive/20 rounded-full"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 </Badge>
               ))}
             </div>
             <div className="flex gap-2">
-              <input className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground" value={newTagInput} onChange={(e) => setNewTagInput(e.target.value)} placeholder="새 태그 입력" onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddTag(); } }} />
-              <Button size="sm" variant="outline" onClick={handleAddTag}><Plus className="w-4 h-4" /></Button>
+              <input
+                className="flex-1 bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
+                value={newTagInput}
+                onChange={(e) => setNewTagInput(e.target.value)}
+                placeholder="새 태그 입력"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
+              />
+              <Button size="sm" variant="outline" onClick={handleAddTag}>
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
-            <Button size="sm" onClick={handleFinishHashtags} className="w-full">완료</Button>
+            <Button size="sm" onClick={handleFinishHashtags} className="w-full">
+              완료
+            </Button>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {hashtags.map((tag, i) => (
-              <Badge key={i} variant="secondary" className="text-sm">#{tag}</Badge>
+              <Badge key={i} variant="secondary" className="text-sm">
+                #{tag}
+              </Badge>
             ))}
             {hashtags.length === 0 && <p className="text-xs text-muted-foreground">해시태그 없음</p>}
           </div>
         )}
       </div>
 
-      {/* SEO Score Visual Section */}
+      {/* SEO Score */}
       {(seoResult || seoLoading) && (
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <div className="flex items-center gap-2">
@@ -327,7 +467,6 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
               </button>
             )}
           </div>
-
           {seoLoading && !seoResult ? (
             <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -343,8 +482,6 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
                   <Progress value={seoResult.totalScore} className="h-2" />
                 </div>
               </div>
-
-              {/* Checklist */}
               {seoResult.checklist && (
                 <div className="space-y-1.5">
                   {seoResult.checklist.map((item: any, i: number) => (
@@ -355,13 +492,13 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
                         <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0 mt-0.5" />
                       )}
                       <span className="flex-1">{item.label}</span>
-                      <span className="text-muted-foreground">{item.current} → {item.recommend}</span>
+                      <span className="text-muted-foreground">
+                        {item.current} → {item.recommend}
+                      </span>
                     </div>
                   ))}
                 </div>
               )}
-
-              {/* Items summary */}
               {seoResult.items && (
                 <div className="grid grid-cols-2 gap-2">
                   {seoResult.items.slice(0, 4).map((item: any, i: number) => (
@@ -380,12 +517,11 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
       <div className="bg-card rounded-[--radius] border border-border p-4 space-y-2 text-xs text-muted-foreground">
         <p>작성일: {post.createdAt}</p>
         <p>페르소나: {post.persona}</p>
-        <p>플랫폼: {post.platforms.map(p => platformLabels[p]).join(", ")}</p>
+        <p>플랫폼: {post.platforms.map((p) => platformLabels[p]).join(", ")}</p>
       </div>
 
-      {/* ─── Action Buttons ─── */}
+      {/* Action Buttons */}
       <div className="space-y-3">
-        {/* Platform CTA buttons */}
         {orderedPlatforms.map((platform, i) => (
           <div key={platform}>
             <Button
@@ -404,30 +540,44 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
 
         {orderedPlatforms.length > 0 && <div className="border-t border-border" />}
 
-        {/* Mark as published */}
         {currentStatus !== "게시완료" && (
-          <Button variant="outline" className="w-full gap-2 text-green-600 border-green-500/30 hover:bg-green-500/10" onClick={handleMarkPublished}>
+          <Button
+            variant="outline"
+            className="w-full gap-2 text-green-600 border-green-500/30 hover:bg-green-500/10"
+            onClick={handleMarkPublished}
+          >
             <CheckCircle2 className="w-5 h-5" />
             발행 완료로 표시
           </Button>
         )}
 
-        {/* Shorts — only enabled if photos ≥2 AND text exists */}
         {(() => {
           const hasPhotos = post.photos.length >= 2;
-          const hasText = blocks.length > 0 && blocks.some(b => b.type === "text" && b.content);
+          const hasText = blocks.length > 0 && blocks.some((b) => b.type === "text" && b.content);
           const canCreate = hasPhotos && hasText;
-          const msg = !hasPhotos && !hasText
-            ? "사진과 글이 모두 필요합니다"
-            : !hasPhotos ? "사진을 2장 이상 추가해 주세요"
-            : !hasText ? "AI 글쓰기를 먼저 완료해 주세요" : null;
+          const msg =
+            !hasPhotos && !hasText
+              ? "사진 2장 이상 + AI 글쓰기 완료 시 활성화됩니다"
+              : !hasPhotos
+                ? "사진을 2장 이상 추가해 주세요"
+                : !hasText
+                  ? "AI 글쓰기를 먼저 완료해 주세요"
+                  : null;
           return (
             <div>
               <Button
                 variant={canCreate ? "outline" : "secondary"}
                 className="w-full gap-2"
                 disabled={!canCreate}
-                style={canCreate ? { background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white", border: "none" } : {}}
+                style={
+                  canCreate
+                    ? {
+                        background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)",
+                        color: "white",
+                        border: "none",
+                      }
+                    : {}
+                }
                 onClick={() => {
                   toast({ title: "이 글 기반으로 영상을 생성합니다" });
                   onBack();
@@ -437,18 +587,19 @@ export function PostDetailPage({ post, onBack, onNavigate }: { post: BlogPost; o
                 <Film className="w-5 h-5" />
                 쇼츠 영상 만들기
               </Button>
-              {msg && <p className="text-xs text-muted-foreground text-center mt-1">{msg}</p>}
+              {/* ✅ FIX: 비활성화 안내를 버튼 아래 깔끔하게 */}
+              {msg && <p className="text-xs text-muted-foreground text-center mt-1.5">{msg}</p>}
             </div>
           );
         })()}
 
-        {/* Regenerate */}
-        <Button variant="outline" className="w-full gap-2" onClick={handleRegenerate}>
-          <RefreshCw className="w-4 h-4" />
-          AI 재생성
+        {/* ✅ FIX: AI 재생성 — 로딩 스피너 포함 */}
+        <Button variant="outline" className="w-full gap-2" onClick={handleRegenerate} disabled={isRegenerating}>
+          <RefreshCw className={`w-4 h-4 ${isRegenerating ? "animate-spin" : ""}`} />
+          {isRegenerating ? "재생성 중..." : "AI 재생성"}
         </Button>
 
-        {/* Temp save */}
+        {/* ✅ FIX: 임시저장 — status 변경 없음 */}
         <Button variant="ghost" size="sm" className="w-full gap-2 text-muted-foreground" onClick={handleTempSave}>
           <Save className="w-4 h-4" />
           임시저장
