@@ -68,6 +68,8 @@ interface Subscription {
   maxCount: number;
   expiresAt: string;
   consecutiveMonths: number;
+  videoCredits: number;        // 보유 영상 크레딧
+  videoCreditExpiry: string;   // 크레딧 만료일
 }
 
 interface AppState {
@@ -84,6 +86,8 @@ interface AppState {
   inquiries: Inquiry[];
   referralCode: string;
   referralCount: number;
+  addVideoCredits: (amount: number) => void;
+  useVideoCredit: () => boolean;
 
   addPhoto: (photo: PhotoItem) => void;
   removePhoto: (id: string) => void;

@@ -200,17 +200,16 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     };
   }, [step, videoUrl, pendingNarration]);
 
-  // ✅ 테스트 모드 — 플랜/쿼터 제한 없음
-  const TEST_MODE = true;
-  const PLAN_LIMITS_MAP: Record<string, number> = {
-    "무료": 1, "베이직": 5, "프로": 20, "비즈니스": 50, "무제한": 999,
-  };
-  const videoLimit = TEST_MODE ? 999 : (PLAN_LIMITS_MAP[subscription.plan] ?? 1);
+  // 크레딧 기반 쿼터 시스템
+  const { addVideoCredits, useVideoCredit } = useAppStore();
+  const videoCredits = subscription.videoCredits ?? 0;
+  const videoLimit = videoCredits; // 보유 크레딧이 한도
   const [videoUsed, setVideoUsed] = useState<number>(0);
-  const quotaExceeded = false; // 테스트 모드: 항상 허용
+  const quotaExceeded = videoCredits <= 0;
 
   const incrementVideoUsed = () => {
-    if (!TEST_MODE) setVideoUsed(v => v + 1);
+    useVideoCredit(); // 크레딧 1개 차감
+    setVideoUsed(v => v + 1);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -609,7 +608,35 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           </div>
         </div>
 
-        <UsageMeter used={videoUsed} max={videoLimit} plan={subscription.plan} />
+        {/* 크레딧 현황 */}
+        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-2">
+          <div className="flex justify-between items-center">
+            <p className="text-sm font-semibold flex items-center gap-1.5">
+              <Film className="w-4 h-4 text-primary" /> 영상 크레딧
+            </p>
+            <p className="text-sm font-bold" style={{ color: videoCredits === 0 ? "#EF4444" : videoCredits <= 2 ? "#F97316" : "#237FFF" }}>
+              {videoCredits}개 보유
+            </p>
+          </div>
+          <div className="w-full bg-secondary rounded-full h-2">
+            <div className="rounded-full h-2 transition-all" style={{
+              width: `${Math.min((videoCredits / 30) * 100, 100)}%`,
+              backgroundColor: videoCredits === 0 ? "#EF4444" : videoCredits <= 2 ? "#F97316" : "#237FFF"
+            }} />
+          </div>
+          {videoCredits === 0 && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-2">
+              <p className="text-xs text-destructive font-medium">영상 크레딧이 부족합니다.</p>
+              <Button size="sm" variant="outline" className="text-xs border-primary text-primary w-full"
+                onClick={() => { sessionStorage.setItem("sms-open-settings-page", "pricing"); window.location.href = "/settings"; }}>
+                크레딧 충전하기
+              </Button>
+            </div>
+          )}
+          {videoCredits > 0 && videoCredits <= 2 && (
+            <p className="text-xs text-amber-500">크레딧이 얼마 남지 않았습니다. 충전을 권장합니다.</p>
+          )}
+        </div>
 
         <div className="space-y-2">
           {(() => {
