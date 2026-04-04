@@ -6,10 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { renderMirraVideo, createBgmTrack, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/mirraRenderer";
+import { renderMirraVideo, createBgmTrack, previewBgm, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
-type BgmType = "upbeat" | "calm" | "none";
 type ShortsStep = "config" | "generating" | "done" | "error" | "ios_guide";
 
 interface VoiceOption {
@@ -39,10 +38,13 @@ const videoStyles: { id: VideoStyle; label: string; desc: string; icon: string }
   { id: "Before/After형", label: "Before/After형", desc: "전후 비교 중심", icon: "refresh" },
 ];
 
-const bgmOptions: { id: BgmType; label: string; icon: string }[] = [
-  { id: "upbeat", label: "경쾌한", icon: "music" },
-  { id: "calm", label: "잔잔한", icon: "volume2" },
-  { id: "none", label: "없음", icon: "volumeX" },
+const bgmOptions: { id: BgmType; label: string; emoji: string; desc: string }[] = [
+  { id: "upbeat",    label: "경쾌한",      emoji: "🎵", desc: "팝 아르페지오" },
+  { id: "hiphop",   label: "힙합/트랩",   emoji: "🎤", desc: "808 킥 + 베이스" },
+  { id: "emotional", label: "감성적",      emoji: "🎹", desc: "피아노 멜로디" },
+  { id: "corporate", label: "프로페셔널",  emoji: "💼", desc: "깔끔한 비즈니스" },
+  { id: "calm",      label: "잔잔한",      emoji: "🌊", desc: "코드 패드" },
+  { id: "none",      label: "없음",        emoji: "🔇", desc: "무음" },
 ];
 
 const PLAN_LIMITS: Record<string, number> = {
@@ -146,7 +148,9 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
   const styleRef = useRef<HTMLDivElement>(null);
 
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("시공일지형");
-  const [bgm, setBgm] = useState<BgmType>("upbeat"); // upbeat | calm | none
+  const [bgm, setBgm] = useState<BgmType>("upbeat");
+  const [previewingBgm, setPreviewingBgm] = useState<BgmType | null>(null);
+  const previewCtxRef = useRef<AudioContext | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string | null>("male_calm");
   const [step, setStep] = useState<ShortsStep>("config");
   const [progressText, setProgressText] = useState("");
@@ -269,7 +273,36 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     speechSynthesis.speak(utterance);
   }, [playingVoice]);
 
+  const handleBgmPreview = (id: BgmType) => {
+    // 이미 재생 중이면 정지
+    if (previewCtxRef.current) {
+      previewCtxRef.current.close().catch(() => {});
+      previewCtxRef.current = null;
+    }
+    if (previewingBgm === id || id === "none") {
+      setPreviewingBgm(null);
+      return;
+    }
+    setPreviewingBgm(id);
+    const ctx = previewBgm(id);
+    previewCtxRef.current = ctx;
+    // 6초 후 자동 종료
+    setTimeout(() => {
+      if (previewCtxRef.current === ctx) {
+        ctx?.close().catch(() => {});
+        previewCtxRef.current = null;
+        setPreviewingBgm(null);
+      }
+    }, 6200);
+  };
+
   const handleGenerate = useCallback(async () => {
+    // 미리듣기 중이면 정지
+    if (previewCtxRef.current) {
+      previewCtxRef.current.close().catch(() => {});
+      previewCtxRef.current = null;
+      setPreviewingBgm(null);
+    }
     if (photos.length < 2) {
       toast({ title: "사진이 2장 이상 필요합니다", variant: "destructive" });
       return;

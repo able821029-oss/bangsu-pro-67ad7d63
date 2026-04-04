@@ -527,8 +527,178 @@ export async function renderMirraVideo(
 }
 
 // ── BGM 생성기 (Web Audio API 기반 — 외부 파일 없이 합성) ──
-export type BgmType = "upbeat" | "calm" | "none";
+export type BgmType = "upbeat" | "calm" | "hiphop" | "emotional" | "corporate" | "none";
 
+// ── BGM 내부 합성 핵심 함수 (preview/render 공용) ──
+function _synthBgm(audioCtx: AudioContext, out: AudioNode, bgmType: BgmType, durationSec: number) {
+  const master = audioCtx.createGain();
+  master.gain.value = 0.20;
+  master.connect(out);
+
+  const t0 = audioCtx.currentTime;
+
+  if (bgmType === "upbeat") {
+    // ♪ 경쾌한 — 팝 아르페지오 + 킥/스네어/하이햇
+    const bpm = 128, beat = 60 / bpm;
+    const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 293.66, 349.23];
+    const beats = Math.ceil(durationSec / beat * 2);
+    for (let b = 0; b < beats; b++) {
+      const t = t0 + b * beat * 0.5;
+      if (t > t0 + durationSec) break;
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "triangle"; o.frequency.value = notes[b % notes.length];
+      g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.4);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + beat * 0.5);
+      if (b % 8 === 0) { // kick
+        const k = audioCtx.createOscillator(), kg = audioCtx.createGain();
+        k.type = "sine"; k.frequency.setValueAtTime(160, t); k.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+        kg.gain.setValueAtTime(0.7, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        k.connect(kg); kg.connect(master); k.start(t); k.stop(t + 0.2);
+      }
+      if (b % 8 === 4) { // snare
+        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.12, audioCtx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / d.length * 8);
+        const s = audioCtx.createBufferSource(), sg = audioCtx.createGain();
+        s.buffer = buf; sg.gain.setValueAtTime(0.4, t); sg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+        s.connect(sg); sg.connect(master); s.start(t);
+      }
+      if (b % 2 === 1) { // hihat
+        const buf2 = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.04, audioCtx.sampleRate);
+        const d2 = buf2.getChannelData(0);
+        for (let i = 0; i < d2.length; i++) d2[i] = (Math.random() * 2 - 1) * 0.2;
+        const h = audioCtx.createBufferSource(), hf = audioCtx.createBiquadFilter(), hg = audioCtx.createGain();
+        hf.type = "highpass"; hf.frequency.value = 9000; h.buffer = buf2;
+        hg.gain.setValueAtTime(0.2, t); hg.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+        h.connect(hf); hf.connect(hg); hg.connect(master); h.start(t);
+      }
+    }
+
+  } else if (bgmType === "calm") {
+    // ♪ 잔잔한 — 느린 피아노 코드 패드
+    const chords = [[261.63,329.63,392.00],[293.66,369.99,440.00],[246.94,311.13,369.99],[220.00,277.18,329.63]];
+    const dur = 3.2, n = Math.ceil(durationSec / dur);
+    for (let ci = 0; ci < n; ci++) {
+      const t = t0 + ci * dur;
+      if (t > t0 + durationSec) break;
+      chords[ci % chords.length].forEach((freq, i) => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "sine"; o.frequency.value = freq * (i === 0 ? 0.5 : 1);
+        g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.28, t + 0.9);
+        g.gain.setValueAtTime(0.28, t + dur - 0.9); g.gain.linearRampToValueAtTime(0.001, t + dur);
+        o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.1);
+      });
+    }
+
+  } else if (bgmType === "hiphop") {
+    // ♪ 힙합/트랩 — 무거운 808 킥 + 롤링 하이햇 + 베이스라인
+    const bpm = 90, beat = 60 / bpm;
+    const bassNotes = [65.41, 73.42, 65.41, 58.27]; // C2 D2 C2 Bb1
+    const beats = Math.ceil(durationSec / beat);
+    for (let b = 0; b < beats; b++) {
+      const t = t0 + b * beat;
+      if (t > t0 + durationSec) break;
+      // 808 kick (긴 베이스 킥)
+      if (b % 4 === 0 || b % 4 === 2) {
+        const k = audioCtx.createOscillator(), kg = audioCtx.createGain();
+        k.type = "sine"; k.frequency.setValueAtTime(200, t); k.frequency.exponentialRampToValueAtTime(40, t + 0.5);
+        kg.gain.setValueAtTime(0.9, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+        k.connect(kg); kg.connect(master); k.start(t); k.stop(t + 0.65);
+      }
+      // 트랩 하이햇 (16분 롤)
+      for (let sub = 0; sub < 4; sub++) {
+        const ht = t + sub * beat * 0.25;
+        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.03, audioCtx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.15;
+        const h = audioCtx.createBufferSource(), hf = audioCtx.createBiquadFilter(), hg = audioCtx.createGain();
+        hf.type = "highpass"; hf.frequency.value = 10000; h.buffer = buf;
+        const vel = sub === 0 ? 0.3 : sub === 2 ? 0.2 : 0.1;
+        hg.gain.setValueAtTime(vel, ht); hg.gain.exponentialRampToValueAtTime(0.001, ht + 0.03);
+        h.connect(hf); hf.connect(hg); hg.connect(master); h.start(ht);
+      }
+      // 베이스라인
+      const bn = audioCtx.createOscillator(), bg = audioCtx.createGain();
+      bn.type = "sawtooth"; bn.frequency.value = bassNotes[b % bassNotes.length];
+      const lp = audioCtx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 300;
+      bg.gain.setValueAtTime(0.5, t); bg.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.8);
+      bn.connect(lp); lp.connect(bg); bg.connect(master); bn.start(t); bn.stop(t + beat);
+    }
+
+  } else if (bgmType === "emotional") {
+    // ♪ 감성적 — 단조 피아노 멜로디 + 스트링 패드
+    const bpm = 72, beat = 60 / bpm;
+    // A minor scale melody
+    const melody = [440.00, 493.88, 523.25, 440.00, 392.00, 349.23, 392.00, 440.00,
+                    493.88, 523.25, 587.33, 523.25, 493.88, 440.00, 392.00, 349.23];
+    const beats = Math.ceil(durationSec / beat);
+    for (let b = 0; b < beats; b++) {
+      const t = t0 + b * beat;
+      if (t > t0 + durationSec) break;
+      // 피아노 멜로디
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "triangle"; o.frequency.value = melody[b % melody.length] * 0.5;
+      g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.3, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.7);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + beat);
+      // 스트링 패드 (4박마다)
+      if (b % 4 === 0) {
+        [220.00, 261.63, 329.63].forEach(freq => {
+          const s = audioCtx.createOscillator(), sg = audioCtx.createGain();
+          s.type = "sawtooth"; s.frequency.value = freq;
+          const lp = audioCtx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 600;
+          sg.gain.setValueAtTime(0.001, t); sg.gain.linearRampToValueAtTime(0.08, t + 1.0);
+          sg.gain.setValueAtTime(0.08, t + beat * 3.5); sg.gain.linearRampToValueAtTime(0.001, t + beat * 4);
+          s.connect(lp); lp.connect(sg); sg.connect(master); s.start(t); s.stop(t + beat * 4 + 0.1);
+        });
+      }
+    }
+
+  } else if (bgmType === "corporate") {
+    // ♪ 프로페셔널 — 깔끔한 피아노 + 베이스 + 라이트 퍼커션
+    const bpm = 100, beat = 60 / bpm;
+    const notes = [329.63, 392.00, 440.00, 493.88, 523.25, 440.00, 392.00, 329.63]; // E G A B C A G E
+    const beats = Math.ceil(durationSec / beat);
+    for (let b = 0; b < beats; b++) {
+      const t = t0 + b * beat;
+      if (t > t0 + durationSec) break;
+      // 피아노 멜로디
+      if (b % 2 === 0) {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "sine"; o.frequency.value = notes[Math.floor(b / 2) % notes.length];
+        g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.25, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + beat * 1.5);
+        o.connect(g); g.connect(master); o.start(t); o.stop(t + beat * 2);
+      }
+      // 베이스 (4박마다)
+      if (b % 4 === 0) {
+        const bs = audioCtx.createOscillator(), bg = audioCtx.createGain();
+        bs.type = "sine"; bs.frequency.value = 98.00; // G2
+        bg.gain.setValueAtTime(0.4, t); bg.gain.exponentialRampToValueAtTime(0.001, t + beat * 1.8);
+        bs.connect(bg); bg.connect(master); bs.start(t); bs.stop(t + beat * 2);
+      }
+      // 라이트 퍼커션
+      if (b % 4 === 0 || b % 4 === 2) {
+        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.08, audioCtx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / d.length * 10) * 0.3;
+        const n = audioCtx.createBufferSource(), ng = audioCtx.createGain();
+        n.buffer = buf; ng.gain.setValueAtTime(0.2, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+        n.connect(ng); ng.connect(master); n.start(t);
+      }
+    }
+  }
+}
+
+// ── 미리듣기용 (스피커 직접 출력, 6초) ──
+export function previewBgm(bgmType: BgmType): AudioContext | null {
+  if (bgmType === "none") return null;
+  const ctx = new AudioContext();
+  _synthBgm(ctx, ctx.destination, bgmType, 6);
+  return ctx;
+}
+
+// ── 영상 믹싱용 ──
 export async function createBgmTrack(
   audioCtx: AudioContext,
   dest: MediaStreamAudioDestinationNode,
@@ -536,87 +706,5 @@ export async function createBgmTrack(
   durationSec: number,
 ): Promise<void> {
   if (bgmType === "none") return;
-
-  const masterGain = audioCtx.createGain();
-  masterGain.gain.value = 0.18; // 나레이션보다 낮게
-  masterGain.connect(dest);
-
-  if (bgmType === "upbeat") {
-    // 경쾌한 — 4/4박자 아르페지오 + 킥드럼 패턴
-    const bpm = 120;
-    const beatSec = 60 / bpm;
-    const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; // C E G C G E
-    const totalBeats = Math.ceil(durationSec / beatSec);
-
-    for (let b = 0; b < totalBeats; b++) {
-      const t = audioCtx.currentTime + b * beatSec * 0.5;
-
-      // 아르페지오 음표
-      const osc = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      osc.type = "triangle";
-      osc.frequency.value = notes[b % notes.length];
-      g.gain.setValueAtTime(0.4, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + beatSec * 0.45);
-      osc.connect(g); g.connect(masterGain);
-      osc.start(t); osc.stop(t + beatSec * 0.5);
-
-      // 킥 드럼 (짝수 박)
-      if (b % 4 === 0) {
-        const kick = audioCtx.createOscillator();
-        const kg = audioCtx.createGain();
-        kick.type = "sine";
-        kick.frequency.setValueAtTime(150, t);
-        kick.frequency.exponentialRampToValueAtTime(40, t + 0.1);
-        kg.gain.setValueAtTime(0.6, t);
-        kg.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-        kick.connect(kg); kg.connect(masterGain);
-        kick.start(t); kick.stop(t + 0.2);
-      }
-
-      // 하이햇 (8분음표)
-      if (b % 2 === 1) {
-        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
-        const data = buf.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
-        const noise = audioCtx.createBufferSource();
-        const hg = audioCtx.createGain();
-        const hf = audioCtx.createBiquadFilter();
-        hf.type = "highpass"; hf.frequency.value = 8000;
-        noise.buffer = buf;
-        hg.gain.setValueAtTime(0.25, t); hg.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-        noise.connect(hf); hf.connect(hg); hg.connect(masterGain);
-        noise.start(t);
-      }
-    }
-
-  } else if (bgmType === "calm") {
-    // 잔잔한 — 느린 코드 패드
-    const chords = [
-      [261.63, 329.63, 392.00], // C maj
-      [293.66, 369.99, 440.00], // D maj
-      [246.94, 311.13, 369.99], // B min
-      [220.00, 277.18, 329.63], // A min
-    ];
-    const chordDur = 3.0;
-    const totalChords = Math.ceil(durationSec / chordDur);
-
-    for (let ci = 0; ci < totalChords; ci++) {
-      const t = audioCtx.currentTime + ci * chordDur;
-      const chord = chords[ci % chords.length];
-
-      chord.forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq * (i === 2 ? 0.5 : 1); // 베이스 옥타브 다운
-        g.gain.setValueAtTime(0.001, t);
-        g.gain.linearRampToValueAtTime(0.3, t + 0.8);
-        g.gain.setValueAtTime(0.3, t + chordDur - 0.8);
-        g.gain.linearRampToValueAtTime(0.001, t + chordDur);
-        osc.connect(g); g.connect(masterGain);
-        osc.start(t); osc.stop(t + chordDur + 0.1);
-      });
-    }
-  }
+  _synthBgm(audioCtx, dest, bgmType, durationSec);
 }
