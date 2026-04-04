@@ -332,6 +332,14 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         voiceNameHint: voice.voiceNameHint,
       } : undefined;
 
+      // ElevenLabs 음성 데이터 — Supabase function에서 생성된 base64 오디오
+      const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
+      const hasElevenLabsAudio = narrationAudios.some(Boolean);
+      if (hasElevenLabsAudio) {
+        setProgressText("🎙️ 나레이션 음성 합성 중...");
+        setProgressPct(22);
+      }
+
       const result = await renderMirraVideo(
         photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
         scenes,
@@ -343,8 +351,8 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           setProgressPct(pct);
           setProgressText(`🖼️ 장면 렌더링 중... ${current}/${total}컷`);
         },
-        undefined,
-        voiceConfig,
+        hasElevenLabsAudio ? narrationAudios : undefined,
+        hasElevenLabsAudio ? undefined : voiceConfig, // ElevenLabs 있으면 Web TTS 사용 안함
       );
 
       const url = URL.createObjectURL(result.blob);
@@ -352,7 +360,8 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       setProgressPct(100);
       setStep("done");
 
-      if (narrationEnabled && voiceConfig && result.narrationTexts.some(Boolean)) {
+      // ElevenLabs 오디오가 없을 때만 Web TTS로 나레이션 재생
+      if (narrationEnabled && voiceConfig && result.narrationTexts.some(Boolean) && !hasElevenLabsAudio) {
         requestAnimationFrame(() => {
           setPendingNarration({ texts: result.narrationTexts, voiceConfig });
         });
@@ -560,10 +569,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           <CheckCircle2 className="w-10 h-10 text-success" />
         </div>
         <h2 className="text-xl font-bold">영상이 완성되었습니다!</h2>
-        <div className="w-full max-w-xs bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2.5 text-center">
-          <p className="text-xs text-amber-600 font-medium">🔊 나레이션은 영상 재생 중 자동으로 읽어드립니다</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">브라우저 TTS — 저장된 영상에는 포함되지 않습니다</p>
-        </div>
+        {/* ElevenLabs 연동 완료 시 안내 제거, 미연동 시 안내 표시 */}
 
         {videoUrl ? (
           <video
