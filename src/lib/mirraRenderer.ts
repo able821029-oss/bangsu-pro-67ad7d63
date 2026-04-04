@@ -1,5 +1,5 @@
 // Canvas Video Renderer — mirra.my style text animation engine
-// Cross-browser compatible (Android Chrome, iOS Safari, Desktop)
+// Quality-enhanced version: 30fps, full-screen photo, text bg box, shadow, Ken Burns+
 
 const W = 1080, H = 1920;
 const FPS = 30;
@@ -17,9 +17,8 @@ export interface MirraScene {
   narration: string;
 }
 
-function easeOut(t: number): number {
-  return 1 - Math.pow(1 - t, 3);
-}
+function easeOut(t: number): number { return 1 - Math.pow(1 - t, 3); }
+function easeInOut(t: number): number { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
 
 function hexToRgba(hex: string, a: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -29,7 +28,7 @@ function hexToRgba(hex: string, a: number): string {
 }
 
 function drawGradientBg(ctx: CanvasRenderingContext2D, colors: [string, string]) {
-  const grad = ctx.createLinearGradient(0, 0, W, H);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, colors[0]);
   grad.addColorStop(1, colors[1]);
   ctx.fillStyle = grad;
@@ -37,9 +36,9 @@ function drawGradientBg(ctx: CanvasRenderingContext2D, colors: [string, string])
 }
 
 function drawGridPattern(ctx: CanvasRenderingContext2D, alpha: number) {
-  ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.04})`;
+  ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.03})`;
   ctx.lineWidth = 1;
-  const spacing = 60;
+  const spacing = 80;
   for (let x = 0; x < W; x += spacing) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
   }
@@ -49,140 +48,21 @@ function drawGridPattern(ctx: CanvasRenderingContext2D, alpha: number) {
 }
 
 function drawGlow(ctx: CanvasRenderingContext2D, accentColor: string, t: number) {
-  const pulse = 0.3 + 0.15 * Math.sin(t * Math.PI * 2);
-  const grad = ctx.createRadialGradient(W * 0.7, H * 0.3, 0, W * 0.7, H * 0.3, 400);
+  const pulse = 0.25 + 0.12 * Math.sin(t * Math.PI * 2);
+  const grad = ctx.createRadialGradient(W * 0.5, H * 0.25, 0, W * 0.5, H * 0.25, 500);
   grad.addColorStop(0, hexToRgba(accentColor, pulse));
   grad.addColorStop(1, hexToRgba(accentColor, 0));
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 }
 
-function drawBadge(
-  ctx: CanvasRenderingContext2D, text: string, accentColor: string,
-  y: number, animProgress: number,
-) {
-  if (!text) return;
-  const slideY = y - 30 * (1 - easeOut(animProgress));
-  const alpha = easeOut(animProgress);
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.font = 'bold 28px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  const tw = ctx.measureText(text).width + 48;
-  const bx = (W - tw) / 2;
-  ctx.fillStyle = accentColor;
-  ctx.beginPath();
-  ctx.roundRect(bx, slideY, tw, 52, 26);
-  ctx.fill();
-  ctx.fillStyle = "#FFFFFF";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(text, W / 2, slideY + 26);
-  ctx.restore();
-}
-
-function drawTitle(
-  ctx: CanvasRenderingContext2D, text: string,
-  y: number, anim: string, progress: number,
-) {
-  if (!text) return;
-  const p = easeOut(Math.min(progress * 1.5, 1));
-  ctx.save();
-  ctx.globalAlpha = p;
-  ctx.font = 'bold 68px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  ctx.fillStyle = "#FFFFFF";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  // 텍스트 그림자 효과
-  ctx.shadowColor = "rgba(0,0,0,0.8)";
-  ctx.shadowBlur = 20;
-  ctx.shadowOffsetY = 4;
-
-  let dx = 0, dy = 0, scale = 1;
-  switch (anim) {
-    case "slide_up": dy = 60 * (1 - p); break;
-    case "slide_left": dx = 80 * (1 - p); break;
-    case "zoom_in": scale = 0.7 + 0.3 * p; break;
-    case "fade_in": break;
-  }
-
-  ctx.translate(W / 2 + dx, y + dy);
-  ctx.scale(scale, scale);
-
-  const maxW = W - 120;
-  const words = text.split("");
-  let line = "";
-  const lines: string[] = [];
-  for (const ch of words) {
-    if (ctx.measureText(line + ch).width > maxW) {
-      lines.push(line); line = ch;
-    } else { line += ch; }
-  }
-  if (line) lines.push(line);
-
-  const lineH = 68;
-  const startY = -(lines.length - 1) * lineH / 2;
-  lines.forEach((l, i) => ctx.fillText(l, 0, startY + i * lineH));
-  ctx.restore();
-}
-
-function drawSubtitleTyping(
-  ctx: CanvasRenderingContext2D, text: string, accentColor: string,
-  y: number, typingProgress: number,
-) {
-  if (!text) return;
-  const visibleLen = Math.floor(text.length * Math.min(typingProgress * 0.7, 1));
-  const visible = text.slice(0, visibleLen);
-  if (!visible) return;
-
-  ctx.save();
-  ctx.font = 'bold 42px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  // 배경 박스
-  const tw = ctx.measureText(visible).width;
-  const pad = 28;
-  const bx = W / 2 - tw / 2 - pad;
-  const bw = tw + pad * 2;
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.beginPath();
-  ctx.roundRect(bx, y - 28, bw, 56, 12);
-  ctx.fill();
-
-  ctx.fillStyle = accentColor;
-  ctx.shadowColor = "rgba(0,0,0,0.6)";
-  ctx.shadowBlur = 8;
-  ctx.fillText(visible, W / 2, y);
-
-  if (typingProgress < 1 && Math.floor(typingProgress * 10) % 2 === 0) {
-    const cursorX = W / 2 + tw / 2 + 6;
-    ctx.fillRect(cursorX, y - 18, 3, 36);
-  }
-  ctx.restore();
-}
-
-function drawDividerLine(ctx: CanvasRenderingContext2D, y: number, accentColor: string, progress: number) {
-  const p = easeOut(Math.min(progress * 2, 1));
-  const lineW = (W - 200) * p;
-  ctx.save();
-  ctx.strokeStyle = hexToRgba(accentColor, 0.5);
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(W / 2 - lineW / 2, y);
-  ctx.lineTo(W / 2 + lineW / 2, y);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawPhotoWithOverlay(
+// ── 전체화면 사진 + Ken Burns + 강한 그라데이션 오버레이 ──
+function drawFullScreenPhoto(
   ctx: CanvasRenderingContext2D, img: HTMLImageElement,
-  bgColors: [string, string], progress: number,
+  bgColors: [string, string], t: number,
 ) {
-  const photoH = H * 0.55;
-  const photoY = H - photoH;
-
   const imgRatio = img.width / img.height;
-  const slotRatio = W / photoH;
+  const slotRatio = W / H;
   let sx = 0, sy = 0, sw = img.width, sh = img.height;
   if (imgRatio > slotRatio) {
     sw = img.height * slotRatio;
@@ -192,26 +72,179 @@ function drawPhotoWithOverlay(
     sy = (img.height - sh) / 2;
   }
 
-  const scale = 1.0 + 0.08 * progress;
+  // Ken Burns: 1.0 → 1.12 줌인
+  const scale = 1.0 + 0.12 * easeInOut(t);
   const dw = W * scale;
-  const dh = photoH * scale;
+  const dh = H * scale;
   const dx = (W - dw) / 2;
-  const dy = photoY + (photoH - dh) / 2;
+  const dy = (H - dh) / 2;
 
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, photoY, W, photoH);
-  ctx.clip();
   ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
 
-  const overlay = ctx.createLinearGradient(0, photoY, 0, photoY + 200);
-  overlay.addColorStop(0, bgColors[0]);
-  overlay.addColorStop(1, hexToRgba(bgColors[0], 0));
-  ctx.fillStyle = overlay;
-  ctx.fillRect(0, photoY, W, 200);
+  // 상단 그라데이션 오버레이 (텍스트 가독성)
+  const topOverlay = ctx.createLinearGradient(0, 0, 0, H * 0.65);
+  topOverlay.addColorStop(0, hexToRgba(bgColors[0], 0.9));
+  topOverlay.addColorStop(0.5, hexToRgba(bgColors[0], 0.6));
+  topOverlay.addColorStop(1, hexToRgba(bgColors[0], 0));
+  ctx.fillStyle = topOverlay;
+  ctx.fillRect(0, 0, W, H);
+
+  // 하단 그라데이션 오버레이
+  const botOverlay = ctx.createLinearGradient(0, H * 0.7, 0, H);
+  botOverlay.addColorStop(0, hexToRgba(bgColors[1], 0));
+  botOverlay.addColorStop(1, hexToRgba(bgColors[1], 0.85));
+  ctx.fillStyle = botOverlay;
+  ctx.fillRect(0, H * 0.7, W, H * 0.3);
+
   ctx.restore();
 }
 
+// ── 배지 (알약형 태그) ──
+function drawBadge(
+  ctx: CanvasRenderingContext2D, text: string, accentColor: string,
+  y: number, animProgress: number,
+) {
+  if (!text) return;
+  const p = easeOut(Math.min(animProgress, 1));
+  const slideY = y - 40 * (1 - p);
+  ctx.save();
+  ctx.globalAlpha = p;
+  ctx.font = 'bold 30px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  const tw = ctx.measureText(text).width + 56;
+  const bx = (W - tw) / 2;
+  const bh = 58;
+
+  // 배지 배경
+  ctx.fillStyle = accentColor;
+  ctx.beginPath();
+  ctx.roundRect(bx, slideY, tw, bh, 29);
+  ctx.fill();
+
+  // 배지 광택
+  ctx.fillStyle = "rgba(255,255,255,0.15)";
+  ctx.beginPath();
+  ctx.roundRect(bx + 4, slideY + 4, tw - 8, bh / 2 - 4, [24, 24, 0, 0]);
+  ctx.fill();
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(0,0,0,0.3)";
+  ctx.shadowBlur = 6;
+  ctx.fillText(text, W / 2, slideY + bh / 2);
+  ctx.restore();
+}
+
+// ── 메인 타이틀 (텍스트 배경박스 + 그림자) ──
+function drawTitle(
+  ctx: CanvasRenderingContext2D, text: string,
+  y: number, anim: string, progress: number,
+) {
+  if (!text) return;
+  const p = easeOut(Math.min(progress * 1.5, 1));
+  ctx.save();
+  ctx.globalAlpha = p;
+  ctx.font = 'bold 72px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  let dx = 0, dy = 0, scale = 1;
+  switch (anim) {
+    case "slide_up":   dy = 70 * (1 - p); break;
+    case "slide_left": dx = 90 * (1 - p); break;
+    case "zoom_in":    scale = 0.65 + 0.35 * p; break;
+    case "fade_in":    break;
+  }
+  ctx.translate(W / 2 + dx, y + dy);
+  ctx.scale(scale, scale);
+
+  // 줄바꿈 처리
+  const maxW = W - 100;
+  let line = "";
+  const lines: string[] = [];
+  for (const ch of text.split("")) {
+    if (ctx.measureText(line + ch).width > maxW) {
+      lines.push(line); line = ch;
+    } else { line += ch; }
+  }
+  if (line) lines.push(line);
+  const lineH = 84;
+  const totalH = lines.length * lineH;
+  const startY = -totalH / 2 + lineH / 2;
+
+  // 텍스트 배경 박스
+  const maxLineW = Math.max(...lines.map(l => ctx.measureText(l).width));
+  const padX = 40, padY = 24;
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.beginPath();
+  ctx.roundRect(-maxLineW / 2 - padX, startY - lineH / 2 - padY, maxLineW + padX * 2, totalH + padY * 2, 16);
+  ctx.fill();
+
+  // 텍스트 그림자 + 본문
+  ctx.shadowColor = "rgba(0,0,0,0.9)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = "#FFFFFF";
+  lines.forEach((l, i) => ctx.fillText(l, 0, startY + i * lineH));
+  ctx.restore();
+}
+
+// ── 서브타이틀 타이핑 효과 (배경박스 포함) ──
+function drawSubtitleTyping(
+  ctx: CanvasRenderingContext2D, text: string, accentColor: string,
+  y: number, typingProgress: number,
+) {
+  if (!text) return;
+  const visibleLen = Math.floor(text.length * Math.min(typingProgress * 0.75, 1));
+  const visible = text.slice(0, visibleLen);
+  if (!visible) return;
+
+  ctx.save();
+  ctx.font = 'bold 44px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const tw = ctx.measureText(visible).width;
+  const pad = 32;
+  const bh = 64;
+
+  // 배경박스
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.beginPath();
+  ctx.roundRect(W / 2 - tw / 2 - pad, y - bh / 2, tw + pad * 2, bh, 14);
+  ctx.fill();
+
+  // 텍스트
+  ctx.shadowColor = "rgba(0,0,0,0.7)";
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = accentColor;
+  ctx.fillText(visible, W / 2, y);
+
+  // 커서
+  if (typingProgress < 0.9 && Math.floor(typingProgress * 12) % 2 === 0) {
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(W / 2 + tw / 2 + 8, y - 20, 4, 40);
+  }
+  ctx.restore();
+}
+
+// ── 구분선 ──
+function drawDividerLine(ctx: CanvasRenderingContext2D, y: number, accentColor: string, progress: number) {
+  const p = easeOut(Math.min(progress * 2, 1));
+  const lineW = (W - 160) * p;
+  ctx.save();
+  ctx.strokeStyle = hexToRgba(accentColor, 0.6);
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - lineW / 2, y);
+  ctx.lineTo(W / 2 + lineW / 2, y);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ── 엔딩 카드 ──
 function drawEndingCard(
   ctx: CanvasRenderingContext2D, company: string, phone: string,
   accentColor: string, progress: number,
@@ -220,41 +253,58 @@ function drawEndingCard(
   ctx.save();
   ctx.globalAlpha = p;
 
-  ctx.font = 'bold 72px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  // 회사명 배경박스
+  ctx.font = 'bold 80px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  const cw = ctx.measureText(company).width;
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.beginPath();
+  ctx.roundRect(W / 2 - cw / 2 - 40, H / 2 - 120, cw + 80, 100, 16);
+  ctx.fill();
   ctx.fillStyle = "#FFFFFF";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(company, W / 2, H / 2 - 60);
+  ctx.shadowColor = "rgba(0,0,0,0.8)";
+  ctx.shadowBlur = 20;
+  ctx.fillText(company, W / 2, H / 2 - 70);
 
-  ctx.font = 'bold 44px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  // 전화번호
+  ctx.font = 'bold 52px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  const pw = ctx.measureText(phone).width;
+  ctx.fillStyle = hexToRgba(accentColor, 0.25);
+  ctx.beginPath();
+  ctx.roundRect(W / 2 - pw / 2 - 32, H / 2 + 10, pw + 64, 72, 36);
+  ctx.fill();
   ctx.fillStyle = accentColor;
-  ctx.fillText(phone, W / 2, H / 2 + 30);
+  ctx.shadowBlur = 12;
+  ctx.fillText(phone, W / 2, H / 2 + 46);
 
-  ctx.font = '24px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  ctx.fillStyle = "#AB5EBE";
-  ctx.fillText("SMS 셀프마케팅서비스", W / 2, H - 160);
+  // SMS 브랜드
+  ctx.font = '28px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.shadowBlur = 0;
+  ctx.fillText("SMS 셀프마케팅서비스", W / 2, H - 140);
 
   ctx.restore();
 }
 
-// ─── Cross-browser MIME type detection ───
+// ── 크로스브라우저 MIME 감지 ──
 function getBestMimeType(): string {
   const types = [
-    'video/mp4;codecs=h264',
-    'video/mp4',
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
+    "video/mp4;codecs=h264",
+    "video/mp4",
+    "video/webm;codecs=vp9",
+    "video/webm;codecs=vp8",
+    "video/webm",
   ];
   for (const type of types) {
-    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) return type;
+    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(type)) return type;
   }
-  return '';
+  return "";
 }
 
 function getFileExtension(mimeType: string): string {
-  if (mimeType.startsWith('video/mp4')) return 'mp4';
-  return 'webm';
+  if (mimeType.startsWith("video/mp4")) return "mp4";
+  return "webm";
 }
 
 export function isIOSDevice(): boolean {
@@ -262,8 +312,10 @@ export function isIOSDevice(): boolean {
 }
 
 export function isRecordingSupported(): boolean {
-  return typeof MediaRecorder !== 'undefined' &&
-    typeof HTMLCanvasElement.prototype.captureStream === 'function';
+  return (
+    typeof MediaRecorder !== "undefined" &&
+    typeof HTMLCanvasElement.prototype.captureStream === "function"
+  );
 }
 
 export interface VoiceConfig {
@@ -280,7 +332,6 @@ function speakNarration(text: string, voiceConfig: VoiceConfig): Promise<void> {
     utterance.lang = voiceConfig.lang;
     utterance.pitch = voiceConfig.pitch;
     utterance.rate = voiceConfig.rate;
-
     const voices = speechSynthesis.getVoices();
     const koVoices = voices.filter(v => v.lang.startsWith("ko"));
     for (const hint of voiceConfig.voiceNameHint) {
@@ -288,13 +339,9 @@ function speakNarration(text: string, voiceConfig: VoiceConfig): Promise<void> {
       if (match) { utterance.voice = match; break; }
     }
     if (!utterance.voice && koVoices[0]) utterance.voice = koVoices[0];
-
-    utterance.onend = () => resolve();
-    utterance.onerror = () => resolve();
-    // Safety timeout
     const timeout = setTimeout(() => resolve(), 10000);
     utterance.onend = () => { clearTimeout(timeout); resolve(); };
-
+    utterance.onerror = () => { clearTimeout(timeout); resolve(); };
     speechSynthesis.speak(utterance);
   });
 }
@@ -309,17 +356,14 @@ export async function renderMirraVideo(
   narrationAudios?: (string | null)[],
   voiceConfig?: VoiceConfig,
 ): Promise<{ blob: Blob; narrationTexts: string[] }> {
-  // Pre-flight checks
-  if (!isRecordingSupported()) {
-    throw new Error("UNSUPPORTED");
-  }
+  if (!isRecordingSupported()) throw new Error("UNSUPPORTED");
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d", { alpha: false })!;
 
-  // Load photos
+  // 이미지 프리로드
   const imageMap: Record<string, HTMLImageElement> = {};
   await Promise.all(
     photos.map((p, i) => new Promise<void>((resolve) => {
@@ -331,7 +375,6 @@ export async function renderMirraVideo(
     }))
   );
 
-  // Recording setup — cross-browser MIME detection
   const stream = canvas.captureStream(FPS);
 
   let audioCtx: AudioContext | null = null;
@@ -340,12 +383,11 @@ export async function renderMirraVideo(
     audioCtx = new AudioContext();
     audioDest = audioCtx.createMediaStreamDestination();
     audioDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
-  } catch { /* no audio support */ }
+  } catch { /* no audio */ }
 
   const mimeType = getBestMimeType();
   const ext = getFileExtension(mimeType);
-
-  const recorderOptions: MediaRecorderOptions = { videoBitsPerSecond: 4_000_000 };
+  const recorderOptions: MediaRecorderOptions = { videoBitsPerSecond: 6_000_000 };
   if (mimeType) recorderOptions.mimeType = mimeType;
 
   const recorder = new MediaRecorder(stream, recorderOptions);
@@ -353,28 +395,21 @@ export async function renderMirraVideo(
   recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
 
   const cleanupRecording = () => {
-    stream.getTracks().forEach((track) => track.stop());
-    if (audioCtx && audioCtx.state !== "closed") {
-      void audioCtx.close().catch(() => undefined);
-    }
+    stream.getTracks().forEach(t => t.stop());
+    if (audioCtx && audioCtx.state !== "closed") void audioCtx.close().catch(() => {});
   };
 
   const recordingDone = new Promise<Blob>((resolve, reject) => {
     recorder.onstop = () => {
       cleanupRecording();
-      const blobType = mimeType || `video/${ext}`;
-      resolve(new Blob(chunks, { type: blobType }));
+      resolve(new Blob(chunks, { type: mimeType || `video/${ext}` }));
     };
-    recorder.onerror = () => {
-      cleanupRecording();
-      reject(new Error("RECORDING_FAILED"));
-    };
+    recorder.onerror = () => { cleanupRecording(); reject(new Error("RECORDING_FAILED")); };
   });
 
-  // Start with timeslice for iOS compatibility
   recorder.start(100);
 
-  // Decode narration audio buffers
+  // 나레이션 오디오 디코딩
   const narrationBuffers: (AudioBuffer | null)[] = [];
   if (narrationAudios && audioCtx) {
     for (const base64 of narrationAudios) {
@@ -383,38 +418,31 @@ export async function renderMirraVideo(
         const binary = atob(base64);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const buffer = await audioCtx.decodeAudioData(bytes.buffer);
-        narrationBuffers.push(buffer);
+        narrationBuffers.push(await audioCtx.decodeAudioData(bytes.buffer));
       } catch { narrationBuffers.push(null); }
     }
   }
 
-  // Collect narration texts for post-render playback
   const narrationTexts: string[] = [];
 
-  // Render each scene (video only — no TTS during render)
+  // 장면별 렌더링
   for (let si = 0; si < scenes.length; si++) {
     const scene = scenes[si];
     const totalFrames = scene.duration || 90;
     const isEnding = si === scenes.length - 1 && !scene.photo;
     const photoImg = scene.photo ? imageMap[scene.photo] : null;
 
-    // Collect narration text for later
-    if (narrationEnabled && scene.narration) {
-      narrationTexts.push(scene.narration);
-    } else {
-      narrationTexts.push("");
-    }
+    narrationTexts.push(narrationEnabled && scene.narration ? scene.narration : "");
 
-    // Pre-rendered audio narration (ElevenLabs path) — plays into recording stream
+    // 오디오 재생
     const narrationBuffer = narrationBuffers[si] || null;
-    if (narrationBuffer && audioCtx) {
+    if (narrationBuffer && audioCtx && audioDest) {
       try {
         const source = audioCtx.createBufferSource();
         source.buffer = narrationBuffer;
-        if (audioDest) source.connect(audioDest);
+        source.connect(audioDest);
         source.start();
-      } catch { /* audio playback error */ }
+      } catch {}
     }
 
     onProgress(si, scenes.length);
@@ -422,33 +450,32 @@ export async function renderMirraVideo(
     for (let f = 0; f < totalFrames; f++) {
       const t = f / totalFrames;
 
+      // 배경
       drawGradientBg(ctx, scene.bg_colors || ["#001130", "#0d2847"]);
-      drawGridPattern(ctx, Math.min(t * 3, 1));
-      drawGlow(ctx, scene.accent_color || "#237FFF", t);
 
       if (photoImg && scene.bg_type === "photo") {
-        drawPhotoWithOverlay(ctx, photoImg, scene.bg_colors || ["#001130", "#0d2847"], t);
+        // 전체화면 사진 모드
+        drawFullScreenPhoto(ctx, photoImg, scene.bg_colors || ["#001130", "#0d2847"], t);
+      } else {
+        drawGridPattern(ctx, Math.min(t * 3, 1));
+        drawGlow(ctx, scene.accent_color || "#237FFF", t);
       }
 
       if (isEnding) {
         drawEndingCard(ctx, companyName || "SMS", phoneNumber || "", scene.accent_color || "#237FFF", t);
       } else {
-        const badgeStart = 0.05;
-        const titleStart = 0.15;
-        const subtitleStart = 0.35;
-        const dividerStart = 0.25;
+        const badgeProgress    = Math.max(0, (t - 0.05) / 0.18);
+        const titleProgress    = Math.max(0, (t - 0.18) / 0.25);
+        const dividerProgress  = Math.max(0, (t - 0.28) / 0.25);
+        const subtitleProgress = Math.max(0, (t - 0.38) / 0.5);
 
-        const badgeProgress = Math.max(0, (t - badgeStart) / 0.2);
-        const titleProgress = Math.max(0, (t - titleStart) / 0.25);
-        const subtitleProgress = Math.max(0, (t - subtitleStart) / 0.5);
-        const dividerProgress = Math.max(0, (t - dividerStart) / 0.3);
+        // 사진 장면은 텍스트를 상단에, 그라데이션 장면은 중앙에
+        const textCenterY = photoImg ? H * 0.20 : H * 0.38;
 
-        const textCenterY = photoImg ? H * 0.22 : H * 0.4;
-
-        drawBadge(ctx, scene.badge, scene.accent_color || "#237FFF", textCenterY - 80, badgeProgress);
-        drawTitle(ctx, scene.title, textCenterY + 20, scene.animation, titleProgress);
-        drawDividerLine(ctx, textCenterY + 80, scene.accent_color || "#237FFF", dividerProgress);
-        drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 130, subtitleProgress);
+        drawBadge(ctx, scene.badge, scene.accent_color || "#237FFF", textCenterY - 100, badgeProgress);
+        drawTitle(ctx, scene.title, textCenterY + 30, scene.animation, titleProgress);
+        drawDividerLine(ctx, textCenterY + 110, scene.accent_color || "#237FFF", dividerProgress);
+        drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 175, subtitleProgress);
       }
 
       await new Promise(r => setTimeout(r, 1000 / FPS));
@@ -457,23 +484,16 @@ export async function renderMirraVideo(
 
   onProgress(scenes.length, scenes.length);
   if (recorder.state !== "inactive") {
-    try {
-      recorder.requestData();
-    } catch {
-      // ignore browsers that don't support manual flush
-    }
+    try { recorder.requestData(); } catch {}
     recorder.stop();
   }
 
   const blob = await Promise.race([
     recordingDone,
-    new Promise<Blob>((resolve) => {
-      setTimeout(() => {
-        cleanupRecording();
-        const blobType = mimeType || `video/${ext}`;
-        resolve(new Blob(chunks, { type: blobType }));
-      }, 2000);
-    }),
+    new Promise<Blob>((resolve) => setTimeout(() => {
+      cleanupRecording();
+      resolve(new Blob(chunks, { type: mimeType || `video/${ext}` }));
+    }, 3000)),
   ]);
 
   return { blob, narrationTexts };
