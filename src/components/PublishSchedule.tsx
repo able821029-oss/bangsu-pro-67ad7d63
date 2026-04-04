@@ -4,7 +4,7 @@ import { useAppStore } from "@/stores/appStore";
 import { Button } from "@/components/ui/button";
 import type { TabId } from "@/components/BottomNav";
 
-const dayLabels = ["월", "화", "수", "목", "금"];
+const dayLabels = ["월", "화", "수", "목", "금", "토", "일"];
 
 export function PublishSchedule({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const posts = useAppStore((s) => s.posts);

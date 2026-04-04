@@ -159,6 +159,21 @@ export function HomeTab({
         </div>
       </div>
 
+      {/* 업체명 미설정 시 설정 유도 */}
+      {!settings.companyName && (
+        <button
+          onClick={() => onNavigate("settings")}
+          className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3"
+        >
+          <span className="text-xl">⚙️</span>
+          <div className="text-left flex-1">
+            <p className="text-sm font-semibold text-amber-600">업체 정보를 먼저 입력해 주세요</p>
+            <p className="text-xs text-muted-foreground">업체명·전화번호를 설정하면 글에 자동 삽입됩니다</p>
+          </div>
+          <span className="text-amber-500 text-sm">→</span>
+        </button>
+      )}
+
       {/* User + Plan Info */}
       <div className="glass-card p-4 space-y-2">
         <div className="flex items-center justify-between">

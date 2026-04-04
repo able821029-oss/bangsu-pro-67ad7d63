@@ -46,7 +46,7 @@ export function InstallBanner() {
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-20 left-0 right-0 z-50 px-4">
+    <div className="fixed bottom-20 left-0 right-0 z-40 px-4 pb-2">
       <div className="max-w-lg mx-auto bg-card border border-border rounded-xl p-4 shadow-lg flex items-start gap-3">
         <svg width="36" height="36" viewBox="0 0 64 64" fill="none" className="shrink-0">
           <defs>
