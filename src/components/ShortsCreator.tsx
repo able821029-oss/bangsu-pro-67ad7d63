@@ -39,11 +39,11 @@ const videoStyles: { id: VideoStyle; label: string; desc: string; icon: string }
 ];
 
 const bgmOptions: { id: BgmType; label: string; emoji: string; desc: string }[] = [
-  { id: "upbeat",    label: "경쾌한",      emoji: "🎵", desc: "팝 아르페지오" },
-  { id: "hiphop",   label: "힙합/트랩",   emoji: "🎤", desc: "808 킥 + 베이스" },
-  { id: "emotional", label: "감성적",      emoji: "🎹", desc: "피아노 멜로디" },
-  { id: "corporate", label: "프로페셔널",  emoji: "💼", desc: "깔끔한 비즈니스" },
-  { id: "calm",      label: "잔잔한",      emoji: "🌊", desc: "코드 패드" },
+  { id: "upbeat",    label: "파워 현장",   emoji: "🔨", desc: "강한 비트 · 시공 파워" },
+  { id: "hiphop",   label: "트렌디",      emoji: "🔥", desc: "틱톡 트랩 · MZ 스타일" },
+  { id: "corporate", label: "전문 업체",   emoji: "🏗️", desc: "신뢰감 있는 프로 느낌" },
+  { id: "emotional", label: "완공 감동",   emoji: "✨", desc: "시공 완료 성취감" },
+  { id: "calm",      label: "깔끔 마감",   emoji: "🪟", desc: "깨끗하고 차분한 완성" },
   { id: "none",      label: "없음",        emoji: "🔇", desc: "무음" },
 ];
 

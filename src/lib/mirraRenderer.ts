@@ -521,162 +521,201 @@ function _synthBgm(audioCtx: AudioContext, out: AudioNode, bgmType: BgmType, dur
   const master = audioCtx.createGain();
   master.gain.value = 0.20;
   master.connect(out);
-
   const t0 = audioCtx.currentTime;
 
+  // ── 공통 유틸 ──
+  function kick(t: number, freq = 120, decay = 0.25, vol = 0.8) {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(30, t + decay);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + decay + 0.05);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + decay + 0.1);
+  }
+  function snare(t: number, vol = 0.35) {
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / d.length * 6);
+    const s = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
+    f.type = "bandpass"; f.frequency.value = 2000; f.Q.value = 0.5;
+    s.buffer = buf; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t);
+  }
+  function hihat(t: number, vol = 0.12, open = false) {
+    const dur = open ? 0.12 : 0.03;
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * dur, audioCtx.sampleRate);
+    const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const s = audioCtx.createBufferSource(), f = audioCtx.createBiquadFilter(), g = audioCtx.createGain();
+    f.type = "highpass"; f.frequency.value = 9000;
+    s.buffer = buf; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t);
+  }
+  function bass(t: number, freq: number, dur: number, vol = 0.5) {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 200;
+    o.type = "sawtooth"; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur * 0.85);
+    o.connect(lp); lp.connect(g); g.connect(master); o.start(t); o.stop(t + dur);
+  }
+  function tone(t: number, freq: number, dur: number, vol = 0.2, type: OscillatorType = "triangle") {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(vol, t + 0.05);
+    g.gain.setValueAtTime(vol, t + dur - 0.08); g.gain.linearRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.1);
+  }
+  function metalHit(t: number, vol = 0.15) {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = "square"; o.frequency.value = 800 + Math.random() * 400;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.1);
+  }
+
   if (bgmType === "upbeat") {
-    // ♪ 경쾌한 — 팝 아르페지오 + 킥/스네어/하이햇
-    const bpm = 128, beat = 60 / bpm;
-    const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 293.66, 349.23];
-    const beats = Math.ceil(durationSec / beat * 2);
-    for (let b = 0; b < beats; b++) {
-      const t = t0 + b * beat * 0.5;
-      if (t > t0 + durationSec) break;
-      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.type = "triangle"; o.frequency.value = notes[b % notes.length];
-      g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.4);
-      o.connect(g); g.connect(master); o.start(t); o.stop(t + beat * 0.5);
-      if (b % 8 === 0) { // kick
-        const k = audioCtx.createOscillator(), kg = audioCtx.createGain();
-        k.type = "sine"; k.frequency.setValueAtTime(160, t); k.frequency.exponentialRampToValueAtTime(40, t + 0.1);
-        kg.gain.setValueAtTime(0.7, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-        k.connect(kg); kg.connect(master); k.start(t); k.stop(t + 0.2);
-      }
-      if (b % 8 === 4) { // snare
-        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.12, audioCtx.sampleRate);
-        const d = buf.getChannelData(0);
-        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / d.length * 8);
-        const s = audioCtx.createBufferSource(), sg = audioCtx.createGain();
-        s.buffer = buf; sg.gain.setValueAtTime(0.4, t); sg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-        s.connect(sg); sg.connect(master); s.start(t);
-      }
-      if (b % 2 === 1) { // hihat
-        const buf2 = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.04, audioCtx.sampleRate);
-        const d2 = buf2.getChannelData(0);
-        for (let i = 0; i < d2.length; i++) d2[i] = (Math.random() * 2 - 1) * 0.2;
-        const h = audioCtx.createBufferSource(), hf = audioCtx.createBiquadFilter(), hg = audioCtx.createGain();
-        hf.type = "highpass"; hf.frequency.value = 9000; h.buffer = buf2;
-        hg.gain.setValueAtTime(0.2, t); hg.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-        h.connect(hf); hf.connect(hg); hg.connect(master); h.start(t);
-      }
-    }
-
-  } else if (bgmType === "calm") {
-    // ♪ 잔잔한 — 느린 피아노 코드 패드
-    const chords = [[261.63,329.63,392.00],[293.66,369.99,440.00],[246.94,311.13,369.99],[220.00,277.18,329.63]];
-    const dur = 3.2, n = Math.ceil(durationSec / dur);
-    for (let ci = 0; ci < n; ci++) {
-      const t = t0 + ci * dur;
-      if (t > t0 + durationSec) break;
-      chords[ci % chords.length].forEach((freq, i) => {
-        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-        o.type = "sine"; o.frequency.value = freq * (i === 0 ? 0.5 : 1);
-        g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.28, t + 0.9);
-        g.gain.setValueAtTime(0.28, t + dur - 0.9); g.gain.linearRampToValueAtTime(0.001, t + dur);
-        o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.1);
-      });
-    }
-
-  } else if (bgmType === "hiphop") {
-    // ♪ 힙합/트랩 — 무거운 808 킥 + 롤링 하이햇 + 베이스라인
-    const bpm = 90, beat = 60 / bpm;
-    const bassNotes = [65.41, 73.42, 65.41, 58.27]; // C2 D2 C2 Bb1
+    // 🔨 파워 현장 — 묵직한 산업 드럼 + 힘차고 반복되는 베이스라인
+    // 건설 현장의 강함과 역동성 표현
+    const bpm = 130, beat = 60 / bpm;
     const beats = Math.ceil(durationSec / beat);
+    // 베이스 패턴 (E2-G2-A2-E2)
+    const bassPattern = [41.2, 49.0, 55.0, 41.2];
     for (let b = 0; b < beats; b++) {
       const t = t0 + b * beat;
       if (t > t0 + durationSec) break;
-      // 808 kick (긴 베이스 킥)
-      if (b % 4 === 0 || b % 4 === 2) {
-        const k = audioCtx.createOscillator(), kg = audioCtx.createGain();
-        k.type = "sine"; k.frequency.setValueAtTime(200, t); k.frequency.exponentialRampToValueAtTime(40, t + 0.5);
-        kg.gain.setValueAtTime(0.9, t); kg.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-        k.connect(kg); kg.connect(master); k.start(t); k.stop(t + 0.65);
+      // 강한 킥 (1,3박)
+      if (b % 4 === 0 || b % 4 === 2) kick(t, 140, 0.3, 0.9);
+      // 스네어 (2,4박)
+      if (b % 4 === 1 || b % 4 === 3) snare(t, 0.4);
+      // 하이햇 16분
+      for (let s = 0; s < 4; s++) {
+        const ht = t + s * beat * 0.25;
+        hihat(ht, s % 2 === 0 ? 0.12 : 0.07, s === 2);
       }
-      // 트랩 하이햇 (16분 롤)
-      for (let sub = 0; sub < 4; sub++) {
-        const ht = t + sub * beat * 0.25;
-        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.03, audioCtx.sampleRate);
-        const d = buf.getChannelData(0);
-        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.15;
-        const h = audioCtx.createBufferSource(), hf = audioCtx.createBiquadFilter(), hg = audioCtx.createGain();
-        hf.type = "highpass"; hf.frequency.value = 10000; h.buffer = buf;
-        const vel = sub === 0 ? 0.3 : sub === 2 ? 0.2 : 0.1;
-        hg.gain.setValueAtTime(vel, ht); hg.gain.exponentialRampToValueAtTime(0.001, ht + 0.03);
-        h.connect(hf); hf.connect(hg); hg.connect(master); h.start(ht);
-      }
-      // 베이스라인
-      const bn = audioCtx.createOscillator(), bg = audioCtx.createGain();
-      bn.type = "sawtooth"; bn.frequency.value = bassNotes[b % bassNotes.length];
-      const lp = audioCtx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 300;
-      bg.gain.setValueAtTime(0.5, t); bg.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.8);
-      bn.connect(lp); lp.connect(bg); bg.connect(master); bn.start(t); bn.stop(t + beat);
-    }
-
-  } else if (bgmType === "emotional") {
-    // ♪ 감성적 — 단조 피아노 멜로디 + 스트링 패드
-    const bpm = 72, beat = 60 / bpm;
-    // A minor scale melody
-    const melody = [440.00, 493.88, 523.25, 440.00, 392.00, 349.23, 392.00, 440.00,
-                    493.88, 523.25, 587.33, 523.25, 493.88, 440.00, 392.00, 349.23];
-    const beats = Math.ceil(durationSec / beat);
-    for (let b = 0; b < beats; b++) {
-      const t = t0 + b * beat;
-      if (t > t0 + durationSec) break;
-      // 피아노 멜로디
-      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.type = "triangle"; o.frequency.value = melody[b % melody.length] * 0.5;
-      g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.3, t + 0.05);
-      g.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.7);
-      o.connect(g); g.connect(master); o.start(t); o.stop(t + beat);
-      // 스트링 패드 (4박마다)
-      if (b % 4 === 0) {
-        [220.00, 261.63, 329.63].forEach(freq => {
-          const s = audioCtx.createOscillator(), sg = audioCtx.createGain();
-          s.type = "sawtooth"; s.frequency.value = freq;
-          const lp = audioCtx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 600;
-          sg.gain.setValueAtTime(0.001, t); sg.gain.linearRampToValueAtTime(0.08, t + 1.0);
-          sg.gain.setValueAtTime(0.08, t + beat * 3.5); sg.gain.linearRampToValueAtTime(0.001, t + beat * 4);
-          s.connect(lp); lp.connect(sg); sg.connect(master); s.start(t); s.stop(t + beat * 4 + 0.1);
+      // 파워 베이스라인
+      bass(t, bassPattern[b % 4], beat * 0.9, 0.55);
+      // 강조 금속음 (4박 시작마다)
+      if (b % 4 === 0) metalHit(t + beat * 0.5, 0.1);
+      // 상승 리드 (8박마다)
+      if (b % 8 === 0) {
+        [220, 277, 330, 440].forEach((f, i) => {
+          tone(t + i * beat * 0.5, f, beat * 0.4, 0.15, "square");
         });
       }
     }
 
-  } else if (bgmType === "corporate") {
-    // ♪ 프로페셔널 — 깔끔한 피아노 + 베이스 + 라이트 퍼커션
-    const bpm = 100, beat = 60 / bpm;
-    const notes = [329.63, 392.00, 440.00, 493.88, 523.25, 440.00, 392.00, 329.63]; // E G A B C A G E
+  } else if (bgmType === "hiphop") {
+    // 🔥 트렌디 — 현장 직워커 틱톡 스타일 트랩 비트
+    // 젊고 파워풀, SNS에 어울리는 현대적 비트
+    const bpm = 85, beat = 60 / bpm;
     const beats = Math.ceil(durationSec / beat);
+    const bassSeq = [43.65, 43.65, 55.0, 43.65]; // F2 F2 A2 F2
     for (let b = 0; b < beats; b++) {
       const t = t0 + b * beat;
       if (t > t0 + durationSec) break;
-      // 피아노 멜로디
-      if (b % 2 === 0) {
-        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-        o.type = "sine"; o.frequency.value = notes[Math.floor(b / 2) % notes.length];
-        g.gain.setValueAtTime(0.001, t); g.gain.linearRampToValueAtTime(0.25, t + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.001, t + beat * 1.5);
-        o.connect(g); g.connect(master); o.start(t); o.stop(t + beat * 2);
+      // 808 스타일 묵직한 킥 + 피치 다운
+      if (b % 4 === 0) kick(t, 180, 0.5, 1.0);
+      if (b % 4 === 2) kick(t, 160, 0.35, 0.8);
+      // 클랩/스네어
+      if (b % 4 === 1 || b % 4 === 3) snare(t, 0.45);
+      // 트랩 하이햇 롤 (16분 + 32분)
+      for (let s = 0; s < 8; s++) {
+        const ht = t + s * beat * 0.125;
+        const vel = [0.18, 0.06, 0.14, 0.06, 0.18, 0.08, 0.10, 0.04][s] || 0.06;
+        hihat(ht, vel, s === 4);
       }
-      // 베이스 (4박마다)
+      // 저음 808 베이스
+      bass(t, bassSeq[b % 4], beat * 0.95, 0.6);
+      // 오픈 하이햇 악센트
+      if (b % 2 === 1) hihat(t + beat * 0.75, 0.2, true);
+    }
+
+  } else if (bgmType === "corporate") {
+    // 🏗️ 전문 업체 — 신뢰감 있고 안정적인 현장 프로 이미지
+    // 체계적이고 믿음직한 느낌의 현장 음악
+    const bpm = 100, beat = 60 / bpm;
+    const beats = Math.ceil(durationSec / beat);
+    // C major 진행으로 신뢰감
+    const chordSeq = [
+      [130.81, 164.81, 196.00], // C3 E3 G3
+      [146.83, 185.00, 220.00], // D3 F#3 A3
+      [174.61, 220.00, 261.63], // F3 A3 C4
+      [130.81, 164.81, 196.00], // C3 반복
+    ];
+    for (let b = 0; b < beats; b++) {
+      const t = t0 + b * beat;
+      if (t > t0 + durationSec) break;
+      // 안정적인 킥 패턴
+      if (b % 4 === 0) kick(t, 100, 0.2, 0.7);
+      if (b % 4 === 2) kick(t, 100, 0.15, 0.55);
+      // 부드러운 스네어
+      if (b % 4 === 1 || b % 4 === 3) snare(t, 0.25);
+      // 하이햇 (8분)
+      if (b % 2 === 0) hihat(t, 0.1); else hihat(t, 0.07);
+      // 코드 패드 (4박마다)
       if (b % 4 === 0) {
-        const bs = audioCtx.createOscillator(), bg = audioCtx.createGain();
-        bs.type = "sine"; bs.frequency.value = 98.00; // G2
-        bg.gain.setValueAtTime(0.4, t); bg.gain.exponentialRampToValueAtTime(0.001, t + beat * 1.8);
-        bs.connect(bg); bg.connect(master); bs.start(t); bs.stop(t + beat * 2);
+        chordSeq[Math.floor(b / 4) % chordSeq.length].forEach(f => {
+          tone(t, f, beat * 3.8, 0.12, "sine");
+        });
       }
-      // 라이트 퍼커션
-      if (b % 4 === 0 || b % 4 === 2) {
-        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.08, audioCtx.sampleRate);
-        const d = buf.getChannelData(0);
-        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / d.length * 10) * 0.3;
-        const n = audioCtx.createBufferSource(), ng = audioCtx.createGain();
-        n.buffer = buf; ng.gain.setValueAtTime(0.2, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-        n.connect(ng); ng.connect(master); n.start(t);
+      // 베이스 워킹
+      bass(t, chordSeq[Math.floor(b / 4) % chordSeq.length][0] / 2, beat * 0.85, 0.45);
+    }
+
+  } else if (bgmType === "emotional") {
+    // ✨ 완공 감동 — 시공 완료의 성취감과 뿌듯함
+    // 고객이 보고 감동받는 완성의 느낌
+    const bpm = 76, beat = 60 / bpm;
+    const beats = Math.ceil(durationSec / beat);
+    // 상승 진행 (Am→F→C→G 감성)
+    const melody = [220.00, 246.94, 261.63, 293.66, 329.63, 293.66, 261.63, 246.94,
+                    261.63, 293.66, 329.63, 392.00, 440.00, 392.00, 349.23, 329.63];
+    const chords = [
+      [220.00, 261.63, 329.63], // Am
+      [174.61, 220.00, 261.63], // F
+      [130.81, 164.81, 196.00], // C
+      [196.00, 246.94, 293.66], // G
+    ];
+    for (let b = 0; b < beats; b++) {
+      const t = t0 + b * beat;
+      if (t > t0 + durationSec) break;
+      // 부드러운 킥 (1,3박만)
+      if (b % 4 === 0 || b % 4 === 2) kick(t, 80, 0.15, 0.5);
+      if (b % 4 === 1 || b % 4 === 3) snare(t, 0.15);
+      hihat(t, 0.06, b % 4 === 2);
+      // 멜로디 (반음씩 올라가는 감성)
+      tone(t, melody[b % melody.length] * 0.5, beat * 0.8, 0.22, "triangle");
+      // 풍성한 코드 패드
+      if (b % 4 === 0) {
+        chords[Math.floor(b / 4) % chords.length].forEach(f => {
+          tone(t, f, beat * 3.5, 0.10, "sine");
+          tone(t + 0.03, f * 2, beat * 3.5, 0.06, "sine"); // 옥타브 배음
+        });
       }
+      // 베이스
+      bass(t, chords[Math.floor(b / 4) % chords.length][0] / 2, beat * 0.9, 0.4);
+    }
+
+  } else if (bgmType === "calm") {
+    // 🪟 깔끔 마감 — 완성된 시공의 깔끔하고 정돈된 느낌
+    // 인테리어/마감재 시공에 어울리는 차분하고 세련된 분위기
+    const bpm = 90, beat = 60 / bpm;
+    const beats = Math.ceil(durationSec / beat);
+    const pattern = [130.81, 164.81, 196.00, 130.81]; // C E G C
+    for (let b = 0; b < beats; b++) {
+      const t = t0 + b * beat;
+      if (t > t0 + durationSec) break;
+      // 최소한의 드럼
+      if (b % 4 === 0) kick(t, 90, 0.12, 0.45);
+      if (b % 4 === 2) kick(t, 90, 0.10, 0.3);
+      if (b % 4 === 1 || b % 4 === 3) snare(t, 0.12);
+      if (b % 2 === 0) hihat(t, 0.07);
+      // 아르페지오 (깔끔한 분위기)
+      const noteT = t;
+      pattern.forEach((f, i) => {
+        tone(noteT + i * beat * 0.25, f, beat * 0.22, 0.15, "sine");
+      });
+      // 부드러운 베이스
+      if (b % 2 === 0) bass(t, 65.41 * (b % 8 < 4 ? 1 : 1.5), beat * 1.8, 0.35);
     }
   }
 }
-
 // ── 미리듣기용 (스피커 직접 출력, 6초) ──
 export function previewBgm(bgmType: BgmType): AudioContext | null {
   if (bgmType === "none") return null;
