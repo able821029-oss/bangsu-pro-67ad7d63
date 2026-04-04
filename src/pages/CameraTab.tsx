@@ -11,7 +11,6 @@ import {
   PenLine,
   ArrowLeft,
 } from "lucide-react";
-import { BeforeAfterComparator } from "@/components/BeforeAfterComparator";
 import { KeywordRecommender } from "@/components/KeywordRecommender";
 import { PlatformChip } from "@/components/PlatformChip";
 import { Button } from "@/components/ui/button";
@@ -350,7 +349,7 @@ export function CameraTab({
         />
 
         <div>
-          <p className="text-sm text-muted-foreground mb-2">촬영 사진 ({photos.length}/10)</p>
+          <p className="text-sm text-muted-foreground mb-2">현장 사진 <span className="font-semibold text-foreground">{photos.length}</span>/10장 {photos.length === 0 ? "— 많을수록 좋아요!" : photos.length >= 3 ? "✓ 충분해요" : "— 3장 이상 권장"}</p>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {photos.map((photo) => (
               <div
@@ -367,9 +366,16 @@ export function CameraTab({
               </div>
             ))}
             {photos.length === 0 && (
-              <div className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center">
-                <Camera className="w-6 h-6 text-muted-foreground" />
-              </div>
+              <>
+                {[0, 1, 2].map(i => (
+                  <div key={i} className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center opacity-40">
+                    <Camera className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                ))}
+                <div className="flex items-center ml-2">
+                  <p className="text-xs text-muted-foreground whitespace-nowrap">사진을<br/>추가해요</p>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -420,8 +426,6 @@ export function CameraTab({
             toast({ title: `"${kw}" 키워드가 반영됩니다` });
           }}
         />
-
-        <BeforeAfterComparator />
 
         {/* ✅ FIX: disabled 제거 — handleNext에서 toast로 처리 */}
         <Button variant="hero" size="xl" className="w-full" onClick={handleNext}>

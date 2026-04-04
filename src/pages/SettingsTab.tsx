@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  User, CreditCard, Ticket, Users, HelpCircle, MessageSquare, Bell,
+  User, CreditCard, Users, HelpCircle, MessageSquare, Bell,
   ChevronRight, LogOut, Hammer, Smile, Building2,
 } from "lucide-react";
 import { ProfileSettings } from "@/pages/settings/ProfileSettings";
@@ -26,9 +26,8 @@ const myInfoItems: { id: SettingsPage; label: string; icon: React.ElementType }[
 ];
 
 const appSettingsItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
-  { id: "pricing", label: "요금제 확인", icon: CreditCard },
-  { id: "coupon", label: "쿠폰·혜택", icon: Ticket },
-  { id: "referral", label: "지인 소개", icon: Users },
+  { id: "pricing", label: "요금제 · 영상 현황", icon: CreditCard },
+  { id: "referral", label: "지인 소개 (첫달 50% 할인)", icon: Users },
   { id: "faq", label: "자주 묻는 질문", icon: HelpCircle },
   { id: "contact", label: "문의하기", icon: MessageSquare },
   { id: "announcements", label: "공지사항", icon: Bell },
@@ -126,7 +125,9 @@ export function SettingsTab() {
       {renderGroup("앱 설정", appSettingsItems)}
 
       {/* Logout */}
-      <button className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-destructive font-medium rounded-xl border border-border hover:bg-destructive/5 transition-colors">
+      <button
+        onClick={() => toast({ title: "로그아웃", description: "앱을 재시작하면 다시 로그인할 수 있습니다." })}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-destructive font-medium rounded-xl border border-border hover:bg-destructive/5 transition-colors">
         <LogOut className="w-5 h-5" />
         로그아웃
       </button>

@@ -15,7 +15,6 @@ import {
   Check,
   AlertTriangle,
   TrendingUp,
-  Lock,
 } from "lucide-react";
 import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
@@ -65,12 +64,10 @@ export function PostDetailPage({
   const [currentStatus, setCurrentStatus] = useState(post.status);
   const [seoResult, setSeoResult] = useState<any>(null);
   const [seoLoading, setSeoLoading] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showShortsCreator, setShowShortsCreator] = useState(false);
   const [uploadGuide, setUploadGuide] = useState<Platform | null>(null);
   const [returnPrompt, setReturnPrompt] = useState(false);
 
-  const isPremium = subscription.plan === "프로" || subscription.plan === "무제한";
 
   useEffect(() => {
     if (blocks.length > 0 && blocks.some((b) => b.type === "text" && b.content)) {
@@ -296,7 +293,7 @@ export function PostDetailPage({
       {/* SNS 복귀 감지 토스트 */}
       {returnPrompt && (
         <div
-          className="fixed top-4 left-4 right-4 z-[90] max-w-lg mx-auto"
+          className="fixed top-0 left-0 right-0 z-[90] max-w-lg mx-auto px-4 pt-4"
           style={{ animation: "fadeUp .3s ease-out" }}
         >
           <div className="bg-green-600 text-white rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl">
@@ -681,65 +678,9 @@ export function PostDetailPage({
           </div>
         )}
 
-        {/* 업그레이드 모달 */}
-        {showUpgradeModal && (
-          <div
-            className="fixed inset-0 z-[70] flex items-end justify-center"
-            onClick={() => setShowUpgradeModal(false)}
-          >
-            <div className="absolute inset-0 bg-black/50" />
-            <div
-              className="relative w-full max-w-lg bg-card rounded-t-2xl p-5 pb-8 space-y-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto" />
-              <div className="text-center space-y-2">
-                <div
-                  className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)" }}
-                >
-                  <Film className="w-7 h-7 text-white" />
-                </div>
-                <h3 className="text-lg font-bold">쇼츠 영상 만들기</h3>
-                <p className="text-sm text-muted-foreground">
-                  현장 사진으로 쇼츠 영상을 자동 생성합니다.
-                  <br />
-                  <span className="text-primary font-semibold">프로 · 무제한 플랜</span>에서 사용 가능합니다.
-                </p>
-              </div>
-              <div className="bg-muted/50 rounded-xl p-3 space-y-1.5 text-sm">
-                <p className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" /> AI가 사진 → 쇼츠 영상 자동 생성
-                </p>
-                <p className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" /> 틱톡 · 인스타 릴스 최적화
-                </p>
-                <p className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" /> 자막 + 배경음악 자동 삽입
-                </p>
-              </div>
-              <Button
-                className="w-full"
-                style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)", color: "white" }}
-                onClick={() => {
-                  setShowUpgradeModal(false);
-                  onNavigate?.("settings");
-                }}
-              >
-                플랜 업그레이드하기
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-muted-foreground"
-                onClick={() => setShowUpgradeModal(false)}
-              >
-                닫기
-              </Button>
-            </div>
-          </div>
-        )}
 
-        <Button variant="outline" className="w-full gap-2" onClick={handleRegenerate} disabled={isRegenerating}>
+
+        <Button variant="secondary" className="w-full gap-2" onClick={handleRegenerate} disabled={isRegenerating}>
           <RefreshCw className={`w-4 h-4 ${isRegenerating ? "animate-spin" : ""}`} />
           {isRegenerating ? "재생성 중..." : "AI 재생성"}
         </Button>

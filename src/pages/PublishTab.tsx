@@ -83,7 +83,7 @@ export function PublishTab({
             </Badge>
           </button>
           {showSemiAutoTip && (
-            <div className="absolute top-8 left-0 z-20 bg-card border border-border rounded-xl p-3 text-xs text-muted-foreground w-60 shadow-xl">
+            <div className="absolute top-8 left-0 z-20 bg-card border border-border rounded-xl p-3 text-xs text-muted-foreground w-56 shadow-xl max-w-[calc(100vw-2rem)]">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="font-semibold text-foreground">반자동이란?</p>
                 <button onClick={() => setShowSemiAutoTip(false)}>
@@ -104,8 +104,14 @@ export function PublishTab({
               {/* ✅ FIX: 카드 본문만 글 상세로 이동 */}
               <button onClick={() => onViewPost(post)} className="w-full text-left">
                 <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                    <Camera className="w-5 h-5 text-muted-foreground" />
+                  <div className="w-12 h-12 rounded-lg bg-secondary overflow-hidden shrink-0">
+                    {post.photos.length > 0 ? (
+                      <img src={post.photos[0].dataUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Camera className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{post.title}</p>
@@ -143,9 +149,8 @@ export function PublishTab({
         <div className="bg-card rounded-[--radius] border border-border p-8 text-center space-y-3">
           <Upload className="w-10 h-10 text-muted-foreground mx-auto" />
           <p className="text-sm text-muted-foreground">
-            작성 완료된 글이 없습니다.
-            <br />
-            촬영 탭에서 AI 글쓰기를 시작해주세요.
+            아직 작성된 글이 없어요.<br />
+            현장 사진을 찍고 AI가 블로그 글을<br />자동으로 써드립니다!
           </p>
           <Button variant="outline" onClick={() => onNavigate("camera")}>
             촬영하러 가기

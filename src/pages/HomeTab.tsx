@@ -207,10 +207,10 @@ export function HomeTab({
           <p className="text-xs text-[#22C55E] mt-1">▲ 2 지난달</p>
         </button>
         {/* 영상 제작 — 프로+ 잠금 표시 */}
-        <button onClick={() => onNavigate("publish")} className="glass-card p-4 text-center w-full">
+        <button onClick={() => onNavigate("shorts")} className="glass-card p-4 text-center w-full">
           <p className="text-[28px] font-bold text-foreground">3</p>
           <p className="text-xs text-muted-foreground">영상 제작</p>
-          <p className="text-xs text-muted-foreground mt-1">🔒 프로+</p>
+          <p className="text-xs text-[#AB5EBE] mt-1">▶ 만들기</p>
         </button>
         <button onClick={() => setShowBadgeSheet(true)} className="glass-card p-4 text-center w-full">
           <p className="text-[28px] font-bold text-foreground">{subscription.consecutiveMonths}개월</p>
@@ -246,7 +246,7 @@ export function HomeTab({
       {/* SEO Donut + Platform Bars */}
       <div className="grid grid-cols-2 gap-3">
         {/* SEO 도넛 — 클릭 시 seo 탭 이동 */}
-        <button onClick={() => onNavigate("seo")} className="chart-card p-4 flex flex-col items-center w-full">
+        <div className="chart-card p-4 flex flex-col items-center">
           <p className="text-xs font-semibold text-muted-foreground mb-2">블로그 SEO 점수</p>
           <div className="relative">
             <PieChart width={100} height={100}>
@@ -267,8 +267,8 @@ export function HomeTab({
               <span className="text-lg font-bold text-foreground">{seoScore}점</span>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">상위 노출 가능 →</p>
-        </button>
+          <p className="text-xs text-muted-foreground mt-1">블로그 SEO</p>
+        </div>
 
         <div className="chart-card p-4 space-y-3">
           <p className="text-xs font-semibold text-muted-foreground">플랫폼별 발행</p>
