@@ -20,7 +20,15 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
   };
 
   const handleSave = () => {
-    toast({ title: "프로필이 저장되었습니다." });
+    if (!settings.companyName.trim()) {
+      toast({ title: "업체명을 입력해 주세요", variant: "destructive" });
+      return;
+    }
+    if (!settings.phoneNumber.trim()) {
+      toast({ title: "전화번호를 입력해 주세요", variant: "destructive" });
+      return;
+    }
+    toast({ title: "프로필이 저장되었습니다", description: `${settings.companyName} · ${settings.phoneNumber}` });
   };
 
   const handleConnect = (platform: string) => {

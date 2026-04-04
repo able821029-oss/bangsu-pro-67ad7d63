@@ -45,7 +45,15 @@ export function ReferralPage({ onBack }: { onBack: () => void }) {
         <Button variant="secondary" size="lg" className="w-full" onClick={handleKakaoShare}>
           <MessageSquare className="w-5 h-5" /> 카카오톡 공유
         </Button>
-        <Button variant="secondary" size="lg" className="w-full">
+        <Button variant="secondary" size="lg" className="w-full" onClick={() => {
+          const msg = `사장님~ 현장 사진만 찍으면\nAI가 블로그 글 써주는 앱이에요.\n무료로 써보세요!\n코드: ${referralCode}`;
+          if (navigator.share) {
+            navigator.share({ text: msg }).catch(() => {});
+          } else {
+            navigator.clipboard.writeText(msg);
+            toast({ title: "문자 내용이 복사되었습니다" });
+          }
+        }}>
           <Share2 className="w-5 h-5" /> 문자 공유
         </Button>
       </div>
