@@ -174,27 +174,32 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           <p className="text-sm text-muted-foreground">{scoreLabel(diagnosis.totalScore)}</p>
         </div>
       ) : (
-        <div className="glass-card p-5 text-center space-y-3">
-          <BarChart3 className="w-12 h-12 text-primary mx-auto" />
-          <p className="text-sm font-semibold">블로그 SEO 진단</p>
-          <p className="text-xs text-muted-foreground">
-            작성한 글들을 AI가 분석하여
-            <br />
-            상위노출 가능성을 점검합니다
-          </p>
-          <Button onClick={handleDiagnose} disabled={isLoading} className="w-full">
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" /> 분석 중...
-              </>
-            ) : (
-              "블로그 진단하기"
-            )}
-          </Button>
+        <div className="glass-card p-5 text-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <BarChart3 className="w-7 h-7 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">블로그 SEO 진단</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {posts.length > 0
+                ? `작성한 글 ${posts.length}개를 AI가 분석해 상위노출 가능성을 점검합니다`
+                : "글을 먼저 작성하면 SEO 점수를 확인할 수 있습니다"}
+            </p>
+          </div>
+          {posts.length > 0 ? (
+            <Button onClick={handleDiagnose} disabled={isLoading} className="w-full">
+              {isLoading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> 분석 중...</>
+              ) : "블로그 진단하기"}
+            </Button>
+          ) : (
+            <Button variant="outline" className="w-full" onClick={() => onNavigate("camera")}>
+              먼저 글 작성하러 가기
+            </Button>
+          )}
         </div>
       )}
 
-      {/* ✅ FIX: 레이더 차트 — 진단 전 empty state */}
       <div className="chart-card p-4 space-y-2">
         <p className="text-sm font-semibold text-foreground">항목별 SEO 분석</p>
 
@@ -292,7 +297,8 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       {/* Keyword Recommender */}
       <div className="space-y-2">
         <p className="text-sm font-semibold flex items-center gap-1">
-          <Search className="w-4 h-4 text-primary" /> 키워드 추천
+          <Search className="w-4 h-4 text-primary" /> 검색 키워드 추천
+          <span className="text-xs text-muted-foreground font-normal ml-1">— 클릭하면 글쓰기에 반영</span>
         </p>
         <KeywordRecommender
           location={settings.serviceArea}
@@ -316,7 +322,7 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
             className="text-xs gap-1 h-7"
           >
             {isAnalyzingPosts ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-            {postScores.length > 0 ? "재분석" : "자동 분석"}
+            {postScores.length > 0 ? "재분석" : "분석 시작"}
           </Button>
         </div>
         {isAnalyzingPosts && postScores.length === 0 && (
@@ -378,7 +384,8 @@ export function SeoTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
         )}
       </div>
 
-      {/* Publish Schedule */}
+      {/* 이번주 발행 현황 */}
+      <p className="text-sm font-semibold flex items-center gap-1"><RefreshCw className="w-4 h-4 text-primary" /> 이번 주 발행 현황</p>
       <PublishSchedule onNavigate={onNavigate} />
 
       {/* SEO Tips Accordion */}
