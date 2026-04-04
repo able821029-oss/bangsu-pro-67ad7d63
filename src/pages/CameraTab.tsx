@@ -286,12 +286,12 @@ export function CameraTab({
         </div>
         <div className="space-y-3 w-full max-w-xs">
           <StepItem
-            label="사진 분석 중"
+            label="현장 사진 분석 중"
             active={genStep === "analyzing"}
             done={genStep === "writing" || genStep === "done"}
           />
-          <StepItem label="글 생성 중" active={genStep === "writing"} done={genStep === "done"} />
-          <StepItem label="완료" active={false} done={genStep === "done"} />
+          <StepItem label="블로그 글 작성 중" active={genStep === "writing"} done={genStep === "done"} />
+          <StepItem label="작성 완료" active={false} done={genStep === "done"} />
         </div>
         {genStep === "error" && (
           <Button variant="outline" onClick={() => setIsGenerating(false)}>
@@ -306,7 +306,6 @@ export function CameraTab({
   if (wizardStep === 1) {
     return (
       <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-        {/* ✅ FIX: 뒤로가기 버튼 추가 */}
         <div className="flex items-center justify-between">
           <button
             onClick={() => onNavigate("home")}
@@ -317,7 +316,10 @@ export function CameraTab({
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Camera className="w-5 h-5 text-primary" /> 사진 + 현장 정보
           </h1>
-          <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">1 / 2</span>
+          <div className="flex gap-1.5 items-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+            <div className="w-2.5 h-2.5 rounded-full bg-secondary" />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -411,12 +413,18 @@ export function CameraTab({
             <label className="text-xs text-muted-foreground flex items-center gap-1">
               <CalendarDays className="w-3 h-3" /> 시공 일자
             </label>
-            <input
-              type="date"
-              className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
-              value={constructionDate}
-              onChange={(e) => setConstructionDate(e.target.value)}
-            />
+            <div className="relative">
+              <input
+                type="date"
+                className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
+                value={constructionDate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setConstructionDate(e.target.value)}
+              />
+              <p className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                {constructionDate ? new Date(constructionDate).toLocaleDateString("ko-KR", { year:"numeric", month:"long", day:"numeric" }) : ""}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -427,7 +435,6 @@ export function CameraTab({
           }}
         />
 
-        {/* ✅ FIX: disabled 제거 — handleNext에서 toast로 처리 */}
         <Button variant="hero" size="xl" className="w-full" onClick={handleNext}>
           다음 →
         </Button>
@@ -439,13 +446,16 @@ export function CameraTab({
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
       <div className="flex items-center justify-between">
-        <button onClick={() => setWizardStep(1)} className="text-sm text-primary font-medium">
-          ← 이전
+        <button onClick={() => setWizardStep(1)} className="flex items-center gap-1 text-sm text-primary font-medium">
+          <ArrowLeft className="w-4 h-4" /> 이전
         </button>
         <h1 className="text-xl font-bold flex items-center gap-2">
           <PenLine className="w-5 h-5 text-primary" /> 스타일 선택
         </h1>
-        <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-full">2 / 2</span>
+        <div className="flex gap-1.5 items-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-primary/30" />
+            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+          </div>
       </div>
 
       <div>
@@ -465,7 +475,12 @@ export function CameraTab({
       </div>
 
       <div>
-        <p className="text-sm font-semibold mb-2">게시 플랫폼 (중복 가능)</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold">게시 플랫폼 선택</p>
+          {selectedPlatforms.length === 0 && (
+            <span className="text-xs text-amber-500 font-medium">하나 이상 선택해 주세요</span>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           {platformIds.map((id) => (
             <PlatformChip
@@ -476,9 +491,19 @@ export function CameraTab({
             />
           ))}
         </div>
+        {selectedPlatforms.length === 0 && (
+          <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2">
+            <p className="text-xs text-amber-600">네이버 블로그를 선택하면 검색 상위노출에 유리합니다</p>
+          </div>
+        )}
       </div>
 
-      <Button variant="hero" size="xl" className="w-full" onClick={handleStartAI}>
+      <Button
+        variant="hero" size="xl" className="w-full"
+        onClick={handleStartAI}
+        disabled={selectedPlatforms.length === 0}
+        style={selectedPlatforms.length === 0 ? {} : undefined}
+      >
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
       </Button>
