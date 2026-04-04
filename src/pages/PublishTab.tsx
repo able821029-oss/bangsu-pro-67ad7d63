@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, Copy, ExternalLink, Camera, HelpCircle, X } from "lucide-react";
+import { Upload, Camera, HelpCircle, X, CheckCircle2, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, BlogPost, Platform, PostStatus } from "@/stores/appStore";
@@ -35,8 +35,7 @@ export function PublishTab({
   const posts = useAppStore((s) => s.posts);
   const { toast } = useToast();
 
-  // ✅ FIX: 반자동 툴팁 상태
-  const [showSemiAutoTip, setShowSemiAutoTip] = useState(false);
+    const [showSemiAutoTip, setShowSemiAutoTip] = useState(false);
 
   const completedPosts = posts.filter((p) => p.status === "완료" || p.status === "게시완료");
   const inProgressPosts = posts.filter((p) => p.status === "작성중" || p.status === "AI생성중");
@@ -71,11 +70,26 @@ export function PublishTab({
 
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
+      {/* 요약 통계 */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-card border border-border rounded-xl p-3 text-center">
+          <p className="text-xl font-bold text-foreground">{completedPosts.length}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">작성 완료</p>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-3 text-center">
+          <p className="text-xl font-bold text-green-500">{posts.filter(p => p.status === "게시완료").length}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">게시 완료</p>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-3 text-center">
+          <p className="text-xl font-bold text-amber-500">{inProgressPosts.length}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">작성 중</p>
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <Upload className="w-5 h-5 text-primary" />
         <h1 className="text-xl font-bold">발행현황</h1>
 
-        {/* ✅ FIX: 반자동 뱃지 — 클릭 시 툴팁 */}
         <div className="relative">
           <button onClick={() => setShowSemiAutoTip(!showSemiAutoTip)}>
             <Badge variant="warning" className="text-xs cursor-pointer gap-1">
@@ -101,8 +115,7 @@ export function PublishTab({
         <div className="space-y-4">
           {completedPosts.map((post) => (
             <div key={post.id} className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-              {/* ✅ FIX: 카드 본문만 글 상세로 이동 */}
-              <button onClick={() => onViewPost(post)} className="w-full text-left">
+                    <button onClick={() => onViewPost(post)} className="w-full text-left">
                 <div className="flex items-start gap-3">
                   <div className="w-12 h-12 rounded-lg bg-secondary overflow-hidden shrink-0">
                     {post.photos.length > 0 ? (
@@ -119,13 +132,13 @@ export function PublishTab({
                       {post.createdAt} · {post.workType}
                     </p>
                   </div>
-                  <Badge variant={statusColor[post.status]} className="shrink-0">
-                    {post.status}
-                  </Badge>
+                  <div className="shrink-0 flex items-center gap-1">
+                    {post.status === "게시완료" && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                    <Badge variant={statusColor[post.status]}>{post.status}</Badge>
+                  </div>
                 </div>
               </button>
 
-              {/* ✅ FIX: 플랫폼 버튼 — stopPropagation으로 카드 클릭과 분리 */}
               <div className="flex gap-2 flex-wrap">
                 {post.platforms.map((p) => (
                   <Button
@@ -146,14 +159,22 @@ export function PublishTab({
           ))}
         </div>
       ) : (
-        <div className="bg-card rounded-[--radius] border border-border p-8 text-center space-y-3">
-          <Upload className="w-10 h-10 text-muted-foreground mx-auto" />
-          <p className="text-sm text-muted-foreground">
-            아직 작성된 글이 없어요.<br />
-            현장 사진을 찍고 AI가 블로그 글을<br />자동으로 써드립니다!
-          </p>
-          <Button variant="outline" onClick={() => onNavigate("camera")}>
-            촬영하러 가기
+        <div className="bg-card rounded-[--radius] border border-border p-8 text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <PenLine className="w-8 h-8 text-primary" />
+          </div>
+          <div>
+            <p className="font-semibold text-sm">아직 작성된 글이 없어요</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              현장 사진만 찍으면 AI가<br />블로그 글을 자동으로 써드립니다!
+            </p>
+          </div>
+          <Button
+            className="w-full"
+            style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white" }}
+            onClick={() => onNavigate("camera")}
+          >
+            지금 바로 글 작성하기
           </Button>
         </div>
       )}
