@@ -11,11 +11,13 @@ import { FaqPage } from "@/pages/settings/FaqPage";
 import { ContactPage } from "@/pages/settings/ContactPage";
 import { AnnouncementsPage } from "@/pages/settings/AnnouncementsPage";
 import { SeoTab } from "@/pages/SeoTab";
+import { FieldToolsPage } from "@/pages/FieldToolsPage";
+import { HardHat } from "lucide-react";
 import { useAppStore, Persona } from "@/stores/appStore";
 import { TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type SettingsPage = "menu" | "profile" | "pricing" | "seo" | "coupon" | "referral" | "faq" | "contact" | "announcements";
+type SettingsPage = "menu" | "profile" | "pricing" | "seo" | "fieldtools" | "coupon" | "referral" | "faq" | "contact" | "announcements";
 
 const personas: { id: Persona; label: string; icon: React.ElementType }[] = [
   { id: "장인형", label: "장인형", icon: Hammer },
@@ -29,6 +31,7 @@ const myInfoItems: { id: SettingsPage; label: string; icon: React.ElementType }[
 
 const appSettingsItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
   { id: "pricing", label: "요금제 · 영상 현황", icon: CreditCard },
+  { id: "fieldtools", label: "현장 도우미 (일당·날씨·임금체불)", icon: HardHat },
   { id: "seo", label: "블로그 상위노출 관리", icon: TrendingUp },
   { id: "referral", label: "지인 소개 (첫달 50% 할인)", icon: Users },
   { id: "faq", label: "자주 묻는 질문", icon: HelpCircle },
@@ -49,6 +52,10 @@ export function SettingsTab() {
   const { toast } = useToast();
 
   if (page !== "menu") {
+
+    if (page === "fieldtools") {
+      return <FieldToolsPage onBack={() => setPage("menu")} />;
+    }
 
     if (page === "seo") {
       return (

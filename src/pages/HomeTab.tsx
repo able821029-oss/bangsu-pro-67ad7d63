@@ -220,6 +220,25 @@ export function HomeTab({
         지금 바로 글 작성하기
       </button>
 
+      {/* 현장 도우미 바로가기 */}
+      <button
+        onClick={() => {
+          sessionStorage.setItem("sms-open-settings-page", "fieldtools");
+          onNavigate("settings");
+        }}
+        className="w-full flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3"
+      >
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+          style={{ background: "linear-gradient(135deg,rgba(35,127,255,0.15),rgba(171,94,190,0.15))" }}>
+          🔨
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-semibold">현장 도우미</p>
+          <p className="text-xs text-muted-foreground">일당 계산 · 날씨 판단 · 임금체불 신고</p>
+        </div>
+        <span className="text-xs text-primary font-semibold">바로가기 →</span>
+      </button>
+
       {/* 통계 카드 4개 — 클릭 시 탭 이동 */}
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => onNavigate("publish")} className="glass-card p-4 text-center w-full">
