@@ -305,7 +305,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     try {
       const { data: scriptData, error: scriptErr } = await supabase.functions.invoke("generate-shorts", {
         body: {
-          photos: photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
+          photos: photos.slice(0, 5).map((p, i) => ({ dataUrl: p.dataUrl, index: i + 1 })),
           workType: "자동판단",
           videoStyle,
           narrationType: narrationEnabled ? "있음" : "없음",
@@ -560,6 +560,10 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           <CheckCircle2 className="w-10 h-10 text-success" />
         </div>
         <h2 className="text-xl font-bold">영상이 완성되었습니다!</h2>
+        <div className="w-full max-w-xs bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2.5 text-center">
+          <p className="text-xs text-amber-600 font-medium">🔊 나레이션은 영상 재생 중 자동으로 읽어드립니다</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">브라우저 TTS — 저장된 영상에는 포함되지 않습니다</p>
+        </div>
 
         {videoUrl ? (
           <video
@@ -586,6 +590,10 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           <Button variant="outline" className="w-full" style={{ borderColor: "#E1306C", color: "#E1306C" }}
             onClick={() => handleDeeplink("instagram")}>
             인스타 릴스 열기
+          </Button>
+          <Button variant="outline" className="w-full" style={{ borderColor: "#FF0000", color: "#FF0000" }}
+            onClick={() => window.open("https://m.youtube.com/upload", "_blank")}>
+            유튜브 쇼츠 올리기
           </Button>
           <Button variant="secondary" className="w-full" onClick={handleReset}>
             <RotateCcw className="w-5 h-5" /> 다시 만들기

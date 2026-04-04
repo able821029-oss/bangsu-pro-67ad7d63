@@ -368,9 +368,9 @@ export async function renderMirraVideo(
   await Promise.all(
     photos.map((p, i) => new Promise<void>((resolve) => {
       const img = new Image();
-      img.crossOrigin = "anonymous";
+      // base64 dataUrl은 crossOrigin 불필요 — 설정 시 오히려 로드 실패
       img.onload = () => { imageMap[`photo_${i + 1}`] = img; resolve(); };
-      img.onerror = () => resolve();
+      img.onerror = (e) => { console.warn(`photo_${i+1} load error`, e); resolve(); };
       img.src = p.dataUrl;
     }))
   );
@@ -478,7 +478,15 @@ export async function renderMirraVideo(
         drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 175, subtitleProgress);
       }
 
-      await new Promise(r => setTimeout(r, 1000 / FPS));
+      // rAF 기반 프레임 대기 — setTimeout보다 정확하고 브라우저 최적화
+      await new Promise<void>(r => {
+        const start = performance.now();
+        const wait = () => {
+          if (performance.now() - start >= (1000 / FPS) - 2) r();
+          else requestAnimationFrame(wait);
+        };
+        requestAnimationFrame(wait);
+      });
     }
   }
 
@@ -488,12 +496,15 @@ export async function renderMirraVideo(
     recorder.stop();
   }
 
+  // 충분한 대기시간: 장면 수 * 4초 + 10초 여유
+  const timeoutMs = scenes.length * 4000 + 10000;
   const blob = await Promise.race([
     recordingDone,
     new Promise<Blob>((resolve) => setTimeout(() => {
+      console.warn("Recording timeout — forcing stop");
       cleanupRecording();
       resolve(new Blob(chunks, { type: mimeType || `video/${ext}` }));
-    }, 3000)),
+    }, timeoutMs)),
   ]);
 
   return { blob, narrationTexts };
