@@ -439,46 +439,40 @@ export async function renderMirraVideo(
 
   console.log(`[mirra] 총 ${scenes.length}장면, ${totalAllFrames}프레임, 예상 ${Math.round(totalAllFrames * FRAME_MS / 1000)}초`);
 
-  // setInterval 기반 렌더링 — 실제 벽시계 시간 보장
-  await new Promise<void>((resolve) => {
-    let si = 0;
-    let fi = 0;
-    let audioStarted = new Set<number>();
+  // AudioContext 클럭 기반 렌더링 — throttle 없는 정확한 타이밍 보장
+  // AudioContext.currentTime은 하드웨어 오디오 클럭 기반으로 브라우저 throttle 영향 없음
+  const clockCtx = audioCtx || new AudioContext();
+  const renderStartTime = clockCtx.currentTime;
 
-    const interval = setInterval(() => {
-      if (si >= scenes.length) {
-        clearInterval(interval);
-        resolve();
-        return;
+  let globalFrameIdx = 0;
+  for (let si = 0; si < scenes.length; si++) {
+    const scene = scenes[si];
+    const totalFrames = scene.duration || 100;
+    const isEnding = si === scenes.length - 1 && !scene.photo;
+    const photoImg = scene.photo ? imageMap[scene.photo] : null;
+
+    narrationTexts.push(narrationEnabled && scene.narration ? scene.narration : "");
+    onProgress(si, scenes.length);
+
+    // 나레이션 오디오 재생
+    const narrationBuffer = narrationBuffers[si] || null;
+    if (narrationBuffer && audioCtx && audioDest) {
+      try {
+        const source = audioCtx.createBufferSource();
+        source.buffer = narrationBuffer;
+        source.connect(audioDest);
+        source.start();
+      } catch {}
+    }
+
+    for (let fi = 0; fi < totalFrames; fi++, globalFrameIdx++) {
+      // 목표 시간까지 AudioContext 클럭으로 대기 (1ms 폴링)
+      const targetTime = renderStartTime + globalFrameIdx * (1 / FPS);
+      while (clockCtx.currentTime < targetTime) {
+        await new Promise(r => setTimeout(r, 1));
       }
 
-      const scene = scenes[si];
-      const totalFrames = scene.duration || 100;
-      const isEnding = si === scenes.length - 1 && !scene.photo;
-      const photoImg = scene.photo ? imageMap[scene.photo] : null;
       const t = fi / totalFrames;
-
-      // 최초 진입 시 처리
-      if (fi === 0) {
-        narrationTexts.push(narrationEnabled && scene.narration ? scene.narration : "");
-        onProgress(si, scenes.length);
-
-        // 나레이션 오디오 재생
-        if (!audioStarted.has(si)) {
-          audioStarted.add(si);
-          const narrationBuffer = narrationBuffers[si] || null;
-          if (narrationBuffer && audioCtx && audioDest) {
-            try {
-              const source = audioCtx.createBufferSource();
-              source.buffer = narrationBuffer;
-              source.connect(audioDest);
-              source.start();
-            } catch {}
-          }
-        }
-      }
-
-      // 프레임 드로잉
       drawGradientBg(ctx, scene.bg_colors || ["#001130", "#0d2847"]);
       if (photoImg && scene.bg_type === "photo") {
         drawFullScreenPhoto(ctx, photoImg, scene.bg_colors || ["#001130", "#0d2847"], t);
@@ -486,7 +480,6 @@ export async function renderMirraVideo(
         drawGridPattern(ctx, Math.min(t * 3, 1));
         drawGlow(ctx, scene.accent_color || "#237FFF", t);
       }
-
       if (isEnding) {
         drawEndingCard(ctx, companyName || "SMS", phoneNumber || "", scene.accent_color || "#237FFF", t);
       } else {
@@ -496,14 +489,8 @@ export async function renderMirraVideo(
         drawDividerLine(ctx, textCenterY + 110, scene.accent_color || "#237FFF", Math.max(0, (t - 0.28) / 0.25));
         drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 175, Math.max(0, (t - 0.38) / 0.5));
       }
-
-      fi++;
-      if (fi >= totalFrames) {
-        si++;
-        fi = 0;
-      }
-    }, FRAME_MS);
-  });
+    }
+  }
 
   onProgress(scenes.length, scenes.length);
   console.log(`[mirra] 렌더링 완료 — recorder 정지`);

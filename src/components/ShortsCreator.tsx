@@ -543,12 +543,38 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
 
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold flex items-center gap-1.5"><Music className="w-4 h-4 text-primary" /> 배경 음악</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {bgmOptions.map(b => (
-              <Badge key={b.id} variant={bgm === b.id ? "chipActive" : "chip"}
-                className="text-sm px-4 py-2 cursor-pointer" onClick={() => setBgm(b.id)}>
-                {b.label}
-              </Badge>
+              <button
+                key={b.id}
+                onClick={() => setBgm(b.id)}
+                className="text-left p-3 rounded-xl transition-all"
+                style={{
+                  border: bgm === b.id ? "2px solid #237FFF" : "1px solid rgba(255,255,255,0.12)",
+                  background: bgm === b.id ? "rgba(35,127,255,0.1)" : "hsl(var(--card))",
+                }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-base">{b.emoji}</span>
+                  {bgm === b.id && <Check className="w-3.5 h-3.5 text-primary" />}
+                </div>
+                <p className="text-xs font-semibold leading-none mb-0.5">{b.label}</p>
+                <p className="text-[10px] text-muted-foreground leading-none mb-2">{b.desc}</p>
+                {b.id !== "none" && (
+                  <button
+                    onClick={e => { e.stopPropagation(); handleBgmPreview(b.id); }}
+                    className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full w-full justify-center"
+                    style={{
+                      background: previewingBgm === b.id ? "#237FFF" : "rgba(255,255,255,0.08)",
+                      color: previewingBgm === b.id ? "#fff" : "rgba(255,255,255,0.5)",
+                    }}
+                  >
+                    {previewingBgm === b.id
+                      ? <><Square className="w-2.5 h-2.5" /> 정지</>
+                      : <><Play className="w-2.5 h-2.5" /> 미리듣기</>}
+                  </button>
+                )}
+              </button>
             ))}
           </div>
         </div>
