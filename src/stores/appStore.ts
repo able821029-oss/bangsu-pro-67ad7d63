@@ -165,8 +165,8 @@ export const useAppStore = create<AppState>((set) => ({
   currentPost: null,
   posts: mockPosts,
   settings: {
-    companyName: "대한방수",
-    phoneNumber: "010-1234-5678",
+    companyName: "",
+    phoneNumber: "",
     serviceArea: "서울 강남, 서초, 송파",
     logoUrl: "",
     autoInsertCompany: true,
@@ -223,4 +223,12 @@ export const useAppStore = create<AppState>((set) => ({
     set((state) => ({ inquiries: [inquiry, ...state.inquiries] })),
   clearSession: () =>
     set({ photos: [], selectedWorkType: null, currentPost: null }),
+  useVideo: () => {
+    const state = get();
+    const used = state.subscription.videoUsed ?? 0;
+    const max = state.subscription.maxVideo ?? 1;
+    if (used >= max) return false;
+    set((s) => ({ subscription: { ...s.subscription, videoUsed: (s.subscription.videoUsed ?? 0) + 1 } }));
+    return true;
+  },
 }));

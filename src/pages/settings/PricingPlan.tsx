@@ -3,7 +3,6 @@ import { ArrowLeft, Check, X, Crown, Gift, Users, Copy, MessageSquare, Share2, C
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { TestModeBadge } from "@/components/TestModeBadge";
 import { PaymentMethodSheet } from "@/components/PaymentMethodSheet";
 import { useAppStore } from "@/stores/appStore";
 import { CancelDialog } from "@/components/CancelDialog";
@@ -272,7 +271,6 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
                   >
                     {plan.price === "₩0" ? "무료로 시작" : "업그레이드"}
                   </Button>
-                  {plan.price !== "₩0" && <TestModeBadge label="테스트" inline />}
                 </div>
               )}
             </div>

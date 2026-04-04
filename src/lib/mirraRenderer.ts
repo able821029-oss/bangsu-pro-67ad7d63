@@ -493,7 +493,6 @@ export async function renderMirraVideo(
   }
 
   onProgress(scenes.length, scenes.length);
-  console.log(`[mirra] 렌더링 완료 — recorder 정지`);
 
   if (recorder.state !== "inactive") {
     try { recorder.requestData(); } catch {}

@@ -10,10 +10,12 @@ import { ReferralPage } from "@/pages/settings/ReferralPage";
 import { FaqPage } from "@/pages/settings/FaqPage";
 import { ContactPage } from "@/pages/settings/ContactPage";
 import { AnnouncementsPage } from "@/pages/settings/AnnouncementsPage";
+import { SeoTab } from "@/pages/SeoTab";
 import { useAppStore, Persona } from "@/stores/appStore";
+import { TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type SettingsPage = "menu" | "profile" | "pricing" | "coupon" | "referral" | "faq" | "contact" | "announcements";
+type SettingsPage = "menu" | "profile" | "pricing" | "seo" | "coupon" | "referral" | "faq" | "contact" | "announcements";
 
 const personas: { id: Persona; label: string; icon: React.ElementType }[] = [
   { id: "장인형", label: "장인형", icon: Hammer },
@@ -27,6 +29,7 @@ const myInfoItems: { id: SettingsPage; label: string; icon: React.ElementType }[
 
 const appSettingsItems: { id: SettingsPage; label: string; icon: React.ElementType }[] = [
   { id: "pricing", label: "요금제 · 영상 현황", icon: CreditCard },
+  { id: "seo", label: "블로그 상위노출 관리", icon: TrendingUp },
   { id: "referral", label: "지인 소개 (첫달 50% 할인)", icon: Users },
   { id: "faq", label: "자주 묻는 질문", icon: HelpCircle },
   { id: "contact", label: "문의하기", icon: MessageSquare },
@@ -46,7 +49,21 @@ export function SettingsTab() {
   const { toast } = useToast();
 
   if (page !== "menu") {
-    const PageComponent: Record<string, React.FC<{ onBack: () => void }>> = {
+
+    if (page === "seo") {
+      return (
+        <div className="relative">
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-3">
+            <button onClick={() => setPage("menu")} className="p-2 -ml-2 rounded-lg hover:bg-secondary">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-xl font-bold">블로그 상위노출 관리</h1>
+          </div>
+          <SeoTab onNavigate={() => setPage("menu")} />
+        </div>
+      );
+    }
+    const PageComponent2: Record<string, React.FC<{ onBack: () => void }>> = {
       profile: ProfileSettings,
       pricing: PricingPlan,
       coupon: CouponPage,
@@ -55,7 +72,7 @@ export function SettingsTab() {
       contact: ContactPage,
       announcements: AnnouncementsPage,
     };
-    const Component = PageComponent[page];
+    const Component = PageComponent2[page];
     return Component ? <Component onBack={() => setPage("menu")} /> : null;
   }
 

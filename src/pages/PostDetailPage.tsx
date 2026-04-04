@@ -49,7 +49,6 @@ export function PostDetailPage({
   onNavigate?: (tab: TabId) => void;
 }) {
   const { updatePost, updatePostStatus } = useAppStore();
-  const subscription = useAppStore((s) => s.subscription);
   const { toast } = useToast();
   const [title, setTitle] = useState(post.title);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -657,7 +656,7 @@ export function PostDetailPage({
           </Button>
         )}
 
-        {/* 쇼츠 영상 — 테스트 모드: 사진 조건 없이 바로 실행 */}
+        {/* 쇼츠 영상 만들기 */}
         <div>
           <Button
             variant="outline"

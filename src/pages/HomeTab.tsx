@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Camera, TrendingUp, Award, PenLine, FileText, ChevronRight, Film } from "lucide-react";
+import { Camera } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -51,12 +51,7 @@ const allTiers = [
   { label: "골드",   range: "6개월 이상", reward: "1개월 무료 자동 지급", color: "#FFD700", bg: "rgba(255,215,0,0.12)", border: "rgba(255,215,0,0.35)", icon: "🥇" },
 ];
 
-const weeklyData = [
-  { week: "1주차", count: 4 },
-  { week: "2주차", count: 6 },
-  { week: "3주차", count: 5 },
-  { week: "4주차", count: 3 },
-];
+// weeklyData는 컴포넌트 안에서 posts로 계산 (아래 참조)
 
 export function HomeTab({
   onNavigate,
@@ -70,6 +65,22 @@ export function HomeTab({
   const subscription = useAppStore((s) => s.subscription);
   const published = posts.filter((p) => p.status === "게시완료").length;
   const completed = posts.filter((p) => p.status === "완료" || p.status === "게시완료").length;
+  const videoCount = subscription.videoUsed ?? 0;
+
+  // 실제 주간 발행 데이터 계산
+  const weeklyData = (() => {
+    const now = new Date();
+    return [3, 2, 1, 0].map((weeksAgo) => {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay() - weeksAgo * 7);
+      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+      const count = posts.filter((p) => {
+        const d = new Date(p.createdAt);
+        return d >= weekStart && d <= weekEnd && (p.status === "완료" || p.status === "게시완료");
+      }).length;
+      return { week: `${4 - weeksAgo}주차`, count };
+    });
+  })();
 
   const usagePercent = subscription.maxCount > 0 ? (subscription.usedCount / subscription.maxCount) * 100 : 0;
   const remaining = subscription.maxCount - subscription.usedCount;
@@ -152,7 +163,7 @@ export function HomeTab({
       <div className="glass-card p-4 space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-foreground">{settings.companyName} 사장님</p>
+            <p className="text-sm font-semibold text-foreground">{settings.companyName ? `${settings.companyName} 사장님` : "업체명을 설정해 주세요"}</p>
             <p className="text-xs text-muted-foreground">
               {subscription.plan} · {subscription.maxCount}건 중 {subscription.usedCount}건
             </p>
@@ -208,8 +219,8 @@ export function HomeTab({
         </button>
         {/* 영상 제작 — 프로+ 잠금 표시 */}
         <button onClick={() => onNavigate("shorts")} className="glass-card p-4 text-center w-full">
-          <p className="text-[28px] font-bold text-foreground">3</p>
-          <p className="text-xs text-muted-foreground">영상 제작</p>
+          <p className="text-[28px] font-bold text-foreground">{videoCount}</p>
+          <p className="text-xs text-muted-foreground">이번달 영상</p>
           <p className="text-xs text-[#AB5EBE] mt-1">▶ 만들기</p>
         </button>
         <button onClick={() => setShowBadgeSheet(true)} className="glass-card p-4 text-center w-full">

@@ -4,11 +4,10 @@ import { InstallBanner } from "@/components/InstallBanner";
 import { HomeTab } from "@/pages/HomeTab";
 import { CameraTab } from "@/pages/CameraTab";
 import { PublishTab } from "@/pages/PublishTab";
-import { SeoTab } from "@/pages/SeoTab";
 import { ShortsTab } from "@/pages/ShortsTab";
 import { SettingsTab } from "@/pages/SettingsTab";
 import { PostDetailPage } from "@/pages/PostDetailPage";
-import { BlogPost } from "@/stores/appStore";
+import { BlogPost, useAppStore } from "@/stores/appStore";
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<"in" | "out">("in");
@@ -52,6 +51,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 }
 
 const Index = () => {
+  const settings = useAppStore((s) => s.settings);
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [viewingPost, setViewingPost] = useState<BlogPost | null>(null);
   const [showSplash, setShowSplash] = useState(true);

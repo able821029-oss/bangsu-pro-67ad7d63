@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus, Music, VolumeX, Mic, AlertTriangle } from "lucide-react";
-import { TestModeBadge } from "@/components/TestModeBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
@@ -634,7 +633,6 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
             );
           })()}
           <div className="flex justify-center">
-            <TestModeBadge label="테스트 모드" inline />
           </div>
         </div>
       </div>

@@ -25,8 +25,8 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
 
   const handleConnect = (platform: string) => {
     toast({
-      title: `${platform} 연동 준비 중`,
-      description: "현재 준비 중입니다. 반자동 방식으로 이용 가능합니다.",
+      title: `${platform} 업로드 안내`,
+      description: "글 작성 후 복사 → 붙여넣기 방식으로 업로드합니다.",
     });
   };
 
