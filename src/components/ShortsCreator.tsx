@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { renderMirraVideo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig } from "@/lib/mirraRenderer";
+import { renderMirraVideo, createBgmTrack, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
 type BgmType = "upbeat" | "calm" | "none";
@@ -146,7 +146,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
   const styleRef = useRef<HTMLDivElement>(null);
 
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("시공일지형");
-  const [bgm, setBgm] = useState<BgmType>("upbeat");
+  const [bgm, setBgm] = useState<BgmType>("upbeat"); // upbeat | calm | none
   const [selectedVoice, setSelectedVoice] = useState<string | null>("male_calm");
   const [step, setStep] = useState<ShortsStep>("config");
   const [progressText, setProgressText] = useState("");
@@ -340,6 +340,14 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         setProgressPct(22);
       }
 
+      // ✅ BGM 준비 — 렌더링 시작 전에 AudioContext 생성 후 BGM 예약
+      const bgmAudioCtx = bgm !== "none" ? new AudioContext() : null;
+      const bgmDest = bgmAudioCtx ? bgmAudioCtx.createMediaStreamDestination() : null;
+      const totalDurationSec = scenes.reduce((sum: number, s: any) => sum + (s.duration || 100) / 30, 0);
+      if (bgmAudioCtx && bgmDest && bgm !== "none") {
+        await createBgmTrack(bgmAudioCtx, bgmDest, bgm as BgmType, totalDurationSec + 2);
+      }
+
       const result = await renderMirraVideo(
         photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
         scenes,
@@ -352,7 +360,8 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           setProgressText(`🖼️ 장면 렌더링 중... ${current}/${total}컷`);
         },
         hasElevenLabsAudio ? narrationAudios : undefined,
-        hasElevenLabsAudio ? undefined : voiceConfig, // ElevenLabs 있으면 Web TTS 사용 안함
+        hasElevenLabsAudio ? undefined : voiceConfig,
+        bgmDest ?? undefined, // ✅ BGM 오디오 스트림 전달
       );
 
       const url = URL.createObjectURL(result.blob);
@@ -368,6 +377,10 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       }
 
       toast({ title: "영상이 완성되었습니다!" });
+      // BGM AudioContext 정리
+      if (bgmAudioCtx && bgmAudioCtx.state !== "closed") {
+        setTimeout(() => bgmAudioCtx.close().catch(() => {}), 500);
+      }
       incrementVideoUsed();
 
 

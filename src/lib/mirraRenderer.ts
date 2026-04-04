@@ -355,6 +355,7 @@ export async function renderMirraVideo(
   onProgress: (current: number, total: number) => void,
   narrationAudios?: (string | null)[],
   voiceConfig?: VoiceConfig,
+  bgmDest?: MediaStreamAudioDestinationNode, // ✅ 외부 BGM 스트림
 ): Promise<{ blob: Blob; narrationTexts: string[] }> {
   if (!isRecordingSupported()) throw new Error("UNSUPPORTED");
 
@@ -384,6 +385,13 @@ export async function renderMirraVideo(
     audioDest = audioCtx.createMediaStreamDestination();
     audioDest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
   } catch { /* no audio */ }
+
+  // ✅ 외부 BGM 트랙을 메인 스트림에 믹싱
+  if (bgmDest) {
+    bgmDest.stream.getAudioTracks().forEach(t => {
+      try { stream.addTrack(t); } catch {}
+    });
+  }
 
   const mimeType = getBestMimeType();
   const ext = getFileExtension(mimeType);
@@ -508,4 +516,99 @@ export async function renderMirraVideo(
   ]);
 
   return { blob, narrationTexts };
+}
+
+// ── BGM 생성기 (Web Audio API 기반 — 외부 파일 없이 합성) ──
+export type BgmType = "upbeat" | "calm" | "none";
+
+export async function createBgmTrack(
+  audioCtx: AudioContext,
+  dest: MediaStreamAudioDestinationNode,
+  bgmType: BgmType,
+  durationSec: number,
+): Promise<void> {
+  if (bgmType === "none") return;
+
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.18; // 나레이션보다 낮게
+  masterGain.connect(dest);
+
+  if (bgmType === "upbeat") {
+    // 경쾌한 — 4/4박자 아르페지오 + 킥드럼 패턴
+    const bpm = 120;
+    const beatSec = 60 / bpm;
+    const notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; // C E G C G E
+    const totalBeats = Math.ceil(durationSec / beatSec);
+
+    for (let b = 0; b < totalBeats; b++) {
+      const t = audioCtx.currentTime + b * beatSec * 0.5;
+
+      // 아르페지오 음표
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = notes[b % notes.length];
+      g.gain.setValueAtTime(0.4, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + beatSec * 0.45);
+      osc.connect(g); g.connect(masterGain);
+      osc.start(t); osc.stop(t + beatSec * 0.5);
+
+      // 킥 드럼 (짝수 박)
+      if (b % 4 === 0) {
+        const kick = audioCtx.createOscillator();
+        const kg = audioCtx.createGain();
+        kick.type = "sine";
+        kick.frequency.setValueAtTime(150, t);
+        kick.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+        kg.gain.setValueAtTime(0.6, t);
+        kg.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        kick.connect(kg); kg.connect(masterGain);
+        kick.start(t); kick.stop(t + 0.2);
+      }
+
+      // 하이햇 (8분음표)
+      if (b % 2 === 1) {
+        const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+        const noise = audioCtx.createBufferSource();
+        const hg = audioCtx.createGain();
+        const hf = audioCtx.createBiquadFilter();
+        hf.type = "highpass"; hf.frequency.value = 8000;
+        noise.buffer = buf;
+        hg.gain.setValueAtTime(0.25, t); hg.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        noise.connect(hf); hf.connect(hg); hg.connect(masterGain);
+        noise.start(t);
+      }
+    }
+
+  } else if (bgmType === "calm") {
+    // 잔잔한 — 느린 코드 패드
+    const chords = [
+      [261.63, 329.63, 392.00], // C maj
+      [293.66, 369.99, 440.00], // D maj
+      [246.94, 311.13, 369.99], // B min
+      [220.00, 277.18, 329.63], // A min
+    ];
+    const chordDur = 3.0;
+    const totalChords = Math.ceil(durationSec / chordDur);
+
+    for (let ci = 0; ci < totalChords; ci++) {
+      const t = audioCtx.currentTime + ci * chordDur;
+      const chord = chords[ci % chords.length];
+
+      chord.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq * (i === 2 ? 0.5 : 1); // 베이스 옥타브 다운
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.3, t + 0.8);
+        g.gain.setValueAtTime(0.3, t + chordDur - 0.8);
+        g.gain.linearRampToValueAtTime(0.001, t + chordDur);
+        osc.connect(g); g.connect(masterGain);
+        osc.start(t); osc.stop(t + chordDur + 0.1);
+      });
+    }
+  }
 }
