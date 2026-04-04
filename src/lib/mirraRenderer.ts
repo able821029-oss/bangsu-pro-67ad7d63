@@ -415,7 +415,7 @@ export async function renderMirraVideo(
     recorder.onerror = () => { cleanupRecording(); reject(new Error("RECORDING_FAILED")); };
   });
 
-  recorder.start(100);
+  recorder.start(); // timeslice 없음 — stop() 시 전체 데이터 한번에
 
   // 나레이션 오디오 디코딩
   const narrationBuffers: (AudioBuffer | null)[] = [];
@@ -433,36 +433,54 @@ export async function renderMirraVideo(
 
   const narrationTexts: string[] = [];
 
-  // 장면별 렌더링
-  for (let si = 0; si < scenes.length; si++) {
-    const scene = scenes[si];
-    const totalFrames = scene.duration || 90;
-    const isEnding = si === scenes.length - 1 && !scene.photo;
-    const photoImg = scene.photo ? imageMap[scene.photo] : null;
+  // 총 프레임 수 계산
+  const totalAllFrames = scenes.reduce((s, sc) => s + (sc.duration || 100), 0);
+  const FRAME_MS = Math.floor(1000 / FPS); // 33ms
 
-    narrationTexts.push(narrationEnabled && scene.narration ? scene.narration : "");
+  console.log(`[mirra] 총 ${scenes.length}장면, ${totalAllFrames}프레임, 예상 ${Math.round(totalAllFrames * FRAME_MS / 1000)}초`);
 
-    // 오디오 재생
-    const narrationBuffer = narrationBuffers[si] || null;
-    if (narrationBuffer && audioCtx && audioDest) {
-      try {
-        const source = audioCtx.createBufferSource();
-        source.buffer = narrationBuffer;
-        source.connect(audioDest);
-        source.start();
-      } catch {}
-    }
+  // setInterval 기반 렌더링 — 실제 벽시계 시간 보장
+  await new Promise<void>((resolve) => {
+    let si = 0;
+    let fi = 0;
+    let audioStarted = new Set<number>();
 
-    onProgress(si, scenes.length);
+    const interval = setInterval(() => {
+      if (si >= scenes.length) {
+        clearInterval(interval);
+        resolve();
+        return;
+      }
 
-    for (let f = 0; f < totalFrames; f++) {
-      const t = f / totalFrames;
+      const scene = scenes[si];
+      const totalFrames = scene.duration || 100;
+      const isEnding = si === scenes.length - 1 && !scene.photo;
+      const photoImg = scene.photo ? imageMap[scene.photo] : null;
+      const t = fi / totalFrames;
 
-      // 배경
+      // 최초 진입 시 처리
+      if (fi === 0) {
+        narrationTexts.push(narrationEnabled && scene.narration ? scene.narration : "");
+        onProgress(si, scenes.length);
+
+        // 나레이션 오디오 재생
+        if (!audioStarted.has(si)) {
+          audioStarted.add(si);
+          const narrationBuffer = narrationBuffers[si] || null;
+          if (narrationBuffer && audioCtx && audioDest) {
+            try {
+              const source = audioCtx.createBufferSource();
+              source.buffer = narrationBuffer;
+              source.connect(audioDest);
+              source.start();
+            } catch {}
+          }
+        }
+      }
+
+      // 프레임 드로잉
       drawGradientBg(ctx, scene.bg_colors || ["#001130", "#0d2847"]);
-
       if (photoImg && scene.bg_type === "photo") {
-        // 전체화면 사진 모드
         drawFullScreenPhoto(ctx, photoImg, scene.bg_colors || ["#001130", "#0d2847"], t);
       } else {
         drawGridPattern(ctx, Math.min(t * 3, 1));
@@ -472,47 +490,37 @@ export async function renderMirraVideo(
       if (isEnding) {
         drawEndingCard(ctx, companyName || "SMS", phoneNumber || "", scene.accent_color || "#237FFF", t);
       } else {
-        const badgeProgress    = Math.max(0, (t - 0.05) / 0.18);
-        const titleProgress    = Math.max(0, (t - 0.18) / 0.25);
-        const dividerProgress  = Math.max(0, (t - 0.28) / 0.25);
-        const subtitleProgress = Math.max(0, (t - 0.38) / 0.5);
-
-        // 사진 장면은 텍스트를 상단에, 그라데이션 장면은 중앙에
         const textCenterY = photoImg ? H * 0.20 : H * 0.38;
-
-        drawBadge(ctx, scene.badge, scene.accent_color || "#237FFF", textCenterY - 100, badgeProgress);
-        drawTitle(ctx, scene.title, textCenterY + 30, scene.animation, titleProgress);
-        drawDividerLine(ctx, textCenterY + 110, scene.accent_color || "#237FFF", dividerProgress);
-        drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 175, subtitleProgress);
+        drawBadge(ctx, scene.badge, scene.accent_color || "#237FFF", textCenterY - 100, Math.max(0, (t - 0.05) / 0.18));
+        drawTitle(ctx, scene.title, textCenterY + 30, scene.animation, Math.max(0, (t - 0.18) / 0.25));
+        drawDividerLine(ctx, textCenterY + 110, scene.accent_color || "#237FFF", Math.max(0, (t - 0.28) / 0.25));
+        drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 175, Math.max(0, (t - 0.38) / 0.5));
       }
 
-      // rAF 기반 프레임 대기 — setTimeout보다 정확하고 브라우저 최적화
-      await new Promise<void>(r => {
-        const start = performance.now();
-        const wait = () => {
-          if (performance.now() - start >= (1000 / FPS) - 2) r();
-          else requestAnimationFrame(wait);
-        };
-        requestAnimationFrame(wait);
-      });
-    }
-  }
+      fi++;
+      if (fi >= totalFrames) {
+        si++;
+        fi = 0;
+      }
+    }, FRAME_MS);
+  });
 
   onProgress(scenes.length, scenes.length);
+  console.log(`[mirra] 렌더링 완료 — recorder 정지`);
+
   if (recorder.state !== "inactive") {
     try { recorder.requestData(); } catch {}
     recorder.stop();
   }
 
-  // 충분한 대기시간: 장면 수 * 4초 + 10초 여유
-  const timeoutMs = scenes.length * 4000 + 10000;
+  // 렌더링 완료 후 최대 8초 대기
   const blob = await Promise.race([
     recordingDone,
     new Promise<Blob>((resolve) => setTimeout(() => {
-      console.warn("Recording timeout — forcing stop");
+      console.warn("[mirra] recorder.onstop 타임아웃 — 강제 종료");
       cleanupRecording();
       resolve(new Blob(chunks, { type: mimeType || `video/${ext}` }));
-    }, timeoutMs)),
+    }, 8000)),
   ]);
 
   return { blob, narrationTexts };
