@@ -570,10 +570,10 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           <p className="text-sm font-semibold flex items-center gap-1.5"><Music className="w-4 h-4 text-primary" /> 배경 음악</p>
           <div className="grid grid-cols-2 gap-2">
             {bgmOptions.map(b => (
-              <button
+              <div
                 key={b.id}
                 onClick={() => setBgm(b.id)}
-                className="text-left p-3 rounded-xl transition-all"
+                className="text-left p-3 rounded-xl transition-all cursor-pointer"
                 style={{
                   border: bgm === b.id ? "2px solid #237FFF" : "1px solid rgba(255,255,255,0.12)",
                   background: bgm === b.id ? "rgba(35,127,255,0.1)" : "hsl(var(--card))",
@@ -588,18 +588,19 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
                 {b.id !== "none" && (
                   <button
                     onClick={e => { e.stopPropagation(); handleBgmPreview(b.id); }}
-                    className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full w-full justify-center"
+                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full w-full justify-center font-medium"
                     style={{
-                      background: previewingBgm === b.id ? "#237FFF" : "rgba(255,255,255,0.08)",
-                      color: previewingBgm === b.id ? "#fff" : "rgba(255,255,255,0.5)",
+                      background: previewingBgm === b.id ? "#237FFF" : "rgba(35,127,255,0.15)",
+                      color: previewingBgm === b.id ? "#fff" : "#237FFF",
+                      border: "1px solid rgba(35,127,255,0.3)",
                     }}
                   >
                     {previewingBgm === b.id
-                      ? <><Square className="w-2.5 h-2.5" /> 정지</>
-                      : <><Play className="w-2.5 h-2.5" /> 미리듣기</>}
+                      ? <><Square className="w-2.5 h-2.5 mr-0.5" /> 정지</>
+                      : <><Play className="w-2.5 h-2.5 mr-0.5" /> 미리듣기</>}
                   </button>
                 )}
-              </button>
+              </div>
             ))}
           </div>
         </div>
