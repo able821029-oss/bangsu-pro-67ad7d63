@@ -641,19 +641,44 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
 
   // ─── Generating ───
   if (step === "generating") {
+    const stages = [
+      { label: "사진 분석 및 스크립트 생성", done: progressPct >= 25 },
+      { label: "나레이션 음성 합성", done: progressPct >= 30 },
+      { label: "장면 렌더링", done: progressPct >= 95 },
+      { label: "영상 완성", done: progressPct >= 100 },
+    ];
     return (
       <div className="px-4 pt-6 pb-24 space-y-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
           <Film className="w-10 h-10 text-primary animate-pulse" />
         </div>
-        <h2 className="text-xl font-bold text-center">영상을 생성하고 있습니다</h2>
-        <p className="text-sm text-muted-foreground">{progressText}</p>
-        <div className="w-full max-w-xs">
+        <div className="text-center space-y-1">
+          <h2 className="text-xl font-bold">영상을 생성하고 있습니다</h2>
+          <p className="text-sm text-muted-foreground">{progressText}</p>
+        </div>
+        <div className="w-full max-w-xs space-y-2">
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+            <span>진행률</span><span className="font-semibold text-primary">{Math.round(progressPct)}%</span>
+          </div>
           <div className="w-full bg-secondary rounded-full h-3">
-            <div className="bg-primary rounded-full h-3 transition-all duration-300" style={{ width: `${progressPct}%` }} />
+            <div className="bg-primary rounded-full h-3 transition-all duration-500" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">약 15~30초 소요됩니다</p>
+        <div className="w-full max-w-xs space-y-2">
+          {stages.map((s, i) => (
+            <div key={i} className="flex items-center gap-3">
+              {s.done
+                ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                : i === stages.findIndex(st => !st.done)
+                  ? <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+                  : <div className="w-5 h-5 rounded-full border-2 border-border shrink-0" />}
+              <p className={`text-sm ${s.done ? "text-green-500" : i === stages.findIndex(st => !st.done) ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                {s.label}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">사진이 많을수록 영상이 길어집니다 (15~60초 소요)</p>
       </div>
     );
   }
@@ -683,24 +708,53 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         )}
 
         <div className="w-full max-w-xs space-y-3">
-          <Button className="w-full" onClick={handleDownload} disabled={!videoUrl}>
+          {/* 저장 */}
+          <Button className="w-full gap-2" style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)", color: "white" }}
+            onClick={handleDownload} disabled={!videoUrl}>
             <Download className="w-5 h-5" /> 갤러리에 저장
           </Button>
-          <Button variant="outline" className="w-full"
-            onClick={() => handleDeeplink("tiktok")}>
-            틱톡 앱 열기
-          </Button>
-          <Button variant="outline" className="w-full" style={{ borderColor: "#E1306C", color: "#E1306C" }}
-            onClick={() => handleDeeplink("instagram")}>
-            인스타 릴스 열기
-          </Button>
-          <Button variant="outline" className="w-full" style={{ borderColor: "#FF0000", color: "#FF0000" }}
-            onClick={() => window.open("https://m.youtube.com/upload", "_blank")}>
-            유튜브 쇼츠 올리기
-          </Button>
-          <Button variant="secondary" className="w-full" onClick={handleReset}>
-            <RotateCcw className="w-5 h-5" /> 다시 만들기
-          </Button>
+          {/* SNS 업로드 */}
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground text-center font-medium">SNS 업로드</p>
+            <div className="grid grid-cols-3 gap-2">
+              <button onClick={() => handleDeeplink("tiktok")}
+                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-border text-xs font-medium hover:bg-secondary transition-colors">
+                <span className="text-lg">⬛</span> 틱톡
+              </button>
+              <button onClick={() => handleDeeplink("instagram")}
+                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-[#E1306C]/40 text-[#E1306C] text-xs font-medium hover:bg-[#E1306C]/5 transition-colors">
+                <span className="text-lg">🟣</span> 릴스
+              </button>
+              <button onClick={() => window.open("https://m.youtube.com/upload", "_blank")}
+                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-[#FF0000]/40 text-[#FF0000] text-xs font-medium hover:bg-[#FF0000]/5 transition-colors">
+                <span className="text-lg">🔴</span> 쇼츠
+              </button>
+            </div>
+          </div>
+          <div className="border-t border-border pt-2 space-y-2">
+            <Button variant="secondary" className="w-full gap-2" onClick={handleReset}>
+              <RotateCcw className="w-4 h-4" /> 다시 만들기
+            </Button>
+            <Button variant="ghost" className="w-full text-muted-foreground" onClick={onClose}>홈으로 돌아가기</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Error ───
+  if (step === "error") {
+    return (
+      <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center">
+          <X className="w-10 h-10 text-destructive" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold">영상 생성 실패</h2>
+          <p className="text-sm text-muted-foreground mt-2">{errorMsg || "다시 시도해 주세요"}</p>
+        </div>
+        <div className="space-y-2 w-full max-w-xs">
+          <Button className="w-full" onClick={handleReset}><RotateCcw className="w-4 h-4" /> 다시 시도</Button>
           <Button variant="ghost" className="w-full" onClick={onClose}>돌아가기</Button>
         </div>
       </div>
