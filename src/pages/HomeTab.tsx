@@ -25,10 +25,10 @@ const statusBadgeVariant: Record<PostStatus, "default" | "info" | "success"> = {
   게시완료: "success",
 };
 
-const medalInfo: Record<number, { label: string; reward: string }> = {
-  1: { label: "브론즈", reward: "" },
-  3: { label: "실버", reward: "20% 할인쿠폰 자동 지급!" },
-  6: { label: "골드", reward: "1개월 무료 자동 지급!" },
+const medalInfo: Record<number, { label: string; reward: string; color: string; bg: string; border: string; icon: string }> = {
+  1: { label: "브론즈", reward: "", color: "#CD7F32", bg: "rgba(205,127,50,0.12)", border: "rgba(205,127,50,0.4)", icon: "🥉" },
+  3: { label: "실버",   reward: "20% 할인쿠폰 자동 지급!", color: "#A8A9AD", bg: "rgba(168,169,173,0.12)", border: "rgba(168,169,173,0.4)", icon: "🥈" },
+  6: { label: "골드",   reward: "1개월 무료 자동 지급!", color: "#FFD700", bg: "rgba(255,215,0,0.12)", border: "rgba(255,215,0,0.4)", icon: "🥇" },
 };
 
 function getMedalTier(months: number) {
@@ -46,9 +46,9 @@ function getNextTier(months: number) {
 }
 
 const allTiers = [
-  { label: "브론즈", range: "1~2개월", reward: "" },
-  { label: "실버", range: "3~5개월", reward: "다음달 20% 할인 쿠폰 자동 지급" },
-  { label: "골드", range: "6개월 이상", reward: "1개월 무료 자동 지급" },
+  { label: "브론즈", range: "1~2개월", reward: "", color: "#CD7F32", bg: "rgba(205,127,50,0.12)", border: "rgba(205,127,50,0.35)", icon: "🥉" },
+  { label: "실버",   range: "3~5개월", reward: "다음달 20% 할인 쿠폰 자동 지급", color: "#A8A9AD", bg: "rgba(168,169,173,0.12)", border: "rgba(168,169,173,0.35)", icon: "🥈" },
+  { label: "골드",   range: "6개월 이상", reward: "1개월 무료 자동 지급", color: "#FFD700", bg: "rgba(255,215,0,0.12)", border: "rgba(255,215,0,0.35)", icon: "🥇" },
 ];
 
 const weeklyData = [
@@ -159,9 +159,12 @@ export function HomeTab({
           </div>
           {medal && (
             <button onClick={() => setShowBadgeSheet(true)}>
-              <Badge variant="default" className="text-xs">
-                {medal.label}
-              </Badge>
+              <span
+                className="text-xs font-bold px-2.5 py-1 rounded-full"
+                style={{ color: medal.color, background: medal.bg, border: `1px solid ${medal.border}` }}
+              >
+                {medal.icon} {medal.label}
+              </span>
             </button>
           )}
         </div>
@@ -212,7 +215,9 @@ export function HomeTab({
         <button onClick={() => setShowBadgeSheet(true)} className="glass-card p-4 text-center w-full">
           <p className="text-[28px] font-bold text-foreground">{subscription.consecutiveMonths}개월</p>
           <p className="text-xs text-muted-foreground">연속 사용</p>
-          <p className="text-xs text-[#237FFF] mt-1">{currentTierLabel} 등급</p>
+          <p className="text-xs mt-1 font-semibold" style={{ color: tier > 0 ? medalInfo[tier].color : "var(--muted-foreground)" }}>
+            {tier > 0 ? `${medalInfo[tier].icon} ${currentTierLabel}` : "등급 없음"}
+          </p>
         </button>
       </div>
 
@@ -336,29 +341,36 @@ export function HomeTab({
               {allTiers.map((t) => (
                 <div
                   key={t.label}
-                  className={`flex items-start gap-3 p-3 rounded-xl border ${currentTierLabel === t.label ? "border-primary bg-primary/10" : "border-border"}`}
+                  className="flex items-start gap-3 p-3 rounded-xl"
+                  style={{
+                    border: `1.5px solid ${currentTierLabel === t.label ? t.border : "var(--color-border-tertiary, rgba(255,255,255,0.08))"}`,
+                    background: currentTierLabel === t.label ? t.bg : "transparent",
+                  }}
                 >
-                  <Award className="w-6 h-6 text-primary shrink-0" />
+                  <span className="text-2xl shrink-0 leading-none mt-0.5">{t.icon}</span>
                   <div className="flex-1">
-                    <p className="font-semibold text-sm">
+                    <p className="font-semibold text-sm" style={{ color: currentTierLabel === t.label ? t.color : "var(--foreground)" }}>
                       {t.label} <span className="text-xs text-muted-foreground font-normal">({t.range})</span>
                     </p>
-                    {t.reward && <p className="text-xs text-primary mt-0.5">{t.reward}</p>}
+                    {t.reward && <p className="text-xs mt-0.5" style={{ color: t.color }}>{t.reward}</p>}
                   </div>
                   {currentTierLabel === t.label && (
-                    <Badge variant="default" className="text-xs">
+                    <span
+                      className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ color: t.color, background: t.bg, border: `1px solid ${t.border}` }}
+                    >
                       현재
-                    </Badge>
+                    </span>
                   )}
                 </div>
               ))}
             </div>
             {nextTier && (
               <p className="text-sm text-center text-muted-foreground">
-                다음 등급까지 <span className="text-primary font-semibold">{nextTier.remaining}개월</span> 남았습니다
+                다음 등급까지 <span className="font-semibold" style={{ color: "#237FFF" }}>{nextTier.remaining}개월</span> 남았습니다
               </p>
             )}
-            {!nextTier && <p className="text-sm text-center text-primary font-semibold">최고 등급 달성!</p>}
+            {!nextTier && <p className="text-sm text-center font-bold" style={{ color: "#FFD700" }}>🥇 골드 등급 달성!</p>}
             <Button variant="outline" className="w-full" onClick={() => setShowBadgeSheet(false)}>
               닫기
             </Button>

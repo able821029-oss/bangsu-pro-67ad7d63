@@ -7,8 +7,9 @@ import type { TabId } from "@/components/BottomNav";
 export function ShortsTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const subscription = useAppStore((s) => s.subscription);
   const isPremium = subscription.plan === "프로" || subscription.plan === "무제한";
+  const isFreeAllowed = subscription.plan === "무료"; // 무료 1회 허용
 
-  if (isPremium) {
+  if (isPremium || isFreeAllowed) {
     return <ShortsCreator onClose={() => onNavigate("home")} />;
   }
 

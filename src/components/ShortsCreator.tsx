@@ -46,7 +46,7 @@ const bgmOptions: { id: BgmType; label: string; icon: string }[] = [
 ];
 
 const PLAN_LIMITS: Record<string, number> = {
-  "무료": 0, "베이직": 5, "프로": 20, "비즈니스": 50, "무제한": 999,
+  "무료": 1, "베이직": 5, "프로": 20, "비즈니스": 50, "무제한": 999,
 };
 
 const PREVIEW_TEXT = "안녕하세요. 방수 전문 시공업체입니다.";
@@ -83,6 +83,7 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
         <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-2">
           <p className="text-xs text-destructive font-medium">
             이번 달 영상 횟수를 모두 사용했습니다.
+            {plan === "무료" && " 베이직 플랜으로 업그레이드하면 월 5개까지 가능해요."}
             {plan === "베이직" && " 프로 플랜으로 업그레이드하면 월 20개까지 가능해요."}
             {plan === "프로" && " 비즈니스 플랜으로 업그레이드하면 월 50개까지 가능해요."}
           </p>
@@ -195,10 +196,27 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     };
   }, [step, videoUrl, pendingNarration]);
 
-  // ✅ 테스트 모드: 쿼터 제한 없음
-  const videoLimit = 999;
-  const [videoUsed] = useState(0);
-  const quotaExceeded = false;
+  // 플랜별 월 제한 (무료: 1회 무료 체험)
+  const PLAN_LIMITS_MAP: Record<string, number> = {
+    "무료": 1, "베이직": 5, "프로": 20, "비즈니스": 50, "무제한": 999,
+  };
+  const videoLimit = PLAN_LIMITS_MAP[subscription.plan] ?? 1;
+
+  // 이번달 사용 횟수 - localStorage 기반
+  const getMonthKey = () => {
+    const d = new Date();
+    return `sms-shorts-used-${d.getFullYear()}-${d.getMonth()}`;
+  };
+  const [videoUsed, setVideoUsed] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem(getMonthKey()) || "0", 10); } catch { return 0; }
+  });
+  const quotaExceeded = videoUsed >= videoLimit;
+
+  const incrementVideoUsed = () => {
+    const next = videoUsed + 1;
+    setVideoUsed(next);
+    try { localStorage.setItem(getMonthKey(), String(next)); } catch {}
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -350,6 +368,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       }
 
       toast({ title: "영상이 완성되었습니다!" });
+      incrementVideoUsed();
 
 
     } catch (err: any) {
