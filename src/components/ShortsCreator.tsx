@@ -365,56 +365,86 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         voiceNameHint: voice.voiceNameHint,
       } : undefined;
 
-      // ElevenLabs 음성 데이터 — Supabase function에서 생성된 base64 오디오
       const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
-      const hasElevenLabsAudio = narrationAudios.some(Boolean);
-      if (hasElevenLabsAudio) {
-        setProgressText("🎙️ 나레이션 음성 합성 중...");
-        setProgressPct(22);
-      }
 
-      // ✅ BGM 준비 — 렌더링 시작 전에 AudioContext 생성 후 BGM 예약
-      const bgmAudioCtx = bgm !== "none" ? new AudioContext() : null;
-      const bgmDest = bgmAudioCtx ? bgmAudioCtx.createMediaStreamDestination() : null;
-      const totalDurationSec = scenes.reduce((sum: number, s: any) => sum + (s.duration || 100) / 30, 0);
-      if (bgmAudioCtx && bgmDest && bgm !== "none") {
-        await createBgmTrack(bgmAudioCtx, bgmDest, bgm as BgmType, totalDurationSec + 2);
-      }
+      // ── 서버사이드 렌더링 (VIDEO_SERVER_URL 설정 시 우선 사용) ──
+      const VIDEO_SERVER_URL = import.meta.env.VITE_VIDEO_SERVER_URL;
 
-      const result = await renderMirraVideo(
-        photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
-        scenes,
-        settings.companyName,
-        settings.phoneNumber,
-        narrationEnabled,
-        (current, total) => {
-          const pct = 25 + Math.round((current / total) * 70);
-          setProgressPct(pct);
-          setProgressText(`🖼️ 장면 렌더링 중... ${current}/${total}컷`);
-        },
-        hasElevenLabsAudio ? narrationAudios : undefined,
-        hasElevenLabsAudio ? undefined : voiceConfig,
-        bgmDest ?? undefined, // ✅ BGM 오디오 스트림 전달
-      );
+      if (VIDEO_SERVER_URL) {
+        setProgressText("🖥️ 서버에서 영상 렌더링 중...");
+        setProgressPct(30);
 
-      const url = URL.createObjectURL(result.blob);
-      setVideoUrl(url);
-      setProgressPct(100);
-      setStep("done");
-
-      // ElevenLabs 오디오가 없을 때만 Web TTS로 나레이션 재생
-      if (narrationEnabled && voiceConfig && result.narrationTexts.some(Boolean) && !hasElevenLabsAudio) {
-        requestAnimationFrame(() => {
-          setPendingNarration({ texts: result.narrationTexts, voiceConfig });
+        const renderRes = await fetch(`${VIDEO_SERVER_URL}/render-video`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scenes,
+            photos: photos.slice(0, 5).map(p => p.dataUrl),
+            narrationAudios,
+            companyName: settings.companyName,
+            phoneNumber: settings.phoneNumber,
+            bgmType: bgm,
+          }),
         });
-      }
 
-      toast({ title: "영상이 완성되었습니다!" });
-      // BGM AudioContext 정리
-      if (bgmAudioCtx && bgmAudioCtx.state !== "closed") {
-        setTimeout(() => bgmAudioCtx.close().catch(() => {}), 500);
+        if (!renderRes.ok) {
+          const err = await renderRes.json().catch(() => ({ error: "서버 오류" }));
+          throw new Error(err.error || "서버 렌더링 실패");
+        }
+
+        const { videoUrl } = await renderRes.json();
+        setProgressPct(100);
+        setVideoUrl(videoUrl);
+        setStep("done");
+        toast({ title: "영상이 완성되었습니다! 🎬" });
+        incrementVideoUsed();
+
+      } else {
+        // ── 브라우저 렌더링 fallback ──
+        const hasElevenLabsAudio = narrationAudios.some(Boolean);
+        if (hasElevenLabsAudio) {
+          setProgressText("🎙️ 나레이션 음성 합성 중...");
+          setProgressPct(22);
+        }
+
+        const bgmAudioCtx = bgm !== "none" ? new AudioContext() : null;
+        const bgmDest = bgmAudioCtx ? bgmAudioCtx.createMediaStreamDestination() : null;
+        const totalDurationSec = scenes.reduce((sum: number, s: any) => sum + (s.duration || 100) / 30, 0);
+        if (bgmAudioCtx && bgmDest && bgm !== "none") {
+          await createBgmTrack(bgmAudioCtx, bgmDest, bgm as BgmType, totalDurationSec + 2);
+        }
+
+        const result = await renderMirraVideo(
+          photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
+          scenes,
+          settings.companyName,
+          settings.phoneNumber,
+          narrationEnabled,
+          (current, total) => {
+            const pct = 25 + Math.round((current / total) * 70);
+            setProgressPct(pct);
+            setProgressText(`🖼️ 장면 렌더링 중... ${current}/${total}컷`);
+          },
+          hasElevenLabsAudio ? narrationAudios : undefined,
+          hasElevenLabsAudio ? undefined : voiceConfig,
+          bgmDest ?? undefined,
+        );
+
+        const url = URL.createObjectURL(result.blob);
+        setVideoUrl(url);
+        setProgressPct(100);
+        setStep("done");
+
+        if (narrationEnabled && voiceConfig && result.narrationTexts.some(Boolean) && !hasElevenLabsAudio) {
+          requestAnimationFrame(() => setPendingNarration({ texts: result.narrationTexts, voiceConfig }));
+        }
+
+        toast({ title: "영상이 완성되었습니다!" });
+        if (bgmAudioCtx && bgmAudioCtx.state !== "closed") {
+          setTimeout(() => bgmAudioCtx.close().catch(() => {}), 500);
+        }
+        incrementVideoUsed();
       }
-      incrementVideoUsed();
 
 
     } catch (err: any) {
