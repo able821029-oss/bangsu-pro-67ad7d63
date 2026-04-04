@@ -64,12 +64,12 @@ interface Settings {
 
 interface Subscription {
   plan: PlanType;
-  usedCount: number;
-  maxCount: number;
+  usedCount: number;      // 이번달 블로그 사용 수
+  maxCount: number;       // 블로그 월 한도
+  videoUsed: number;      // 이번달 영상 사용 수
+  maxVideo: number;       // 영상 월 한도
   expiresAt: string;
   consecutiveMonths: number;
-  videoCredits: number;        // 보유 영상 크레딧
-  videoCreditExpiry: string;   // 크레딧 만료일
 }
 
 interface AppState {
@@ -86,8 +86,7 @@ interface AppState {
   inquiries: Inquiry[];
   referralCode: string;
   referralCount: number;
-  addVideoCredits: (amount: number) => void;
-  useVideoCredit: () => boolean;
+  useVideo: () => boolean;  // 영상 1개 사용
 
   addPhoto: (photo: PhotoItem) => void;
   removePhoto: (id: string) => void;

@@ -9,19 +9,19 @@ import { CancelDialog } from "@/components/CancelDialog";
 
 const plans = [
   {
-    name: "무료", price: "₩0", amount: 0, monthly: "5건", platforms: "네이버만", persona: "1종", photos: "2장", highlight: false, videoCredits: "1크레딧/월",
+    name: "무료", price: "₩0", amount: 0, monthly: "5건", platforms: "네이버만", persona: "1종", photos: "2장", highlight: false, video: "월 1개",
     features: { seo: false, photoAuto: false, persona3: false, admin: false },
   },
   {
-    name: "베이직", price: "₩9,900", amount: 9900, monthly: "50건", platforms: "3개", persona: "3종", photos: "5장", highlight: false, videoCredits: "3크레딧/월",
+    name: "베이직", price: "₩9,900", amount: 9900, monthly: "50건", platforms: "3개", persona: "3종", photos: "5장", highlight: false, video: "월 5개",
     features: { seo: true, photoAuto: false, persona3: true, admin: false },
   },
   {
-    name: "프로", price: "₩19,900", amount: 19900, monthly: "150건", platforms: "전체", persona: "전체", photos: "10장", highlight: true, videoCredits: "10크레딧/월",
+    name: "프로", price: "₩19,900", amount: 19900, monthly: "150건", platforms: "전체", persona: "전체", photos: "10장", highlight: true, video: "월 20개",
     features: { seo: true, photoAuto: true, persona3: true, admin: false },
   },
   {
-    name: "무제한", price: "₩39,900", amount: 39900, monthly: "무제한", platforms: "전체", persona: "전체", photos: "10장", highlight: false, videoCredits: "30크레딧/월",
+    name: "무제한", price: "₩39,900", amount: 39900, monthly: "무제한", platforms: "전체", persona: "전체", photos: "10장", highlight: false, video: "월 50개",
     features: { seo: true, photoAuto: true, persona3: true, admin: true },
   },
 ] as const;
