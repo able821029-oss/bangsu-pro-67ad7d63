@@ -660,28 +660,19 @@ export function PostDetailPage({
           </Button>
         )}
 
-        {/* 쇼츠 영상 — 테스트 모드 (플랜 체크 없이 바로 실행) */}
-        {(() => {
-          const hasPhotos = post.photos.length >= 2;
-          const canCreate = hasPhotos;
-          return (
-            <div>
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white", border: "none" }}
-                onClick={() => setShowShortsCreator(true)}
-              >
-                <Film className="w-5 h-5" />
-                쇼츠 영상 만들기
-                <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full">테스트</span>
-              </Button>
-              {!hasPhotos && (
-                <p className="text-xs text-muted-foreground text-center mt-1.5">사진을 2장 이상 추가해 주세요</p>
-              )}
-            </div>
-          );
-        })()}
+        {/* 쇼츠 영상 — 테스트 모드: 사진 조건 없이 바로 실행 */}
+        <div>
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white", border: "none" }}
+            onClick={() => setShowShortsCreator(true)}
+          >
+            <Film className="w-5 h-5" />
+            쇼츠 영상 만들기
+            <span className="ml-auto text-xs bg-white/20 px-2 py-0.5 rounded-full">테스트</span>
+          </Button>
+        </div>
 
         {/* ShortsCreator 오버레이 */}
         {showShortsCreator && (

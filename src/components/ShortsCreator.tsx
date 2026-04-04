@@ -196,26 +196,17 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     };
   }, [step, videoUrl, pendingNarration]);
 
-  // 플랜별 월 제한 (무료: 1회 무료 체험)
+  // ✅ 테스트 모드 — 플랜/쿼터 제한 없음
+  const TEST_MODE = true;
   const PLAN_LIMITS_MAP: Record<string, number> = {
     "무료": 1, "베이직": 5, "프로": 20, "비즈니스": 50, "무제한": 999,
   };
-  const videoLimit = PLAN_LIMITS_MAP[subscription.plan] ?? 1;
-
-  // 이번달 사용 횟수 - localStorage 기반
-  const getMonthKey = () => {
-    const d = new Date();
-    return `sms-shorts-used-${d.getFullYear()}-${d.getMonth()}`;
-  };
-  const [videoUsed, setVideoUsed] = useState<number>(() => {
-    try { return parseInt(localStorage.getItem(getMonthKey()) || "0", 10); } catch { return 0; }
-  });
-  const quotaExceeded = videoUsed >= videoLimit;
+  const videoLimit = TEST_MODE ? 999 : (PLAN_LIMITS_MAP[subscription.plan] ?? 1);
+  const [videoUsed, setVideoUsed] = useState<number>(0);
+  const quotaExceeded = false; // 테스트 모드: 항상 허용
 
   const incrementVideoUsed = () => {
-    const next = videoUsed + 1;
-    setVideoUsed(next);
-    try { localStorage.setItem(getMonthKey(), String(next)); } catch {}
+    if (!TEST_MODE) setVideoUsed(v => v + 1);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

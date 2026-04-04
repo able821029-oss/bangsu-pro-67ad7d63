@@ -6,11 +6,14 @@ import type { TabId } from "@/components/BottomNav";
 
 export function ShortsTab({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const subscription = useAppStore((s) => s.subscription);
-  const isPremium = subscription.plan === "프로" || subscription.plan === "무제한";
-  const isFreeAllowed = subscription.plan === "무료"; // 무료 1회 허용
+  // ✅ 테스트 모드 — 모든 플랜 허용
+  return <ShortsCreator onClose={() => onNavigate("home")} />;
 
+  // 아래는 실서비스용 (테스트 종료 후 활성화)
+  const isPremium = subscription.plan === "프로" || subscription.plan === "무제한";
+  const isFreeAllowed = subscription.plan === "무료";
   if (isPremium || isFreeAllowed) {
-    return <ShortsCreator onClose={() => onNavigate("home")} />;
+    // return <ShortsCreator onClose={() => onNavigate("home")} />;
   }
 
   return (
