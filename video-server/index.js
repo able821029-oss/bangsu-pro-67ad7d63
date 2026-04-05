@@ -1,5 +1,4 @@
 const express = require('express');
-const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -10,7 +9,17 @@ const { renderFramesToDir, FPS } = require('./renderer');
 const { generateBgm } = require('./bgm');
 
 const app = express();
-app.use(cors());
+
+// ── CORS 완전 허용 ──
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
 app.use(express.json({ limit: '200mb' }));
 
 // Supabase 클라이언트
@@ -21,7 +30,7 @@ const supabase = createClient(
 
 // ── 헬스체크 ──
 app.get('/health', (_, res) => {
-  res.json({ ok: true, ts: Date.now(), version: '2.0' });
+  res.json({ ok: true, ts: Date.now(), version: '2.1' });
 });
 
 // ── 영상 렌더링 ──
@@ -54,15 +63,15 @@ app.post('/render-video', async (req, res) => {
 
     console.log(`[${jobId}] 시작 — ${scenes.length}장면 ${photos.length}사진 bgm:${bgmType}`);
 
-    // ── Step 1: 프레임 렌더링 ──
+    // Step 1: 프레임 렌더링
     const totalFrames = await renderFramesToDir(
       scenes, photos, companyName, phoneNumber, tmpDir,
       (si, total) => console.log(`[${jobId}] 장면 ${si + 1}/${total} (${elapsed()})`)
     );
     const durationSec = totalFrames / FPS;
-    console.log(`[${jobId}] 프레임 완료: ${totalFrames}개 (${durationSec.toFixed(1)}초) ${elapsed()}`);
+    console.log(`[${jobId}] 프레임 완료: ${totalFrames}개 (${elapsed()})`);
 
-    // ── Step 2: 나레이션 오디오 처리 ──
+    // Step 2: 나레이션 오디오 처리
     let hasNarration = false;
     const validAudios = (narrationAudios || []).filter(Boolean);
     if (validAudios.length > 0) {
@@ -82,111 +91,65 @@ app.post('/render-video', async (req, res) => {
       }
       audioFiles.forEach(f => { try { fs.unlinkSync(f); } catch {} });
       hasNarration = true;
-      console.log(`[${jobId}] 나레이션 오디오 준비 완료 ${elapsed()}`);
     }
 
-    // ── Step 3: BGM 생성 ──
+    // Step 3: BGM 생성
     let hasBgm = false;
     if (bgmType && bgmType !== 'none') {
       hasBgm = generateBgm(bgmType, durationSec + 1, bgmPath);
-      console.log(`[${jobId}] BGM ${hasBgm ? '생성 완료' : '생성 실패'} ${elapsed()}`);
     }
 
-    // ── Step 4: 오디오 믹싱 (나레이션 + BGM) ──
+    // Step 4: 오디오 믹싱
     let finalAudioPath = null;
     if (hasNarration && hasBgm) {
-      // 나레이션 + BGM 믹싱 (나레이션 우선, BGM 볼륨 낮춤)
       execSync(
         `${ffmpegPath} -y -i "${audioPath}" -i "${bgmPath}" ` +
         `-filter_complex "[0:a]volume=1.0[nar];[1:a]volume=0.25[bgm];[nar][bgm]amix=inputs=2:normalize=0[out]" ` +
         `-map "[out]" -c:a libmp3lame -b:a 192k "${mixedPath}"`
       );
       finalAudioPath = mixedPath;
-      console.log(`[${jobId}] 오디오 믹싱 완료 ${elapsed()}`);
     } else if (hasNarration) {
       finalAudioPath = audioPath;
     } else if (hasBgm) {
       finalAudioPath = bgmPath;
     }
 
-    // ── Step 5: FFmpeg 영상 합성 ──
+    // Step 5: FFmpeg 영상 합성
     const framePattern = path.join(tmpDir, 'f%06d.jpg');
     let ffCmd;
-
     if (finalAudioPath) {
-      ffCmd = [
-        ffmpegPath, '-y',
-        `-framerate ${FPS}`,
-        `-i "${framePattern}"`,
-        `-i "${finalAudioPath}"`,
-        `-c:v libx264 -preset fast -crf 18`,
-        `-pix_fmt yuv420p`,
-        `-c:a aac -b:a 192k`,
-        `-shortest`,
-        `-movflags +faststart`,
-        `"${videoPath}"`
-      ].join(' ');
+      ffCmd = [ffmpegPath, '-y', `-framerate ${FPS}`, `-i "${framePattern}"`, `-i "${finalAudioPath}"`,
+        `-c:v libx264 -preset fast -crf 18`, `-pix_fmt yuv420p`, `-c:a aac -b:a 192k`,
+        `-shortest`, `-movflags +faststart`, `"${videoPath}"`].join(' ');
     } else {
-      ffCmd = [
-        ffmpegPath, '-y',
-        `-framerate ${FPS}`,
-        `-i "${framePattern}"`,
-        `-c:v libx264 -preset fast -crf 18`,
-        `-pix_fmt yuv420p`,
-        `-movflags +faststart`,
-        `"${videoPath}"`
-      ].join(' ');
+      ffCmd = [ffmpegPath, '-y', `-framerate ${FPS}`, `-i "${framePattern}"`,
+        `-c:v libx264 -preset fast -crf 18`, `-pix_fmt yuv420p`,
+        `-movflags +faststart`, `"${videoPath}"`].join(' ');
     }
-
     execSync(ffCmd, { maxBuffer: 1024 * 1024 * 512 });
-    console.log(`[${jobId}] 영상 합성 완료 ${elapsed()}`);
+    console.log(`[${jobId}] FFmpeg 완료 (${elapsed()})`);
 
-    // ── Step 6: Supabase Storage 업로드 ──
+    // Step 6: Supabase Storage 업로드
     const videoBuffer = fs.readFileSync(videoPath);
     const storagePath = `videos/${jobId}.mp4`;
-
     let publicUrl = '';
+
     try {
-      const { error: uploadErr } = await supabase.storage
-        .from('sms-videos')
-        .upload(storagePath, videoBuffer, {
-          contentType: 'video/mp4',
-          cacheControl: '3600',
-        });
+      // 버킷 생성 시도
+      await supabase.storage.createBucket('sms-videos', { public: true, fileSizeLimit: 104857600 });
+    } catch {}
 
-      if (uploadErr) {
-        console.warn(`[${jobId}] Storage 업로드 실패:`, uploadErr.message);
-        // 버킷 없으면 생성 시도
-        if (uploadErr.message.includes('Bucket not found') || uploadErr.message.includes('not found')) {
-          console.log(`[${jobId}] sms-videos 버킷 생성 시도...`);
-          await supabase.storage.createBucket('sms-videos', { public: true, fileSizeLimit: 104857600 });
-          const { error: retryErr } = await supabase.storage
-            .from('sms-videos')
-            .upload(storagePath, videoBuffer, { contentType: 'video/mp4', cacheControl: '3600' });
-          if (retryErr) throw new Error(`Storage 재업로드 실패: ${retryErr.message}`);
-        } else {
-          throw new Error(`Storage 업로드 실패: ${uploadErr.message}`);
-        }
-      }
+    const { error: uploadErr } = await supabase.storage
+      .from('sms-videos')
+      .upload(storagePath, videoBuffer, { contentType: 'video/mp4', cacheControl: '3600' });
 
-      const { data: { publicUrl: url } } = supabase.storage
-        .from('sms-videos')
-        .getPublicUrl(storagePath);
-      publicUrl = url;
-    } catch (storageErr) {
-      console.error(`[${jobId}] Storage 오류:`, storageErr.message);
-      throw storageErr;
-    }
+    if (uploadErr) throw new Error(`Storage 업로드 실패: ${uploadErr.message}`);
 
-    console.log(`[${jobId}] 🎬 완료! (총 ${elapsed()}) → ${publicUrl}`);
+    const { data: { publicUrl: url } } = supabase.storage.from('sms-videos').getPublicUrl(storagePath);
+    publicUrl = url;
 
-    res.json({
-      ok: true,
-      videoUrl: publicUrl,
-      jobId,
-      durationSec: Math.round(durationSec),
-      frames: totalFrames,
-    });
+    console.log(`[${jobId}] 🎬 완료! (${elapsed()}) → ${publicUrl}`);
+    res.json({ ok: true, videoUrl: publicUrl, jobId, durationSec: Math.round(durationSec), frames: totalFrames });
 
   } catch (err) {
     console.error(`[${jobId}] 오류:`, err.message);
@@ -205,7 +168,7 @@ app.post('/render-video', async (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`🚀 SMS Video Server v2.0 — :${PORT}`);
+  console.log(`🚀 SMS Video Server v2.1 — :${PORT}`);
   console.log(`  FFmpeg: ${ffmpegPath}`);
   console.log(`  Supabase: ${process.env.SUPABASE_URL ? '연결됨' : '⚠️ 미설정'}`);
 });
