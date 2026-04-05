@@ -451,7 +451,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       if (err.message === "UNSUPPORTED") {
         setErrorMsg("이 기기에서는 영상 생성을 지원하지 않습니다. 최신 Chrome 브라우저를 사용해 주세요.");
       } else {
-        setErrorMsg(err.message || "다시 시도해 주세요");
+        setErrorMsg((err.message || "다시 시도해 주세요").slice(0, 200));
       }
     }
   }, [photos, videoStyle, selectedVoice, settings, toast]);

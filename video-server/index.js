@@ -145,18 +145,38 @@ app.post('/render-video', async (req, res) => {
     const videoBuffer = fs.readFileSync(videoPath);
     const storagePath = `videos/${jobId}.mp4`;
 
-    const { error: uploadErr } = await supabase.storage
-      .from('sms-videos')
-      .upload(storagePath, videoBuffer, {
-        contentType: 'video/mp4',
-        cacheControl: '3600',
-      });
+    let publicUrl = '';
+    try {
+      const { error: uploadErr } = await supabase.storage
+        .from('sms-videos')
+        .upload(storagePath, videoBuffer, {
+          contentType: 'video/mp4',
+          cacheControl: '3600',
+        });
 
-    if (uploadErr) throw new Error(`Storage 업로드 실패: ${uploadErr.message}`);
+      if (uploadErr) {
+        console.warn(`[${jobId}] Storage 업로드 실패:`, uploadErr.message);
+        // 버킷 없으면 생성 시도
+        if (uploadErr.message.includes('Bucket not found') || uploadErr.message.includes('not found')) {
+          console.log(`[${jobId}] sms-videos 버킷 생성 시도...`);
+          await supabase.storage.createBucket('sms-videos', { public: true, fileSizeLimit: 104857600 });
+          const { error: retryErr } = await supabase.storage
+            .from('sms-videos')
+            .upload(storagePath, videoBuffer, { contentType: 'video/mp4', cacheControl: '3600' });
+          if (retryErr) throw new Error(`Storage 재업로드 실패: ${retryErr.message}`);
+        } else {
+          throw new Error(`Storage 업로드 실패: ${uploadErr.message}`);
+        }
+      }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('sms-videos')
-      .getPublicUrl(storagePath);
+      const { data: { publicUrl: url } } = supabase.storage
+        .from('sms-videos')
+        .getPublicUrl(storagePath);
+      publicUrl = url;
+    } catch (storageErr) {
+      console.error(`[${jobId}] Storage 오류:`, storageErr.message);
+      throw storageErr;
+    }
 
     console.log(`[${jobId}] 🎬 완료! (총 ${elapsed()}) → ${publicUrl}`);
 
