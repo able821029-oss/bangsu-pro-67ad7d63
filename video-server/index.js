@@ -183,7 +183,7 @@ app.post('/render-video', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`🚀 SMS Video Server v2.0 — :${PORT}`);
   console.log(`  FFmpeg: ${ffmpegPath}`);
