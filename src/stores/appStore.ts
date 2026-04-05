@@ -156,7 +156,7 @@ const mockInquiries: Inquiry[] = [
   { id: "i2", type: "결제·환불", title: "프로 플랜 결제 문의", content: "연간 결제 변경 방법을 알고 싶습니다", status: "처리중", createdAt: "2026-03-28" },
 ];
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   photos: [],
   selectedWorkType: null,
   selectedStyle: "시공일지형",

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   User, CreditCard, Users, HelpCircle, MessageSquare, Bell,
-  ChevronRight, LogOut, Hammer, Smile, Building2,
+  ChevronRight, LogOut, Hammer, Smile, Building2, ArrowLeft,
 } from "lucide-react";
 import { ProfileSettings } from "@/pages/settings/ProfileSettings";
 import { PricingPlan } from "@/pages/settings/PricingPlan";
