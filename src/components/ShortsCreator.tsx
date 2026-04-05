@@ -361,45 +361,38 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
 
       const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
 
-      // ── 서버사이드 렌더링 (VIDEO_SERVER_URL 설정 시 우선 사용) ──
-      // 서버 CORS 이슈로 임시 브라우저 렌더링 사용
-      // const VIDEO_SERVER_URL = import.meta.env.VITE_VIDEO_SERVER_URL || "https://bangsu-pro-67ad7d63-production-6e2e.up.railway.app";
-      const VIDEO_SERVER_URL = import.meta.env.VITE_VIDEO_SERVER_URL || "";
+      // ── Supabase Edge Function → Railway 서버 렌더링 (CORS 해결, iOS 지원) ──
+      setProgressText("🖥️ 서버에서 영상 렌더링 중...");
+      setProgressPct(20);
 
-      if (VIDEO_SERVER_URL) {
-        setProgressText("🖥️ 서버에서 영상 렌더링 중...");
-        setProgressPct(30);
+      const { data: renderData, error: renderErr } = await supabase.functions.invoke("render-video", {
+        body: {
+          scenes,
+          photos: photos.slice(0, 5).map(p => p.dataUrl),
+          narrationAudios,
+          companyName: settings.companyName,
+          phoneNumber: settings.phoneNumber,
+          bgmType: bgm,
+        },
+      });
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2분 타임아웃
-        
-        const renderRes = await fetch(`${VIDEO_SERVER_URL}/render-video`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            scenes,
-            photos: photos.slice(0, 5).map(p => p.dataUrl),
-            narrationAudios,
-            companyName: settings.companyName,
-            phoneNumber: settings.phoneNumber,
-            bgmType: bgm,
-          }),
-        }).finally(() => clearTimeout(timeoutId));
-
-        if (!renderRes.ok) {
-          const errText = await renderRes.text().catch(() => "서버 오류");
-          throw new Error(`서버 오류 (${renderRes.status}): ${errText.slice(0, 100)}`);
-        }
-
-        const { videoUrl } = await renderRes.json();
+      if (renderErr || renderData?.error) {
+        // 서버 실패 시 브라우저 렌더링으로 fallback
+        console.warn("서버 렌더링 실패, 브라우저로 전환:", renderErr?.message || renderData?.error);
+        setProgressText("🖥️ 브라우저에서 렌더링 중...");
+        setProgressPct(25);
+      } else {
+        const videoUrl = renderData?.videoUrl;
         setProgressPct(100);
         setVideoUrl(videoUrl);
         setStep("done");
         toast({ title: "영상이 완성되었습니다! 🎬" });
         incrementVideoUsed();
+        return; // 서버 성공 시 종료
+      }
 
-      } else {
+      // ── 브라우저 렌더링 fallback ──
+      if (true) {
         // ── 브라우저 렌더링 fallback ──
         const hasElevenLabsAudio = narrationAudios.some(Boolean);
         if (hasElevenLabsAudio) {
