@@ -179,6 +179,8 @@ export const useAppStore = create<AppState>((set) => ({
     plan: "베이직",
     usedCount: 23,
     maxCount: 50,
+    videoUsed: 0,
+    maxVideo: 3,
     expiresAt: "2026-04-30",
     consecutiveMonths: 4,
   },
