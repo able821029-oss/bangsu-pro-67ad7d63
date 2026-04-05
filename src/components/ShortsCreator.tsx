@@ -362,7 +362,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
 
       // ── 서버사이드 렌더링 (VIDEO_SERVER_URL 설정 시 우선 사용) ──
-      const VIDEO_SERVER_URL = import.meta.env.VITE_VIDEO_SERVER_URL;
+      const VIDEO_SERVER_URL = import.meta.env.VITE_VIDEO_SERVER_URL || "https://bangsu-pro-67ad7d63-production.up.railway.app";
 
       if (VIDEO_SERVER_URL) {
         setProgressText("🖥️ 서버에서 영상 렌더링 중...");
