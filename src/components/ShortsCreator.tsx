@@ -362,15 +362,19 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
 
       // ── 서버사이드 렌더링 (VIDEO_SERVER_URL 설정 시 우선 사용) ──
-      const VIDEO_SERVER_URL = import.meta.env.VITE_VIDEO_SERVER_URL || "https://bangsu-pro-67ad7d63-production-8819.up.railway.app";
+      const VIDEO_SERVER_URL = import.meta.env.VITE_VIDEO_SERVER_URL || "https://bangsu-pro-67ad7d63-production-6e2e.up.railway.app";
 
       if (VIDEO_SERVER_URL) {
         setProgressText("🖥️ 서버에서 영상 렌더링 중...");
         setProgressPct(30);
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2분 타임아웃
+        
         const renderRes = await fetch(`${VIDEO_SERVER_URL}/render-video`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             scenes,
             photos: photos.slice(0, 5).map(p => p.dataUrl),
@@ -379,11 +383,11 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
             phoneNumber: settings.phoneNumber,
             bgmType: bgm,
           }),
-        });
+        }).finally(() => clearTimeout(timeoutId));
 
         if (!renderRes.ok) {
-          const err = await renderRes.json().catch(() => ({ error: "서버 오류" }));
-          throw new Error(err.error || "서버 렌더링 실패");
+          const errText = await renderRes.text().catch(() => "서버 오류");
+          throw new Error(`서버 오류 (${renderRes.status}): ${errText.slice(0, 100)}`);
         }
 
         const { videoUrl } = await renderRes.json();
