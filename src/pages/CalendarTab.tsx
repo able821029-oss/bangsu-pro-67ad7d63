@@ -20,6 +20,7 @@ interface Schedule {
   location: string;
   image_url: string | null;
   google_synced: boolean;
+  google_event_id: string | null;
 }
 
 type ViewMode = "month" | "week" | "day";
