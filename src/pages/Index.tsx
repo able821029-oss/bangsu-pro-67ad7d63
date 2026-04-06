@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { BottomNav, TabId } from "@/components/BottomNav";
 import { InstallBanner } from "@/components/InstallBanner";
+import { AuthProvider, useAuth } from "@/components/AuthProvider";
+import AuthPage from "@/pages/AuthPage";
 import { HomeTab } from "@/pages/HomeTab";
-import { CameraTab } from "@/pages/CameraTab";
-import { PublishTab } from "@/pages/PublishTab";
-import { ShortsTab } from "@/pages/ShortsTab";
-import { SettingsTab } from "@/pages/SettingsTab";
+import { CalendarTab } from "@/pages/CalendarTab";
+import { ContentTab } from "@/pages/ContentTab";
+import { MyPage } from "@/pages/MyPage";
 import { PostDetailPage } from "@/pages/PostDetailPage";
-import { BlogPost, useAppStore } from "@/stores/appStore";
+import { BlogPost } from "@/stores/appStore";
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<"in" | "out">("in");
@@ -50,33 +51,35 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-const Index = () => {
-  const settings = useAppStore((s) => s.settings);
+function AppContent() {
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [viewingPost, setViewingPost] = useState<BlogPost | null>(null);
   const [showSplash, setShowSplash] = useState(true);
 
   const handleViewPost = (post: BlogPost) => setViewingPost(post);
   const handleBackFromPost = () => setViewingPost(null);
+  const handleSplashDone = useCallback(() => setShowSplash(false), []);
 
-  if (showSplash) return <SplashScreen onDone={() => setShowSplash(false)} />;
+  if (showSplash) return <SplashScreen onDone={handleSplashDone} />;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
+  if (!user) return <AuthPage />;
 
   if (viewingPost) {
     return (
       <div className="min-h-screen bg-background">
-        <PostDetailPage post={viewingPost} onBack={handleBackFromPost} onNavigate={setActiveTab} />
+        <PostDetailPage post={viewingPost} onBack={handleBackFromPost} onNavigate={(t) => setActiveTab(t as TabId)} />
       </div>
     );
   }
 
   const renderTab = () => {
     switch (activeTab) {
-      case "home":     return <HomeTab onNavigate={setActiveTab} onViewPost={handleViewPost} />;
-      case "camera":   return <CameraTab onNavigate={setActiveTab} onViewPost={handleViewPost} />;
-      case "shorts":   return <ShortsTab onNavigate={setActiveTab} />;
-      case "publish":  return <PublishTab onNavigate={setActiveTab} onViewPost={handleViewPost} />;
-      case "settings": return <SettingsTab />;
-      default:         return <HomeTab onNavigate={setActiveTab} onViewPost={handleViewPost} />;
+      case "home":     return <HomeTab onNavigate={(t) => setActiveTab(t as TabId)} onViewPost={handleViewPost} />;
+      case "calendar": return <CalendarTab />;
+      case "content":  return <ContentTab onNavigate={(t) => setActiveTab(t as TabId)} onViewPost={handleViewPost} />;
+      case "mypage":   return <MyPage />;
+      default:         return <HomeTab onNavigate={(t) => setActiveTab(t as TabId)} onViewPost={handleViewPost} />;
     }
   };
 
@@ -87,6 +90,12 @@ const Index = () => {
       <InstallBanner />
     </div>
   );
-};
+}
+
+const Index = () => (
+  <AuthProvider>
+    <AppContent />
+  </AuthProvider>
+);
 
 export default Index;
