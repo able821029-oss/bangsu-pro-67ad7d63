@@ -183,7 +183,7 @@ JSON 형식으로만 응답해주세요.`,
       const detectedType = workType || "시공";
       const mockContent = `안녕하세요, ${companyName || "SMS"}입니다.\n\n${constructionDate || "오늘"} ${location || "현장"}에서 ${buildingType || "건물"} ${detectedType} 시공을 진행했습니다.\n\n■ 현장 소개\n${location || "현장"} ${buildingType || "건물"}에서 ${detectedType} 의뢰를 받았습니다.\n\n■ 시공 전 상태\n기존 방수층이 노후화되어 누수가 발생한 상태였습니다.\n\n■ 시공 과정\n${detectedType} 작업을 단계별로 꼼꼼하게 진행했습니다.\n\n■ 시공 완료\n깔끔하게 마무리하였습니다.\n\n■ 문의\n${companyName || "SMS"} ${phoneNumber || "전화문의"}`;
 
-      const photoBlocks = photoSlice.flatMap((_, i) => [
+      const photoBlocks = photoSlice.flatMap((_: any, i: number) => [
         { type: "photo" as const, content: `photo-${i + 1}`, caption: `${detectedType} 시공 현장 사진 ${i + 1}` },
         { type: "text" as const, content: i === photoSlice.length - 1
           ? `${companyName || "SMS"}에서 ${location || "현장"} ${detectedType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
