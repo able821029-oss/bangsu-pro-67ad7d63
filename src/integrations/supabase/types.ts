@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      contents: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          text: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          text?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          text?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           blocks: Json
@@ -65,6 +95,87 @@ export type Database = {
           updated_at?: string
           work_date?: string | null
           work_type?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          google_refresh_token: string | null
+          id: string
+          name: string | null
+          terms_agreed: boolean | null
+          terms_agreed_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          google_refresh_token?: string | null
+          id?: string
+          name?: string | null
+          terms_agreed?: boolean | null
+          terms_agreed_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          google_refresh_token?: string | null
+          id?: string
+          name?: string | null
+          terms_agreed?: boolean | null
+          terms_agreed_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      schedules: {
+        Row: {
+          created_at: string
+          google_event_id: string | null
+          google_synced: boolean | null
+          id: string
+          image_url: string | null
+          location: string | null
+          memo: string | null
+          schedule_date: string
+          schedule_time: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          google_event_id?: string | null
+          google_synced?: boolean | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          memo?: string | null
+          schedule_date?: string
+          schedule_time?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          google_event_id?: string | null
+          google_synced?: boolean | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          memo?: string | null
+          schedule_date?: string
+          schedule_time?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
