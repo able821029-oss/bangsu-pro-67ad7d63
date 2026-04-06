@@ -1,7 +1,7 @@
 import { Home, Calendar, PenLine, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type TabId = "home" | "calendar" | "content" | "mypage";
+export type TabId = "home" | "calendar" | "content" | "mypage" | "camera" | "shorts" | "publish" | "settings";
 
 interface BottomNavProps {
   activeTab: TabId;
