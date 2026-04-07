@@ -58,7 +58,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [viewingPost, setViewingPost] = useState<BlogPost | null>(null);
   const [showSplash, setShowSplash] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("sms_onboarded"));
   const [showReviews, setShowReviews] = useState(false);
 
   const handleViewPost = (post: BlogPost) => setViewingPost(post);
@@ -70,17 +70,10 @@ function AppContent() {
     setShowOnboarding(false);
   }, []);
 
-  // Show onboarding for first-time users after login
-  useEffect(() => {
-    if (user && !localStorage.getItem("sms_onboarded")) {
-      setShowOnboarding(true);
-    }
-  }, [user]);
-
   if (showSplash) return <SplashScreen onDone={handleSplashDone} />;
+  if (showOnboarding) return <OnboardingSlides onComplete={handleOnboardingComplete} />;
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
   if (!user) return <AuthPage />;
-  if (showOnboarding) return <OnboardingSlides onComplete={handleOnboardingComplete} />;
 
   if (showReviews) {
     return <ReviewsPage onBack={() => setShowReviews(false)} />;

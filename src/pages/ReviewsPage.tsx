@@ -1,243 +1,100 @@
-import { useState } from "react";
-import { ArrowLeft, Star, ThumbsUp, MessageCircle, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, Star, TrendingUp } from "lucide-react";
 
-interface ReviewsPageProps {
-  onBack: () => void;
-}
-
-interface Review {
-  id: string;
-  name: string;
-  rating: number;
-  date: string;
-  category: string;
-  text: string;
-  helpful: number;
-  avatar: string;
-}
-
-const MOCK_REVIEWS: Review[] = [
-  {
-    id: "1",
-    name: "김**",
-    rating: 5,
-    date: "2026.03.28",
-    category: "방수공사",
-    text: "블로그 글을 AI로 작성해주니까 정말 편합니다. 사진만 올리면 자동으로 글이 완성되니 시간이 많이 절약됩니다. 고객 문의도 늘었어요!",
-    helpful: 24,
-    avatar: "김",
-  },
-  {
-    id: "2",
-    name: "박**",
-    rating: 5,
-    date: "2026.03.22",
-    category: "도장공사",
-    text: "일정 관리가 특히 좋습니다. 구글 캘린더에 자동으로 연동되니까 따로 기록할 필요가 없어요. 현장에서 바로 등록하고 갑니다.",
-    helpful: 18,
-    avatar: "박",
-  },
-  {
-    id: "3",
-    name: "이**",
-    rating: 4,
-    date: "2026.03.15",
-    category: "타일공사",
-    text: "SNS 마케팅을 혼자 해야 하는데, 이 앱 덕분에 네이버 블로그 관리가 훨씬 수월해졌습니다. 해시태그 추천도 유용해요.",
-    helpful: 15,
-    avatar: "이",
-  },
-  {
-    id: "4",
-    name: "최**",
-    rating: 5,
-    date: "2026.03.10",
-    category: "옥상방수",
-    text: "50대 사장님들도 쉽게 사용할 수 있게 만들어져 있어서 좋습니다. 글씨도 크고 버튼도 눌리기 쉽게 되어 있어요.",
-    helpful: 31,
-    avatar: "최",
-  },
-  {
-    id: "5",
-    name: "정**",
-    rating: 5,
-    date: "2026.03.05",
-    category: "외벽방수",
-    text: "전에는 블로그 글 하나 쓰는데 1시간 넘게 걸렸는데, 지금은 10분이면 끝납니다. 사진 찍고 올리기만 하면 되니까요.",
-    helpful: 27,
-    avatar: "정",
-  },
-  {
-    id: "6",
-    name: "한**",
-    rating: 4,
-    date: "2026.02.28",
-    category: "실내방수",
-    text: "캘린더 기능이 깔끔하고, 월/주/일 보기가 다 돼서 일정 파악하기 편합니다. 다만 알림 기능이 추가되면 더 좋겠어요.",
-    helpful: 12,
-    avatar: "한",
-  },
+const reviews = [
+  { name: "김OO 사장님", job: "방수 전문 10년", region: "강남구", rating: 5, text: "솔직히 처음엔 반신반의했어요. 근데 3주 만에 견적 문의가 2배로 늘었습니다. 사진만 찍으면 되니까 정말 편하고요.", ago: "2주 전", avatar: "김", gain: "견적 +200%" },
+  { name: "박OO 사장님", job: "도배 전문", region: "송파구", rating: 5, text: "네이버 블로그 운영하고 싶었는데 글 쓰는 게 너무 힘들었거든요. 이거 쓰고 나서 검색 순위가 확 올라갔어요.", ago: "1달 전", avatar: "박", gain: "검색 1위" },
+  { name: "이OO 사장님", job: "외벽 페인트 15년", region: "마포구", rating: 5, text: "月 9,900원에 이 정도면 대박이죠. 예전에 광고 쓸 때는 한 달에 20만원 넘게 나갔는데...", ago: "3주 전", avatar: "이", gain: "광고비 절감" },
+  { name: "최OO 사장님", job: "타일 시공 전문", region: "서초구", rating: 5, text: "쇼츠 영상 기능이 생기고 나서 인스타 팔로워가 늘었어요. 현장 영상이 자동으로 만들어지니까 신기합니다.", ago: "1주 전", avatar: "최", gain: "인스타 성장" },
+  { name: "정OO 사장님", job: "방수 도장 전문", region: "노원구", rating: 4, text: "처음 설치하고 바로 쓸 수 있어서 좋았어요. 사진 찍는 거 하나도 안 바뀌었는데 블로그가 알아서 올라가더라고요.", ago: "2달 전", avatar: "정", gain: "방문자 3배" },
+  { name: "한OO 사장님", job: "실내 인테리어", region: "용인시", rating: 5, text: "지인 소개로 시작했는데 이제 저도 다른 사장님들한테 소개해주고 있어요. 진짜 쓸만합니다.", ago: "3달 전", avatar: "한", gain: "지인 소개 중" },
+  { name: "윤OO 사장님", job: "욕실 리모델링", region: "성남시", rating: 5, text: "60대인데도 어렵지 않게 쓸 수 있어요. 사진 찍으면 끝이라 우리 같은 사람한테 딱이에요.", ago: "3주 전", avatar: "윤", gain: "초보도 가능" },
+  { name: "강OO 사장님", job: "철거·인테리어", region: "광진구", rating: 5, text: "한 달 써보니까 블로그 방문자 수가 300명에서 900명으로 늘었어요. 계속 쓸 생각입니다.", ago: "1달 전", avatar: "강", gain: "방문자 3배" },
 ];
 
-type SortType = "latest" | "highest" | "helpful";
+const stats = [
+  { label: "평균 별점", value: "4.9", unit: "★", color: "#FBBF24" },
+  { label: "재구독률", value: "94", unit: "%", color: "#22C55E" },
+  { label: "견적 증가", value: "+67", unit: "%", color: "#237FFF" },
+  { label: "사용 중", value: "1,240", unit: "명+", color: "#AB5EBE" },
+];
 
-export function ReviewsPage({ onBack }: ReviewsPageProps) {
-  const [sort, setSort] = useState<SortType>("latest");
-  const [showAll, setShowAll] = useState(false);
-
-  const averageRating = (
-    MOCK_REVIEWS.reduce((acc, r) => acc + r.rating, 0) / MOCK_REVIEWS.length
-  ).toFixed(1);
-
-  const sortedReviews = [...MOCK_REVIEWS].sort((a, b) => {
-    if (sort === "highest") return b.rating - a.rating;
-    if (sort === "helpful") return b.helpful - a.helpful;
-    return 0; // latest = default order
-  });
-
-  const displayedReviews = showAll ? sortedReviews : sortedReviews.slice(0, 4);
-
+export function ReviewsPage({ onBack }: { onBack: () => void }) {
   return (
-    <div className="min-h-screen bg-background pb-8">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center h-14 px-4">
-          <button onClick={onBack} className="mr-3 p-1">
-            <ArrowLeft className="w-5 h-5 text-foreground" />
-          </button>
-          <h1 className="text-lg font-bold text-foreground">고객 리뷰</h1>
+    <div className="pb-28 max-w-lg mx-auto">
+      {/* 헤더 */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-3">
+        <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-secondary transition-colors">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-lg font-bold">사용자 리뷰</h1>
+          <p className="text-xs text-muted-foreground">실제 사장님들의 생생한 후기</p>
         </div>
       </div>
 
-      {/* Summary Card */}
-      <div className="px-4 mt-6 mb-6">
-        <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-primary/10">
-          <CardContent className="p-6 flex items-center gap-6">
-            <div className="text-center">
-              <p className="text-5xl font-black text-foreground">{averageRating}</p>
-              <div className="flex gap-0.5 mt-2 justify-center">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star
-                    key={s}
-                    className={`w-4 h-4 ${
-                      s <= Math.round(Number(averageRating))
-                        ? "text-warning fill-warning"
-                        : "text-muted-foreground/30"
-                    }`}
-                  />
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {MOCK_REVIEWS.length}개 리뷰
-              </p>
-            </div>
-
-            <div className="flex-1 space-y-1.5">
-              {[5, 4, 3, 2, 1].map((rating) => {
-                const count = MOCK_REVIEWS.filter((r) => r.rating === rating).length;
-                const pct = (count / MOCK_REVIEWS.length) * 100;
-                return (
-                  <div key={rating} className="flex items-center gap-2 text-xs">
-                    <span className="text-muted-foreground w-3">{rating}</span>
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-warning rounded-full transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="text-muted-foreground w-5 text-right">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+      {/* 히어로 */}
+      <div className="px-4 pt-5 pb-4 text-center">
+        <div className="text-4xl mb-3">⭐</div>
+        <p className="text-xl font-black leading-snug">
+          전국 1,240명 사장님이<br/>선택한 마케팅 도구
+        </p>
       </div>
 
-      {/* Sort tabs */}
-      <div className="px-4 mb-4 flex gap-2">
-        {([
-          { key: "latest" as SortType, label: "최신순" },
-          { key: "highest" as SortType, label: "별점순" },
-          { key: "helpful" as SortType, label: "도움순" },
-        ]).map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setSort(key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              sort === key
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {label}
-          </button>
+      {/* 통계 그리드 */}
+      <div className="grid grid-cols-2 gap-3 px-4 mb-5">
+        {stats.map(s => (
+          <div key={s.label} className="bg-card border border-border rounded-2xl p-4 text-center">
+            <p className="text-3xl font-black" style={{ color: s.color }}>
+              {s.value}<span className="text-lg">{s.unit}</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1.5">{s.label}</p>
+          </div>
         ))}
       </div>
 
-      {/* Review list */}
+      {/* 리뷰 카드 */}
       <div className="px-4 space-y-3">
-        {displayedReviews.map((review) => (
-          <Card key={review.id} className="border-border/60">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm">
-                    {review.avatar}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-foreground">{review.name}</p>
-                    <p className="text-xs text-muted-foreground">{review.category} · {review.date}</p>
-                  </div>
-                </div>
-                <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star
-                      key={s}
-                      className={`w-3.5 h-3.5 ${
-                        s <= review.rating
-                          ? "text-warning fill-warning"
-                          : "text-muted-foreground/30"
-                      }`}
-                    />
-                  ))}
-                </div>
+        {reviews.map((r, i) => (
+          <div key={i} className="bg-card border border-border rounded-2xl p-4">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-11 h-11 rounded-full flex items-center justify-center font-black text-white text-base shrink-0"
+                style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
+                {r.avatar}
               </div>
-
-              <p className="text-sm text-foreground/85 leading-relaxed mb-3">
-                {review.text}
-              </p>
-
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                <button className="flex items-center gap-1 hover:text-primary transition-colors">
-                  <ThumbsUp className="w-3.5 h-3.5" />
-                  도움됨 {review.helpful}
-                </button>
-                <button className="flex items-center gap-1 hover:text-primary transition-colors">
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  답글
-                </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-bold text-sm">{r.name}</p>
+                  <span className="text-[10px] bg-green-500/10 text-green-500 px-1.5 py-0.5 rounded-md font-semibold shrink-0">인증</span>
+                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-semibold shrink-0 flex items-center gap-0.5">
+                    <TrendingUp className="w-2.5 h-2.5" />{r.gain}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">{r.job} · {r.region}</p>
               </div>
-            </CardContent>
-          </Card>
+              <p className="text-xs text-muted-foreground shrink-0">{r.ago}</p>
+            </div>
+            <div className="flex gap-0.5 mb-2">
+              {[1,2,3,4,5].map(i => (
+                <Star key={i} className="w-4 h-4" fill={i <= r.rating ? "#FBBF24" : "none"} stroke={i <= r.rating ? "#FBBF24" : "#6B7280"} />
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">"{r.text}"</p>
+          </div>
         ))}
       </div>
 
-      {/* Load more */}
-      {!showAll && sortedReviews.length > 4 && (
-        <div className="px-4 mt-4">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setShowAll(true)}
-          >
-            리뷰 더보기
-            <ChevronDown className="w-4 h-4 ml-1" />
-          </Button>
+      {/* 하단 CTA */}
+      <div className="px-4 pt-5">
+        <div className="rounded-2xl p-5 space-y-3 text-center"
+          style={{ background: "linear-gradient(135deg,rgba(35,127,255,0.08),rgba(171,94,190,0.08))", border: "1px solid rgba(35,127,255,0.18)" }}>
+          <p className="font-bold text-sm">나도 후기 남기기</p>
+          <p className="text-xs text-muted-foreground">솔직한 후기가 다른 사장님들께 도움이 됩니다</p>
+          <button className="w-full py-3 rounded-xl text-sm font-bold text-white"
+            style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
+            리뷰 작성하기
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
