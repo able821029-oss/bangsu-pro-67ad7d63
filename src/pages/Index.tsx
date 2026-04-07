@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { BottomNav, TabId } from "@/components/BottomNav";
 import { InstallBanner } from "@/components/InstallBanner";
+import { OnboardingSlides } from "@/components/OnboardingSlides";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import AuthPage from "@/pages/AuthPage";
 import { HomeTab } from "@/pages/HomeTab";
@@ -8,6 +9,7 @@ import { CalendarTab } from "@/pages/CalendarTab";
 import { ContentTab } from "@/pages/ContentTab";
 import { MyPage } from "@/pages/MyPage";
 import { PostDetailPage } from "@/pages/PostDetailPage";
+import { ReviewsPage } from "@/pages/ReviewsPage";
 import { BlogPost } from "@/stores/appStore";
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
@@ -56,14 +58,33 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [viewingPost, setViewingPost] = useState<BlogPost | null>(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showReviews, setShowReviews] = useState(false);
 
   const handleViewPost = (post: BlogPost) => setViewingPost(post);
   const handleBackFromPost = () => setViewingPost(null);
   const handleSplashDone = useCallback(() => setShowSplash(false), []);
 
+  const handleOnboardingComplete = useCallback(() => {
+    localStorage.setItem("sms_onboarded", "true");
+    setShowOnboarding(false);
+  }, []);
+
+  // Show onboarding for first-time users after login
+  useEffect(() => {
+    if (user && !localStorage.getItem("sms_onboarded")) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
+
   if (showSplash) return <SplashScreen onDone={handleSplashDone} />;
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
   if (!user) return <AuthPage />;
+  if (showOnboarding) return <OnboardingSlides onComplete={handleOnboardingComplete} />;
+
+  if (showReviews) {
+    return <ReviewsPage onBack={() => setShowReviews(false)} />;
+  }
 
   if (viewingPost) {
     return (
