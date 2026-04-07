@@ -14,7 +14,7 @@ const reviews = [
 const stats = [
   { label: "평균 별점", value: "4.9", unit: "★", color: "#FBBF24" },
   { label: "재구독률", value: "94", unit: "%", color: "#22C55E" },
-  { label: "견적 증가", value: "+67", unit: "%", color: "#237FFF" },
+  { label: "평균 견적 증가", value: "67", unit: "%↑", color: "#237FFF" },
   { label: "사용 중", value: "1,240", unit: "명+", color: "#AB5EBE" },
 ];
 

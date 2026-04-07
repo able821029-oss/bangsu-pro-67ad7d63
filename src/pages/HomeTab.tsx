@@ -212,7 +212,7 @@ export function HomeTab({
 
       {/* Quick Start */}
       <button
-        onClick={() => onNavigate("camera")}
+        onClick={() => onNavigate("content")}
         className="w-full rounded-2xl px-6 py-5 text-white text-lg font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all"
         style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)" }}
       >
@@ -252,7 +252,7 @@ export function HomeTab({
           <p className="text-xs text-[#22C55E] mt-1">▲ 2 지난달</p>
         </button>
         {/* 영상 제작 — 프로+ 잠금 표시 */}
-        <button onClick={() => onNavigate("shorts")} className="glass-card p-4 text-center w-full">
+        <button onClick={() => onNavigate("content")} className="glass-card p-4 text-center w-full">
           <p className="text-[28px] font-bold text-foreground">{videoCount}</p>
           <p className="text-xs text-muted-foreground">이번달 영상</p>
           <p className="text-xs text-[#AB5EBE] mt-1">▶ 만들기</p>

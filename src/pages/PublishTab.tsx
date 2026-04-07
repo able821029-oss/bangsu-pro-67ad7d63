@@ -172,7 +172,7 @@ export function PublishTab({
           <Button
             className="w-full"
             style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white" }}
-            onClick={() => onNavigate("camera")}
+            onClick={() => onNavigate("content")}
           >
             지금 바로 글 작성하기
           </Button>
