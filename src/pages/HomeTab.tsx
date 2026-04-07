@@ -162,7 +162,7 @@ export function HomeTab({
       {/* 업체명 미설정 시 설정 유도 */}
       {!settings.companyName && (
         <button
-          onClick={() => onNavigate("settings")}
+          onClick={() => onNavigate("mypage")}
           className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3"
         >
           <span className="text-xl">⚙️</span>
@@ -224,7 +224,7 @@ export function HomeTab({
       <button
         onClick={() => {
           sessionStorage.setItem("sms-open-settings-page", "fieldtools");
-          onNavigate("settings");
+          onNavigate("mypage");
         }}
         className="w-full flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3"
       >

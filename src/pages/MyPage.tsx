@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   User, LogOut, Crown, FileText, Settings,
-  ChevronRight, Star, Download, MessageSquare, Phone
+  ChevronRight, Star, Download, MessageSquare, Phone, Hammer
 } from "lucide-react";
 import { useAppStore } from "@/stores/appStore";
 import { PricingPlan } from "@/pages/settings/PricingPlan";
@@ -14,8 +14,9 @@ import { ProfileSettings } from "@/pages/settings/ProfileSettings";
 import { TermsPage } from "@/pages/settings/TermsPage";
 import { UserSettings } from "@/pages/settings/UserSettings";
 import { ReviewsPage } from "@/pages/ReviewsPage";
+import { FieldToolsPage } from "@/pages/FieldToolsPage";
 
-type Page = "main" | "pricing" | "profile" | "terms" | "usersettings" | "reviews";
+type Page = "main" | "pricing" | "profile" | "terms" | "usersettings" | "reviews" | "fieldtools";
 
 export function MyPage() {
   const { user, signOut } = useAuth();
@@ -23,7 +24,11 @@ export function MyPage() {
   const settings = useAppStore(s => s.settings);
   const [name, setName] = useState("");
   const [googleConnected, setGoogleConnected] = useState(false);
-  const [page, setPage] = useState<Page>("main");
+  const [page, setPage] = useState<Page>(() => {
+    const pending = sessionStorage.getItem("sms-open-settings-page") as Page | null;
+    if (pending) { sessionStorage.removeItem("sms-open-settings-page"); return pending; }
+    return "main";
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -39,6 +44,7 @@ export function MyPage() {
   if (page === "terms") return <TermsPage onBack={() => setPage("main")} />;
   if (page === "usersettings") return <UserSettings onBack={() => setPage("main")} />;
   if (page === "reviews") return <ReviewsPage onBack={() => setPage("main")} />;
+  if (page === "fieldtools") return <FieldToolsPage onBack={() => setPage("main")} />;
 
   const planColor = subscription.plan === "무제한" ? "#F97316"
     : subscription.plan === "프로" ? "#AB5EBE"
@@ -49,6 +55,10 @@ export function MyPage() {
   const videoPct = Math.min(100, Math.round(((subscription.videoUsed || 0) / (subscription.maxVideo || 1)) * 100));
 
   const menuItems = [
+    {
+      icon: Hammer, label: "현장 도우미", desc: "일당·날씨·임금체불",
+      onClick: () => setPage("fieldtools"),
+    },
     {
       icon: Crown, label: "요금제 변경", desc: subscription.plan,
       onClick: () => setPage("pricing"),
