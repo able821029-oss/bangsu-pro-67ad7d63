@@ -20,8 +20,8 @@
     --primary: 220 100% 84%;        /* #ADC6FF */
     --primary-foreground: 215 100% 21%; /* #002E69 */
 
-    --secondary: 290 100% 84%;      /* #F2AFFF */
-    --secondary-foreground: 289 100% 21%; /* #54026A */
+    --secondary: 222 20% 23%;       /* #2F3445 surface-variant */
+    --secondary-foreground: 230 72% 92%; /* #DEE1F7 */
 
     --muted: 222 23% 17%;           /* #25293A surface-container-high */
     --muted-foreground: 224 13% 59%; /* #8B90A0 outline */
