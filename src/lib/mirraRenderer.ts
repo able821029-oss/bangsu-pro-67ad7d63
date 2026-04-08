@@ -437,10 +437,8 @@ export async function renderMirraVideo(
   const totalAllFrames = scenes.reduce((s, sc) => s + (sc.duration || 100), 0);
   const FRAME_MS = Math.floor(1000 / FPS); // 33ms
 
-  // AudioContext 클럭 기반 렌더링 — throttle 없는 정확한 타이밍 보장
-  // AudioContext.currentTime은 하드웨어 오디오 클럭 기반으로 브라우저 throttle 영향 없음
-  const clockCtx = audioCtx || new AudioContext();
-  const renderStartTime = clockCtx.currentTime;
+  // performance.now() 기반 실시간 렌더링 — AudioContext suspended 문제 회피
+  const renderStartMs = performance.now();
 
   let globalFrameIdx = 0;
   for (let si = 0; si < scenes.length; si++) {
@@ -464,10 +462,11 @@ export async function renderMirraVideo(
     }
 
     for (let fi = 0; fi < totalFrames; fi++, globalFrameIdx++) {
-      // 목표 시간까지 AudioContext 클럭으로 대기 (1ms 폴링)
-      const targetTime = renderStartTime + globalFrameIdx * (1 / FPS);
-      while (clockCtx.currentTime < targetTime) {
-        await new Promise(r => setTimeout(r, 1));
+      // performance.now() 기반 정확한 프레임 타이밍
+      const targetMs = renderStartMs + globalFrameIdx * FRAME_MS;
+      const now = performance.now();
+      if (now < targetMs) {
+        await new Promise(r => setTimeout(r, Math.max(1, targetMs - now)));
       }
 
       const t = fi / totalFrames;
