@@ -23,12 +23,12 @@ interface VoiceOption {
 
 // Web Speech API voices — mapped to Korean-compatible system voices
 const VOICES: VoiceOption[] = [
-  { id: "male_calm", label: "남성 — 차분한", desc: "낮고 안정적", gender: "male", lang: "ko-KR", pitch: 0.85, rate: 0.85, voiceNameHint: ["Google 한국의", "Yuna", "Korean Male"] },
-  { id: "male_pro", label: "남성 — 전문적", desc: "신뢰감 있는", gender: "male", lang: "ko-KR", pitch: 0.95, rate: 0.9, voiceNameHint: ["Google 한국의", "Korean Male"] },
-  { id: "male_strong", label: "남성 — 힘있는", desc: "에너지 넘치는", gender: "male", lang: "ko-KR", pitch: 1.0, rate: 1.0, voiceNameHint: ["Google 한국의", "Korean Male"] },
-  { id: "female_friendly", label: "여성 — 친근한", desc: "따뜻하고 밝은", gender: "female", lang: "ko-KR", pitch: 1.1, rate: 0.9, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
-  { id: "female_pro", label: "여성 — 전문적", desc: "자신감 있는", gender: "female", lang: "ko-KR", pitch: 1.0, rate: 0.95, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
-  { id: "female_bright", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female", lang: "ko-KR", pitch: 1.2, rate: 1.0, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
+  { id: "male_calm", label: "남성 — 차분한", desc: "낮고 안정적", gender: "male", lang: "ko-KR", pitch: 0.5, rate: 0.75, voiceNameHint: ["Google 한국의", "Korean Male"] },
+  { id: "male_pro", label: "남성 — 전문적", desc: "신뢰감 있는", gender: "male", lang: "ko-KR", pitch: 0.7, rate: 0.85, voiceNameHint: ["Google 한국의", "Korean Male"] },
+  { id: "male_strong", label: "남성 — 힘있는", desc: "에너지 넘치는", gender: "male", lang: "ko-KR", pitch: 0.9, rate: 1.1, voiceNameHint: ["Google 한국의", "Korean Male"] },
+  { id: "female_friendly", label: "여성 — 친근한", desc: "따뜻하고 밝은", gender: "female", lang: "ko-KR", pitch: 1.4, rate: 0.85, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
+  { id: "female_pro", label: "여성 — 전문적", desc: "자신감 있는", gender: "female", lang: "ko-KR", pitch: 1.15, rate: 0.95, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
+  { id: "female_bright", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female", lang: "ko-KR", pitch: 1.7, rate: 1.15, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
 ];
 
 const videoStyles: { id: VideoStyle; label: string; desc: string; icon: string }[] = [

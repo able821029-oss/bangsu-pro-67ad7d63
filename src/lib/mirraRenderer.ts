@@ -435,41 +435,47 @@ export async function renderMirraVideo(
 
   // 총 프레임 수 계산
   const totalAllFrames = scenes.reduce((s, sc) => s + (sc.duration || 100), 0);
-  const FRAME_MS = Math.floor(1000 / FPS); // 33ms
+  // FRAME_MS는 requestAnimationFrame 방식에서는 브라우저가 자동 관리
 
-  // performance.now() 기반 실시간 렌더링 — AudioContext suspended 문제 회피
-  const renderStartMs = performance.now();
-
+  // requestAnimationFrame 기반 실시간 렌더링 — 브라우저 프레임과 동기화
   let globalFrameIdx = 0;
-  for (let si = 0; si < scenes.length; si++) {
-    const scene = scenes[si];
-    const totalFrames = scene.duration || 100;
-    const isEnding = si === scenes.length - 1 && !scene.photo;
-    const photoImg = scene.photo ? imageMap[scene.photo] : null;
+  let sceneIdx = 0;
+  let frameInScene = 0;
 
-    narrationTexts.push(narrationEnabled && scene.narration ? scene.narration : "");
-    onProgress(si, scenes.length);
-
-    // 나레이션 오디오 재생
-    const narrationBuffer = narrationBuffers[si] || null;
-    if (narrationBuffer && audioCtx && audioDest) {
-      try {
-        const source = audioCtx.createBufferSource();
-        source.buffer = narrationBuffer;
-        source.connect(audioDest);
-        source.start();
-      } catch {}
-    }
-
-    for (let fi = 0; fi < totalFrames; fi++, globalFrameIdx++) {
-      // performance.now() 기반 정확한 프레임 타이밍
-      const targetMs = renderStartMs + globalFrameIdx * FRAME_MS;
-      const now = performance.now();
-      if (now < targetMs) {
-        await new Promise(r => setTimeout(r, Math.max(1, targetMs - now)));
+  await new Promise<void>((resolveRender) => {
+    function renderFrame() {
+      if (sceneIdx >= scenes.length) {
+        onProgress(scenes.length, scenes.length);
+        if (recorder.state !== "inactive") {
+          try { recorder.requestData(); } catch {}
+          recorder.stop();
+        }
+        resolveRender();
+        return;
       }
 
-      const t = fi / totalFrames;
+      const scene = scenes[sceneIdx];
+      const totalFrames = scene.duration || 100;
+      const isEnding = sceneIdx === scenes.length - 1 && !scene.photo;
+      const photoImg = scene.photo ? imageMap[scene.photo] : null;
+
+      // 장면 시작 시 나레이션/진행상황 업데이트
+      if (frameInScene === 0) {
+        narrationTexts.push(narrationEnabled && scene.narration ? scene.narration : "");
+        onProgress(sceneIdx, scenes.length);
+
+        const narrationBuffer = narrationBuffers[sceneIdx] || null;
+        if (narrationBuffer && audioCtx && audioDest) {
+          try {
+            const source = audioCtx.createBufferSource();
+            source.buffer = narrationBuffer;
+            source.connect(audioDest);
+            source.start();
+          } catch {}
+        }
+      }
+
+      const t = frameInScene / totalFrames;
       drawGradientBg(ctx, scene.bg_colors || ["#001130", "#0d2847"]);
       if (photoImg && scene.bg_type === "photo") {
         drawFullScreenPhoto(ctx, photoImg, scene.bg_colors || ["#001130", "#0d2847"], t);
@@ -486,15 +492,21 @@ export async function renderMirraVideo(
         drawDividerLine(ctx, textCenterY + 110, scene.accent_color || "#237FFF", Math.max(0, (t - 0.28) / 0.25));
         drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 175, Math.max(0, (t - 0.38) / 0.5));
       }
+
+      frameInScene++;
+      globalFrameIdx++;
+
+      if (frameInScene >= totalFrames) {
+        sceneIdx++;
+        frameInScene = 0;
+      }
+
+      // 다음 프레임을 requestAnimationFrame으로 예약 — 브라우저 렌더 사이클과 동기화
+      requestAnimationFrame(renderFrame);
     }
-  }
 
-  onProgress(scenes.length, scenes.length);
-
-  if (recorder.state !== "inactive") {
-    try { recorder.requestData(); } catch {}
-    recorder.stop();
-  }
+    requestAnimationFrame(renderFrame);
+  });
 
   // 렌더링 완료 후 최대 8초 대기
   const blob = await Promise.race([
