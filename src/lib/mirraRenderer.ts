@@ -410,7 +410,7 @@ export async function renderMirraVideo(
   const recordingDone = new Promise<Blob>((resolve, reject) => {
     recorder.onstop = () => {
       cleanupRecording();
-      resolve(new Blob(chunks, { type: mimeType || `video/${ext}` }));
+      resolve(new Blob(chunks, { type: mimeType || ("video/" + ext) }));
     };
     recorder.onerror = () => { cleanupRecording(); reject(new Error("RECORDING_FAILED")); };
   });
@@ -436,7 +436,6 @@ export async function renderMirraVideo(
   // 총 프레임 수 계산
   const totalAllFrames = scenes.reduce((s, sc) => s + (sc.duration || 100), 0);
   const FRAME_MS = Math.floor(1000 / FPS); // 33ms
-}초`);
 
   // AudioContext 클럭 기반 렌더링 — throttle 없는 정확한 타이밍 보장
   // AudioContext.currentTime은 하드웨어 오디오 클럭 기반으로 브라우저 throttle 영향 없음
@@ -504,7 +503,7 @@ export async function renderMirraVideo(
     new Promise<Blob>((resolve) => setTimeout(() => {
       console.warn("[mirra] recorder.onstop 타임아웃 — 강제 종료");
       cleanupRecording();
-      resolve(new Blob(chunks, { type: mimeType || `video/${ext}` }));
+      resolve(new Blob(chunks, { type: mimeType || ("video/" + ext) }));
     }, 8000)),
   ]);
 
