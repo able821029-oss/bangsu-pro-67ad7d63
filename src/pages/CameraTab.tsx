@@ -112,7 +112,6 @@ export function CameraTab({
     e.target.value = "";
   };
 
-  // ✅ FIX: 사진 없을 때 toast 안내
   const handleNext = () => {
     if (photos.length === 0) {
       toast({ title: "사진을 먼저 촬영해주세요", variant: "destructive" });
@@ -200,7 +199,6 @@ export function CameraTab({
         .single();
 
       if (dbError) {
-        console.error("DB save error:", dbError);
         toast({ title: "DB 저장 실패", description: dbError.message, variant: "destructive" });
       }
 
@@ -267,19 +265,20 @@ export function CameraTab({
     );
   };
 
+  // ─── AI 생성 중 화면 (Stitch Dark) ───
   if (isGenerating) {
     return (
-      <div className="px-4 pt-6 pb-24 space-y-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <Sparkles className="w-10 h-10 text-primary animate-pulse" />
+      <div className="px-4 pt-6 pb-28 space-y-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="w-20 h-20 rounded-full bg-[#4C8EFF]/15 flex items-center justify-center">
+          <Sparkles className="w-10 h-10 text-[#ADC6FF] animate-pulse" />
         </div>
-        <h2 className="text-xl font-bold text-center">
+        <h2 className="text-xl font-bold text-center text-[#DEE1F7] font-[Manrope]">
           {genStep === "error" ? "생성 실패" : "AI가 글을 작성하고 있습니다"}
         </h2>
         <div className="w-full max-w-xs">
-          <div className="w-full bg-secondary rounded-full h-3">
+          <div className="w-full bg-[#1A1F2F] rounded-full h-3">
             <div
-              className="bg-primary rounded-full h-3 transition-all duration-300"
+              className="bg-gradient-to-r from-[#4C8EFF] to-[#ADC6FF] rounded-full h-3 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -294,43 +293,55 @@ export function CameraTab({
           <StepItem label="작성 완료" active={false} done={genStep === "done"} />
         </div>
         {genStep === "error" && (
-          <Button variant="outline" onClick={() => setIsGenerating(false)}>
+          <button
+            onClick={() => setIsGenerating(false)}
+            className="bg-[#2F3445] text-[#ADC6FF] rounded-full h-[52px] px-8 font-bold text-sm"
+          >
             돌아가기
-          </Button>
+          </button>
         )}
       </div>
     );
   }
 
-  // ─── Step 1 ───
+  // ─── Step 1: 사진 + 현장 정보 (Stitch Dark) ───
   if (wizardStep === 1) {
     return (
-      <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
+      <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <button
             onClick={() => onNavigate("home")}
-            className="flex items-center gap-1 text-sm text-primary font-medium"
+            className="flex items-center gap-1 text-sm text-[#ADC6FF] font-medium font-[Inter]"
           >
             <ArrowLeft className="w-4 h-4" /> 홈
           </button>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Camera className="w-5 h-5 text-primary" /> 사진 + 현장 정보
+          <h1 className="text-xl font-bold flex items-center gap-2 text-[#DEE1F7] font-[Manrope]">
+            <Camera className="w-5 h-5 text-[#ADC6FF]" /> 사진 + 현장 정보
           </h1>
+          {/* Wizard progress dots */}
           <div className="flex gap-1.5 items-center">
-            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-            <div className="w-2.5 h-2.5 rounded-full bg-secondary" />
+            <div className="w-4 h-1.5 rounded-full bg-[#4C8EFF]" />
+            <div className="w-1.5 h-1.5 rounded-full bg-[#414754]" />
           </div>
         </div>
 
+        {/* Action buttons */}
         <div className="grid grid-cols-2 gap-3">
-          <Button size="lg" className="w-full" onClick={() => cameraInputRef.current?.click()}>
+          <button
+            className="w-full h-[52px] rounded-full bg-gradient-to-r from-[#4C8EFF] to-[#6BA4FF] text-white font-bold text-sm flex items-center justify-center gap-2"
+            onClick={() => cameraInputRef.current?.click()}
+          >
             <Camera className="w-5 h-5" />
             사진 촬영
-          </Button>
-          <Button variant="secondary" size="lg" className="w-full" onClick={() => fileInputRef.current?.click()}>
+          </button>
+          <button
+            className="w-full h-[52px] rounded-full bg-[#2F3445] text-[#ADC6FF] font-bold text-sm flex items-center justify-center gap-2"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <ImagePlus className="w-5 h-5" />
             갤러리 선택
-          </Button>
+          </button>
         </div>
 
         <input
@@ -350,54 +361,59 @@ export function CameraTab({
           onChange={handleFileSelect}
         />
 
+        {/* Photo grid */}
         <div>
-          <p className="text-sm text-muted-foreground mb-2">현장 사진 <span className="font-semibold text-foreground">{photos.length}</span>/10장 {photos.length === 0 ? "— 많을수록 좋아요!" : photos.length >= 3 ? "✓ 충분해요" : "— 3장 이상 권장"}</p>
+          <p className="text-sm text-[#8B90A0] mb-2 font-[Inter]">
+            현장 사진 <span className="font-semibold text-[#DEE1F7]">{photos.length}</span>/10장{" "}
+            {photos.length === 0 ? "— 많을수록 좋아요!" : photos.length >= 3 ? "✓ 충분해요" : "— 3장 이상 권장"}
+          </p>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {photos.map((photo) => (
               <div
                 key={photo.id}
-                className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border"
+                className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-[#161B2B]"
               >
                 <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
                 <button
                   onClick={() => removePhoto(photo.id)}
-                  className="absolute top-0.5 right-0.5 bg-destructive rounded-full p-0.5"
+                  className="absolute top-0.5 right-0.5 bg-red-500/80 rounded-full p-0.5"
                 >
-                  <X className="w-3 h-3 text-destructive-foreground" />
+                  <X className="w-3 h-3 text-white" />
                 </button>
               </div>
             ))}
             {photos.length === 0 && (
               <>
                 {[0, 1, 2].map(i => (
-                  <div key={i} className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center opacity-40">
-                    <Camera className="w-6 h-6 text-muted-foreground" />
+                  <div key={i} className="w-20 h-20 rounded-xl border-2 border-dashed border-[#414754] bg-[#161B2B] flex items-center justify-center">
+                    <Camera className="w-6 h-6 text-[#8B90A0]" />
                   </div>
                 ))}
                 <div className="flex items-center ml-2">
-                  <p className="text-xs text-muted-foreground whitespace-nowrap">사진을<br/>추가해요</p>
+                  <p className="text-xs text-[#8B90A0] whitespace-nowrap font-[Inter]">사진을<br/>추가해요</p>
                 </div>
               </>
             )}
           </div>
         </div>
 
-        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
+        {/* Location & Date card — glass-card style */}
+        <div className="bg-white/[0.06] backdrop-blur-md rounded-xl border border-white/10 p-4 space-y-3">
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground flex items-center gap-1">
+            <label className="text-xs text-[#8B90A0] flex items-center gap-1 font-[Inter]">
               <MapPin className="w-3 h-3" /> 시공 위치
             </label>
-            {gpsTimedOut && !location && <p className="text-xs text-yellow-500">위치 감지 실패 — 직접 입력해 주세요</p>}
+            {gpsTimedOut && !location && <p className="text-xs text-yellow-500 font-[Inter]">위치 감지 실패 — 직접 입력해 주세요</p>}
             <div className="flex gap-2">
               <input
-                className="flex-1 bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
+                className="flex-1 bg-[#1A1F2F] border border-white/10 rounded-xl px-3 h-14 text-sm outline-none text-[#DEE1F7] placeholder:text-[#8B90A0] font-[Inter]"
                 placeholder={isLocating ? "GPS 감지 중..." : "예) 강남구 역삼동"}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
               />
               <button
                 onClick={handleRetryGps}
-                className="bg-primary/10 text-primary rounded-lg px-3 py-2 text-xs font-medium shrink-0"
+                className="bg-[#4C8EFF]/15 text-[#ADC6FF] rounded-xl px-3 h-14 text-xs font-medium shrink-0 flex items-center gap-1 font-[Inter]"
               >
                 {isLocating ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -410,18 +426,18 @@ export function CameraTab({
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground flex items-center gap-1">
+            <label className="text-xs text-[#8B90A0] flex items-center gap-1 font-[Inter]">
               <CalendarDays className="w-3 h-3" /> 시공 일자
             </label>
             <div className="relative">
               <input
                 type="date"
-                className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
+                className="w-full bg-[#1A1F2F] border border-white/10 rounded-xl px-3 h-14 text-sm outline-none text-[#DEE1F7] font-[Inter]"
                 value={constructionDate}
                 max={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setConstructionDate(e.target.value)}
               />
-              <p className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+              <p className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#8B90A0] pointer-events-none font-[Inter]">
                 {constructionDate ? new Date(constructionDate).toLocaleDateString("ko-KR", { year:"numeric", month:"long", day:"numeric" }) : ""}
               </p>
             </div>
@@ -435,50 +451,62 @@ export function CameraTab({
           }}
         />
 
-        <Button variant="hero" size="xl" className="w-full" onClick={handleNext}>
+        {/* CTA button — Stitch brand gradient */}
+        <button
+          className="w-full h-[52px] rounded-full bg-gradient-to-r from-[#4C8EFF] to-[#6BA4FF] text-white font-bold text-base flex items-center justify-center gap-2"
+          onClick={handleNext}
+        >
           다음 →
-        </Button>
+        </button>
       </div>
     );
   }
 
-  // ─── Step 2 ───
+  // ─── Step 2: 스타일 선택 (Stitch Dark) ───
   return (
-    <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
+    <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <button onClick={() => setWizardStep(1)} className="flex items-center gap-1 text-sm text-primary font-medium">
+        <button onClick={() => setWizardStep(1)} className="flex items-center gap-1 text-sm text-[#ADC6FF] font-medium font-[Inter]">
           <ArrowLeft className="w-4 h-4" /> 이전
         </button>
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <PenLine className="w-5 h-5 text-primary" /> 스타일 선택
+        <h1 className="text-xl font-bold flex items-center gap-2 text-[#DEE1F7] font-[Manrope]">
+          <PenLine className="w-5 h-5 text-[#ADC6FF]" /> 스타일 선택
         </h1>
+        {/* Wizard progress dots */}
         <div className="flex gap-1.5 items-center">
-            <div className="w-2.5 h-2.5 rounded-full bg-primary/30" />
-            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-          </div>
+          <div className="w-1.5 h-1.5 rounded-full bg-[#414754]" />
+          <div className="w-4 h-1.5 rounded-full bg-[#4C8EFF]" />
+        </div>
       </div>
 
+      {/* Persona cards */}
       <div>
-        <p className="text-sm font-semibold mb-2">글쓰기 페르소나</p>
+        <p className="text-sm font-semibold mb-2 text-[#C1C6D7] font-[Inter]">글쓰기 페르소나</p>
         <div className="space-y-2">
           {personas.map((p) => (
             <button
               key={p.id}
               onClick={() => setSelectedPersona(p.id)}
-              className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${selectedPersona === p.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+              className={`w-full text-left px-4 py-3 rounded-xl transition-all ${
+                selectedPersona === p.id
+                  ? "border border-[#4C8EFF] bg-[#4C8EFF]/10"
+                  : "border border-white/10 bg-[#1A1F2F]"
+              }`}
             >
-              <p className="font-semibold text-sm">{p.label}</p>
-              <p className="text-xs text-muted-foreground">{p.desc}</p>
+              <p className="font-semibold text-sm text-[#DEE1F7] font-[Manrope]">{p.label}</p>
+              <p className="text-xs text-[#8B90A0] font-[Inter]">{p.desc}</p>
             </button>
           ))}
         </div>
       </div>
 
+      {/* Platform selection */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold">게시 플랫폼 선택</p>
+          <p className="text-sm font-semibold text-[#C1C6D7] font-[Inter]">게시 플랫폼 선택</p>
           {selectedPlatforms.length === 0 && (
-            <span className="text-xs text-amber-500 font-medium">하나 이상 선택해 주세요</span>
+            <span className="text-xs text-amber-500 font-medium font-[Inter]">하나 이상 선택해 주세요</span>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -492,21 +520,25 @@ export function CameraTab({
           ))}
         </div>
         {selectedPlatforms.length === 0 && (
-          <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2">
-            <p className="text-xs text-amber-600">네이버 블로그를 선택하면 검색 상위노출에 유리합니다</p>
+          <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2">
+            <p className="text-xs text-amber-500 font-[Inter]">네이버 블로그를 선택하면 검색 상위노출에 유리합니다</p>
           </div>
         )}
       </div>
 
-      <Button
-        variant="hero" size="xl" className="w-full"
+      {/* CTA button — Stitch brand gradient */}
+      <button
+        className={`w-full h-[52px] rounded-full font-bold text-base flex items-center justify-center gap-2 transition-opacity ${
+          selectedPlatforms.length === 0
+            ? "bg-[#2F3445] text-[#8B90A0] opacity-50 cursor-not-allowed"
+            : "bg-gradient-to-r from-[#4C8EFF] to-[#6BA4FF] text-white"
+        }`}
         onClick={handleStartAI}
         disabled={selectedPlatforms.length === 0}
-        style={selectedPlatforms.length === 0 ? {} : undefined}
       >
         <Sparkles className="w-6 h-6" />
         AI 글쓰기 시작
-      </Button>
+      </button>
     </div>
   );
 }
@@ -515,14 +547,16 @@ function StepItem({ label, active, done }: { label: string; active: boolean; don
   return (
     <div className="flex items-center gap-3">
       {done ? (
-        <CheckCircle2 className="w-6 h-6 text-success shrink-0" />
+        <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
       ) : active ? (
-        <Loader2 className="w-6 h-6 text-primary animate-spin shrink-0" />
+        <Loader2 className="w-6 h-6 text-[#4C8EFF] animate-spin shrink-0" />
       ) : (
-        <div className="w-6 h-6 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+        <div className="w-6 h-6 rounded-full border-2 border-[#414754] shrink-0" />
       )}
       <p
-        className={`text-sm font-medium ${done ? "text-success" : active ? "text-foreground" : "text-muted-foreground"}`}
+        className={`text-sm font-medium font-[Inter] ${
+          done ? "text-emerald-400" : active ? "text-[#DEE1F7]" : "text-[#8B90A0]"
+        }`}
       >
         {label}
       </p>
