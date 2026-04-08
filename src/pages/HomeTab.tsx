@@ -108,116 +108,73 @@ export function HomeTab({
   ).length;
 
   return (
-    <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-      {/* 헤더 — 설정 아이콘 제거, 로고 수정 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5">
-            <svg width="36" height="36" viewBox="0 0 64 64" fill="none" className="shrink-0">
-              <defs>
-                <linearGradient id="hSg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#237FFF" />
-                  <stop offset="100%" stopColor="#AB5EBE" />
-                </linearGradient>
-              </defs>
-              <rect width="64" height="64" rx="16" fill="url(#hSg)" />
-              <text
-                x="8"
-                y="52"
-                fontFamily="Arial Black, Helvetica Neue, sans-serif"
-                fontWeight="900"
-                fontSize="52"
-                fill="#FFFFFF"
-              >
-                S
-              </text>
-            </svg>
-            <div className="flex flex-col gap-1">
-              <span
-                className="font-black text-xl leading-none"
-                style={{
-                  background: "linear-gradient(90deg, #237FFF, #AB5EBE)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
-                SMS
-              </span>
-              <span
-                style={{
-                  fontSize: "9px",
-                  fontWeight: 600,
-                  color: "rgba(180,180,200,0.9)",
-                  letterSpacing: "2px",
-                  textTransform: "uppercase" as const,
-                }}
-              >
-                셀프마케팅서비스
-              </span>
-            </div>
-          </div>
+    <div className="px-5 pt-6 pb-28 space-y-6 max-w-lg mx-auto">
+      {/* Stitch Header */}
+      <header className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-[#237FFF] text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>architecture</span>
+          <span className="headline-font font-bold text-2xl tracking-tighter text-[#237FFF]">SMS</span>
         </div>
-      </div>
+        <button className="hover:opacity-80 transition-opacity">
+          <span className="material-symbols-outlined text-[#414754]">notifications</span>
+        </button>
+      </header>
 
-      {/* 업체명 미설정 시 설정 유도 */}
+      {/* Stitch Amber Warning Banner */}
       {!settings.companyName && (
         <button
           onClick={() => onNavigate("mypage")}
-          className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-center gap-3"
+          className="w-full bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded-r-xl flex justify-between items-center"
         >
-          <span className="text-xl">⚙️</span>
-          <div className="text-left flex-1">
-            <p className="text-sm font-semibold text-amber-600">업체 정보를 먼저 입력해 주세요</p>
-            <p className="text-xs text-muted-foreground">업체명·전화번호를 설정하면 글에 자동 삽입됩니다</p>
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-amber-500">warning</span>
+            <p className="text-amber-200 font-bold text-sm">업체 정보를 먼저 입력해 주세요</p>
           </div>
-          <span className="text-amber-500 text-sm">→</span>
+          <span className="material-symbols-outlined text-amber-500 text-sm">arrow_forward_ios</span>
         </button>
       )}
 
-      {/* User + Plan Info */}
-      <div className="glass-card p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold text-foreground">{settings.companyName ? `${settings.companyName} 사장님` : "업체명을 설정해 주세요"}</p>
-            <p className="text-xs text-muted-foreground">
-              {subscription.plan} · {subscription.maxCount}건 중 {subscription.usedCount}건
-            </p>
+      {/* Stitch Glassmorphism User Card */}
+      <section className="glass-card p-6 space-y-5">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full p-0.5 bg-brand-gradient">
+            <div className="w-full h-full rounded-full bg-background overflow-hidden flex items-center justify-center">
+              <span className="text-2xl">👷</span>
+            </div>
           </div>
-          {medal && (
-            <button onClick={() => setShowBadgeSheet(true)}>
-              <span
-                className="text-xs font-bold px-2.5 py-1 rounded-full"
-                style={{ color: medal.color, background: medal.bg, border: `1px solid ${medal.border}` }}
-              >
-                {medal.icon} {medal.label}
-              </span>
-            </button>
-          )}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold">{settings.companyName ? `${settings.companyName} 사장님` : "사장님"}</h2>
+              <span className="bg-[#4C8EFF] text-[#00285C] px-2 py-0.5 rounded-full text-[10px] font-bold">{subscription.plan} 플랜</span>
+            </div>
+            {medal && (
+              <button onClick={() => setShowBadgeSheet(true)} className="flex items-center gap-1">
+                <span className="text-xs font-bold" style={{ color: medal.color }}>{medal.icon} {medal.label}</span>
+              </button>
+            )}
+          </div>
         </div>
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">이번달 사용량</span>
-            <span className="text-xs font-semibold" style={{ color: progressColor }}>
-              잔여 {remaining}건
-            </span>
+        <div className="space-y-2">
+          <div className="flex justify-between items-end">
+            <span className="text-sm font-medium text-[#C1C6D7]">블로그 이번달 사용량</span>
+            <span className="text-sm font-bold label-font text-primary">{subscription.usedCount} <span className="text-[#8B90A0] text-xs font-normal">/ {subscription.maxCount}건</span></span>
           </div>
-          <div className="w-full bg-secondary rounded-full h-2">
+          <div className="h-2 w-full bg-[#2F3445] rounded-full overflow-hidden">
             <div
-              className="rounded-full h-2 transition-all duration-300"
-              style={{ width: `${Math.min(usagePercent, 100)}%`, backgroundColor: progressColor }}
+              className="h-full bg-brand-gradient rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(usagePercent, 100)}%`, boxShadow: "0 0 8px rgba(35,127,255,0.4)" }}
             />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Quick Start */}
+      {/* Stitch Power CTA */}
       <button
         onClick={() => onNavigate("content")}
-        className="w-full rounded-2xl px-6 py-5 text-white text-lg font-bold flex items-center justify-center gap-3 shadow-lg active:scale-[0.97] transition-all"
-        style={{ background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)" }}
+        className="w-full h-[52px] bg-brand-gradient rounded-full flex items-center justify-center gap-2 shadow-lg shadow-[#4C8EFF]/20 active:scale-95 transition-transform duration-200"
       >
-        <Camera className="w-7 h-7" />
-        지금 바로 글 작성하기
+        <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>photo_camera</span>
+        <span className="text-white font-bold text-lg">지금 바로 글 작성하기</span>
       </button>
 
       {/* 현장 도우미 바로가기 */}
@@ -239,30 +196,33 @@ export function HomeTab({
         <span className="text-xs text-primary font-semibold">바로가기 →</span>
       </button>
 
-      {/* 통계 카드 4개 — 클릭 시 탭 이동 */}
-      <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => onNavigate("publish")} className="glass-card p-4 text-center w-full">
-          <p className="text-[28px] font-bold text-foreground">{completed}</p>
-          <p className="text-xs text-muted-foreground">블로그 작성</p>
-          <p className="text-xs text-[#22C55E] mt-1">▲ 3 지난달</p>
+      {/* Stitch Stats Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        <button onClick={() => onNavigate("publish")} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
+          <div className="flex justify-between items-start">
+            <span className="text-[#8B90A0] text-xs">블로그 작성</span>
+            <span className="text-[#4AE176] text-[10px] font-bold flex items-center">
+              <span className="material-symbols-outlined text-[12px]">arrow_drop_up</span>3
+            </span>
+          </div>
+          <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{completed}건</div>
         </button>
-        <button onClick={() => onNavigate("publish")} className="glass-card p-4 text-center w-full">
-          <p className="text-[28px] font-bold text-foreground">{published}</p>
-          <p className="text-xs text-muted-foreground">게시 완료</p>
-          <p className="text-xs text-[#22C55E] mt-1">▲ 2 지난달</p>
+        <button onClick={() => onNavigate("publish")} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
+          <div className="flex justify-between items-start">
+            <span className="text-[#8B90A0] text-xs">게시 완료</span>
+            <span className="text-[#4AE176] text-[10px] font-bold flex items-center">
+              <span className="material-symbols-outlined text-[12px]">arrow_drop_up</span>2
+            </span>
+          </div>
+          <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{published}건</div>
         </button>
-        {/* 영상 제작 — 프로+ 잠금 표시 */}
-        <button onClick={() => onNavigate("content")} className="glass-card p-4 text-center w-full">
-          <p className="text-[28px] font-bold text-foreground">{videoCount}</p>
-          <p className="text-xs text-muted-foreground">이번달 영상</p>
-          <p className="text-xs text-[#AB5EBE] mt-1">▶ 만들기</p>
+        <button onClick={() => onNavigate("content")} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
+          <span className="text-[#8B90A0] text-xs">이번달 영상</span>
+          <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{videoCount}개</div>
         </button>
-        <button onClick={() => setShowBadgeSheet(true)} className="glass-card p-4 text-center w-full">
-          <p className="text-[28px] font-bold text-foreground">{subscription.consecutiveMonths}개월</p>
-          <p className="text-xs text-muted-foreground">연속 사용</p>
-          <p className="text-xs mt-1 font-semibold" style={{ color: tier > 0 ? medalInfo[tier].color : "var(--muted-foreground)" }}>
-            {tier > 0 ? `${medalInfo[tier].icon} ${currentTierLabel}` : "등급 없음"}
-          </p>
+        <button onClick={() => setShowBadgeSheet(true)} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
+          <span className="text-[#8B90A0] text-xs">연속 사용</span>
+          <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{subscription.consecutiveMonths}개월</div>
         </button>
       </div>
 

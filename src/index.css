@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Plus+Jakarta+Sans:wght@400;500;600&family=Inter:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,60 +7,61 @@
 
 @layer base {
   :root {
-    --background: 210 17% 98%;
-    --foreground: 234 33% 14%;
+    /* ── Stitch Deep Nocturnal Palette ── */
+    --background: 222 32% 9%;       /* #0E1322 */
+    --foreground: 230 72% 92%;      /* #DEE1F7 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 234 33% 14%;
+    --card: 222 28% 14%;            /* #1A1F2F surface-container */
+    --card-foreground: 230 72% 92%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 234 33% 14%;
+    --popover: 222 28% 14%;
+    --popover-foreground: 230 72% 92%;
 
-    --primary: 215 100% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 220 100% 84%;        /* #ADC6FF */
+    --primary-foreground: 215 100% 21%; /* #002E69 */
 
-    --secondary: 220 15% 92%;
-    --secondary-foreground: 220 20% 15%;
+    --secondary: 290 100% 84%;      /* #F2AFFF */
+    --secondary-foreground: 289 100% 21%; /* #54026A */
 
-    --muted: 220 10% 90%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 222 23% 17%;           /* #25293A surface-container-high */
+    --muted-foreground: 224 13% 59%; /* #8B90A0 outline */
 
-    --accent: 287 42% 56%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 222 20% 23%;          /* #2F3445 surface-variant */
+    --accent-foreground: 230 72% 92%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 7 100% 84%;      /* #FFB4AB */
+    --destructive-foreground: 0 100% 2%; /* #690005 */
 
-    --border: 220 15% 88%;
-    --input: 220 15% 88%;
-    --ring: 215 100% 50%;
+    --border: 222 14% 29%;          /* #414754 outline-variant */
+    --input: 222 14% 29%;
+    --ring: 216 100% 65%;           /* #4C8EFF primary-container */
 
-    --radius: 0.875rem;
+    --radius: 1rem;
 
-    --success: 153 97% 33%;
-    --success-foreground: 0 0% 100%;
+    --success: 140 100% 59%;        /* #4AE176 tertiary */
+    --success-foreground: 148 100% 11%; /* #003915 */
     --warning: 40 95% 55%;
     --warning-foreground: 0 0% 10%;
-    --info: 215 100% 50%;
-    --info-foreground: 0 0% 100%;
+    --info: 216 100% 65%;           /* #4C8EFF */
+    --info-foreground: 215 100% 18%; /* #00285C */
 
-    --naver: 153 97% 39%;
-    --naver-foreground: 0 0% 100%;
+    --naver: 140 100% 59%;
+    --naver-foreground: 148 100% 11%;
 
-    --nav-background: 0 0% 100%;
-    --nav-foreground: 220 10% 45%;
-    --nav-active: 215 100% 50%;
+    --nav-background: 222 32% 9%;
+    --nav-foreground: 222 14% 29%;  /* #414754 */
+    --nav-active: 216 100% 57%;     /* #237FFF */
 
-    --brand-gradient: linear-gradient(135deg, hsl(215 100% 50%) 0%, hsl(287 42% 56%) 100%);
+    --brand-gradient: linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%);
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 20% 10%;
-    --sidebar-primary: 215 100% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 92%;
-    --sidebar-accent-foreground: 220 20% 15%;
-    --sidebar-border: 220 15% 88%;
-    --sidebar-ring: 215 100% 50%;
+    --sidebar-background: 225 30% 8%;  /* #090E1C */
+    --sidebar-foreground: 230 72% 92%;
+    --sidebar-primary: 220 100% 84%;
+    --sidebar-primary-foreground: 215 100% 21%;
+    --sidebar-accent: 222 20% 23%;
+    --sidebar-accent-foreground: 230 72% 92%;
+    --sidebar-border: 222 14% 29%;
+    --sidebar-ring: 216 100% 65%;
   }
 }
 
@@ -69,11 +71,12 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
-    font-family: 'Noto Sans KR', sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Apple SD Gothic Neo', 'Plus Jakarta Sans', 'Noto Sans KR', sans-serif;
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 1.6;
   }
 }
 
@@ -84,19 +87,41 @@
   .bg-brand-gradient {
     background: linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%);
   }
+  .headline-font {
+    font-family: 'Manrope', 'Noto Sans KR', sans-serif;
+    letter-spacing: -0.02em;
+  }
+  .label-font {
+    font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  }
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
 }
 
 @layer components {
+  /* Stitch Glassmorphism Card */
   .glass-card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius);
+  }
+  /* Stitch Tonal Card (No-Line rule) */
+  .tonal-card {
     background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    border-radius: var(--radius);
   }
   .chart-card {
-    background: hsl(215 100% 50% / 0.04);
-    border: 1px solid hsl(215 100% 50% / 0.12);
-    border-radius: 12px;
+    background: rgba(76, 142, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius);
+  }
+  /* Stitch Power Gradient CTA */
+  .btn-power {
+    @apply bg-brand-gradient text-white font-bold rounded-full h-[52px] px-6;
+    @apply flex items-center justify-center gap-2;
+    @apply shadow-lg active:scale-95 transition-transform duration-200;
   }
 }
 

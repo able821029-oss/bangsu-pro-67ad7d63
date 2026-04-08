@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude settings (contains API keys)
+.claude/
+supabase/.temp/

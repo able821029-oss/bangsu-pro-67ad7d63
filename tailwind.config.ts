@@ -14,7 +14,10 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["'Noto Sans KR'", "sans-serif"],
+        sans: ["'Apple SD Gothic Neo'", "'Plus Jakarta Sans'", "'Noto Sans KR'", "sans-serif"],
+        headline: ["'Manrope'", "'Noto Sans KR'", "sans-serif"],
+        body: ["'Apple SD Gothic Neo'", "'Plus Jakarta Sans'", "'Noto Sans KR'", "sans-serif"],
+        label: ["'Inter'", "'Noto Sans KR'", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

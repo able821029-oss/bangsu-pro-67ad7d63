@@ -113,7 +113,7 @@ function VoiceCard({
       className="relative w-full text-left p-3 rounded-xl transition-all"
       style={{
         border: selected ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",
-        backgroundColor: selected ? "hsl(215 100% 97%)" : "hsl(var(--card))",
+        backgroundColor: selected ? "hsl(var(--muted))" : "hsl(var(--card))",
       }}
     >
       {selected && (
@@ -556,7 +556,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
             className="w-full text-center py-2.5 rounded-xl text-sm font-medium transition-all"
             style={{
               border: selectedVoice === null ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",
-              backgroundColor: selectedVoice === null ? "hsl(215 100% 97%)" : "hsl(var(--card))",
+              backgroundColor: selectedVoice === null ? "hsl(var(--muted))" : "hsl(var(--card))",
               color: selectedVoice === null ? "hsl(215 100% 50%)" : "hsl(var(--muted-foreground))",
             }}
           >
