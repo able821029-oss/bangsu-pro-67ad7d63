@@ -48,15 +48,23 @@ export default function AuthPage() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      // Supabase Auth 설정에서 Google 활성화 여부 확인
+      const settingsRes = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`,
+        { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } },
+      );
+      const settings = await settingsRes.json();
+
+      if (!settings?.external?.google) {
+        toast.error("구글 로그인이 준비 중입니다. 이메일로 로그인해주세요.");
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-        },
+        options: { redirectTo: window.location.origin },
       });
-      if (error) {
-        toast.error("구글 로그인에 실패했습니다");
-      }
+      if (error) toast.error("구글 로그인에 실패했습니다");
     } catch {
       toast.error("구글 로그인 오류");
     } finally {

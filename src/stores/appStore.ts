@@ -104,58 +104,6 @@ interface AppState {
   clearSession: () => void;
 }
 
-const mockPosts: BlogPost[] = [
-  {
-    id: "1",
-    title: "강남구 아파트 옥상방수 시공 완료",
-    photos: [],
-    workType: "옥상방수",
-    style: "시공일지형",
-    blocks: [],
-    hashtags: ["옥상방수", "강남방수", "아파트방수"],
-    status: "게시완료",
-    createdAt: "2026-04-01",
-    platforms: ["naver"],
-    persona: "장인형",
-  },
-  {
-    id: "2",
-    title: "서초구 상가 외벽방수 시공기",
-    photos: [],
-    workType: "외벽방수",
-    style: "업체홍보형",
-    blocks: [],
-    hashtags: ["외벽방수", "서초방수"],
-    status: "완료",
-    createdAt: "2026-03-28",
-    platforms: ["naver", "instagram"],
-    persona: "전문기업형",
-  },
-  {
-    id: "3",
-    title: "송파구 지하주차장 균열보수",
-    photos: [],
-    workType: "균열보수",
-    style: "상담유도형",
-    blocks: [],
-    hashtags: ["균열보수", "지하방수"],
-    status: "작성중",
-    createdAt: "2026-03-25",
-    platforms: ["naver"],
-    persona: "친근형",
-  },
-];
-
-const mockCoupons: Coupon[] = [
-  { id: "c1", code: "WELCOME50", discount: "50% 할인", expiresAt: "2026-05-01", used: false },
-  { id: "c2", code: "SPRING20", discount: "20% 할인", expiresAt: "2026-04-30", used: true },
-];
-
-const mockInquiries: Inquiry[] = [
-  { id: "i1", type: "이용 방법", title: "사진 업로드가 안 됩니다", content: "갤러리에서 사진 선택이 안됩니다", status: "답변완료", createdAt: "2026-03-20" },
-  { id: "i2", type: "결제·환불", title: "프로 플랜 결제 문의", content: "연간 결제 변경 방법을 알고 싶습니다", status: "처리중", createdAt: "2026-03-28" },
-];
-
 export const useAppStore = create<AppState>((set, get) => ({
   photos: [],
   selectedWorkType: null,
@@ -163,7 +111,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedPlatforms: ["naver"],
   selectedPersona: "장인형",
   currentPost: null,
-  posts: mockPosts,
+  posts: [],
   settings: {
     companyName: "",
     phoneNumber: "",
@@ -184,8 +132,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     expiresAt: "",
     consecutiveMonths: 0,
   },
-  coupons: mockCoupons,
-  inquiries: mockInquiries,
+  coupons: [],
+  inquiries: [],
   referralCode: "BANGSU-A1B2C3",
   referralCount: 3,
 
