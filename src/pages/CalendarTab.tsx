@@ -410,7 +410,7 @@ export function CalendarTab() {
                       )}>
                       <Check className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => openEdit(s)}
+                    <button onClick={() => openEdit(s)} aria-label="수정"
                       className="p-1.5 rounded-lg hover:bg-white/5 text-[#8B90A0]">
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
