@@ -103,6 +103,8 @@ interface AppState {
   updateSettings: (settings: Partial<Settings>) => void;
   addCoupon: (coupon: Coupon) => void;
   addInquiry: (inquiry: Inquiry) => void;
+  updateSubscription: (sub: Partial<Subscription>) => void;
+  upgradePlan: (planName: string) => void;
   clearSession: () => void;
 }
 
@@ -175,6 +177,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({ coupons: [...state.coupons, coupon] })),
   addInquiry: (inquiry) =>
     set((state) => ({ inquiries: [inquiry, ...state.inquiries] })),
+  updateSubscription: (sub) =>
+    set((state) => ({ subscription: { ...state.subscription, ...sub } })),
+  upgradePlan: (planName: string) => {
+    const limits: Record<string, { maxCount: number; maxVideo: number }> = {
+      "무료": { maxCount: 5, maxVideo: 1 },
+      "베이직": { maxCount: 50, maxVideo: 5 },
+      "프로": { maxCount: 150, maxVideo: 20 },
+      "무제한": { maxCount: 9999, maxVideo: 50 },
+    };
+    const planLimits = limits[planName] || limits["무료"];
+    set((state) => ({
+      subscription: {
+        ...state.subscription,
+        plan: planName as PlanType,
+        maxCount: planLimits.maxCount,
+        maxVideo: planLimits.maxVideo,
+      },
+    }));
+  },
   clearSession: () =>
     set({ photos: [], selectedWorkType: null, currentPost: null }),
   useVideo: () => {

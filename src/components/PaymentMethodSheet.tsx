@@ -4,6 +4,7 @@ import { TestModeBadge } from "@/components/TestModeBadge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAppStore } from "@/stores/appStore";
 
 interface PaymentMethodSheetProps {
   open: boolean;
@@ -69,6 +70,7 @@ function TossPayLogo() {
 
 export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: PaymentMethodSheetProps) {
   const { toast } = useToast();
+  const upgradePlan = useAppStore((s) => s.upgradePlan);
   const [loading, setLoading] = useState<"kakao" | "toss" | null>(null);
 
   const handleKakaoPay = async () => {
@@ -90,9 +92,10 @@ export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: Pay
       if (error) throw error;
 
       if (data?.test_mode) {
+        upgradePlan(planName);
         toast({
-          title: "테스트 모드",
-          description: `카카오페이 테스트 결제가 시뮬레이션되었습니다. (${planName} ${amount.toLocaleString()}원)`,
+          title: "플랜 변경 완료",
+          description: `${planName} 플랜이 적용되었습니다. (${amount.toLocaleString()}원/월)`,
         });
         onOpenChange(false);
       } else if (data?.next_redirect_mobile_url) {
@@ -107,9 +110,10 @@ export function PaymentMethodSheet({ open, onOpenChange, planName, amount }: Pay
 
   const handleTossPay = async () => {
     setLoading("toss");
+    upgradePlan(planName);
     toast({
-      title: "테스트 모드",
-      description: `토스페이먼츠 테스트 결제가 시뮬레이션되었습니다. (${planName} ${amount.toLocaleString()}원)`,
+      title: "플랜 변경 완료",
+      description: `${planName} 플랜이 적용되었습니다. (${amount.toLocaleString()}원/월)`,
     });
     setLoading(null);
     onOpenChange(false);
