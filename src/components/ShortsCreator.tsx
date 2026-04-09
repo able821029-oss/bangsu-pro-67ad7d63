@@ -337,6 +337,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           workType: "자동판단",
           videoStyle,
           narrationType: narrationEnabled ? "있음" : "없음",
+          voiceId: selectedVoice || "male_pro",
           location: "",
           buildingType: "",
           constructionDate: new Date().toISOString().slice(0, 10),

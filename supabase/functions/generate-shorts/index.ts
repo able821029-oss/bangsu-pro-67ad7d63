@@ -52,11 +52,21 @@ serve(async (req) => {
   try {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    // 기본 목소리 ID (한국어 지원 — Adam multilingual)
+    // ElevenLabs 인기 한국어 지원 음성 매핑
+    const VOICE_MAP: Record<string, string> = {
+      "male_calm": "ErXwobaYiN019PkySvjV",      // Antoni — 차분한 남성
+      "male_pro": "VR6AewLTigWG4xSOukaG",       // Arnold — 전문적 남성
+      "male_strong": "pNInz6obpgDQGcFmaJgB",    // Adam — 힘있는 남성
+      "female_friendly": "EXAVITQu4vr4xnSDxMaL", // Bella — 친근한 여성
+      "female_pro": "21m00Tcm4TlvDq8ikWAM",     // Rachel — 전문적 여성
+      "female_bright": "AZnzlk1XvdvUeBnXmlld",  // Domi — 밝은 여성
+    };
     const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "pNInz6obpgDQGcFmaJgB";
 
     const body = await req.json();
-    const { photos, videoStyle, narrationType, location, buildingType, constructionDate, companyName, phoneNumber } = body;
+    const { photos, videoStyle, narrationType, location, buildingType, constructionDate, companyName, phoneNumber, voiceId: requestedVoiceId } = body;
+    // voiceId를 요청에서 받거나 기본 VOICE_MAP에서 매핑
+    const resolvedVoiceId = VOICE_MAP[requestedVoiceId || ""] || requestedVoiceId || ELEVENLABS_VOICE_ID;
 
     const styleGuide: Record<string, string> = {
       "시공일지형": "시공 전 → 시공 중 → 시공 후 순서로 텍스트 중심 장면을 구성합니다.",
@@ -198,7 +208,7 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       for (const scene of scenes) {
         const text = scene.narration || "";
         if (text) {
-          const audio = await generateNarration(text, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID);
+          const audio = await generateNarration(text, ELEVENLABS_API_KEY, resolvedVoiceId);
           narrationAudios.push(audio);
         } else {
           narrationAudios.push(null);
