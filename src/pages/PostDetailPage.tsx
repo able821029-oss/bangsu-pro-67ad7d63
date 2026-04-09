@@ -251,10 +251,11 @@ export function PostDetailPage({
     );
   };
 
+  const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
   const deeplinks: Record<Platform, string> = {
-    naver: "naver://blog/write",
-    instagram: "instagram://",
-    tiktok: "snssdk1233://",
+    naver: isMobile ? "naver://blog/write" : "https://blog.naver.com/GoBlogWrite.naver",
+    instagram: isMobile ? "instagram://" : "https://www.instagram.com/",
+    tiktok: isMobile ? "snssdk1233://" : "https://www.tiktok.com/upload",
   };
 
   const platformButtonStyles: Record<Platform, string> = {

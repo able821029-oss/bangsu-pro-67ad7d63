@@ -45,6 +45,32 @@ export default function AuthPage() {
     }
   };
 
+  const handleKakaoLogin = async () => {
+    setLoading(true);
+    try {
+      const settingsRes = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/auth/v1/settings`,
+        { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } },
+      );
+      const settings = await settingsRes.json();
+
+      if (!settings?.external?.kakao) {
+        toast.error("카카오 로그인이 준비 중입니다. 이메일로 로그인해주세요.");
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "kakao",
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) toast.error("카카오 로그인에 실패했습니다");
+    } catch {
+      toast.error("카카오 로그인 오류");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
@@ -101,7 +127,15 @@ export default function AuthPage() {
         <p className="text-xs text-[#8B90A0] mt-1 tracking-widest">셀프마케팅서비스</p>
       </div>
 
-      <div className="w-full max-w-sm space-y-4">
+      <div className="w-full max-w-sm space-y-3">
+        {/* Kakao Login */}
+        <button onClick={handleKakaoLogin} disabled={loading}
+          className="w-full h-12 rounded-xl text-[#191600] text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
+          style={{ backgroundColor: "#FEE500" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3C6.48 3 2 6.36 2 10.44c0 2.61 1.74 4.9 4.36 6.22l-1.1 4.07c-.09.33.28.6.56.41l4.84-3.21c.44.04.88.07 1.34.07 5.52 0 10-3.36 10-7.56S17.52 3 12 3z" fill="#3C1E1E"/></svg>
+          카카오로 계속하기
+        </button>
+
         {/* Google Login */}
         <button onClick={handleGoogleLogin} disabled={loading}
           className="w-full h-12 rounded-xl bg-[#2F3445] text-[#DEE1F7] text-sm font-medium flex items-center justify-center gap-2 hover:bg-[#25293A] active:scale-[0.98] transition-all disabled:opacity-50"
