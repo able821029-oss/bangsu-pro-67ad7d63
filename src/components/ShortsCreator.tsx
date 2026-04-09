@@ -407,6 +407,9 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       const scenes: MirraScene[] = scriptData?.scenes || [];
       if (scenes.length === 0) throw new Error("스크립트 생성 실패");
 
+      // 대본 반영 확인 로그
+      console.warn("[SMS] 영상 장면:", scenes.map((s, i) => `${i}: ${s.title}`).join(" | "));
+
       setProgressText("🎬 텍스트 애니메이션 합성 중...");
       setProgressPct(25);
 

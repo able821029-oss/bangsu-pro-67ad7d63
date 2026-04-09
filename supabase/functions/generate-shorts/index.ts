@@ -248,20 +248,24 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
     const narrationAudios: (string | null)[] = [];
 
     if (ELEVENLABS_API_KEY && narrationType !== "없음") {
-      console.log(`ElevenLabs TTS 시작 — ${scenes.length}개 장면`);
+      console.log(`ElevenLabs TTS 시작 — ${scenes.length}개 장면, voiceId: ${resolvedVoiceId}`);
       for (const scene of scenes) {
         const text = scene.narration || "";
         if (text) {
-          const audio = await generateNarration(text, ELEVENLABS_API_KEY, resolvedVoiceId);
-          narrationAudios.push(audio);
+          try {
+            const audio = await generateNarration(text, ELEVENLABS_API_KEY, resolvedVoiceId);
+            narrationAudios.push(audio);
+          } catch (e) {
+            console.warn("ElevenLabs TTS 실패:", e);
+            narrationAudios.push(null);
+          }
         } else {
           narrationAudios.push(null);
         }
       }
-      console.log(`ElevenLabs TTS 완료 — 성공: ${narrationAudios.filter(Boolean).length}개`);
+      console.log(`ElevenLabs TTS 완료 — 성공: ${narrationAudios.filter(Boolean).length}/${scenes.length}`);
     } else {
       scenes.forEach(() => narrationAudios.push(null));
-      if (!ELEVENLABS_API_KEY) console.warn("ELEVENLABS_API_KEY 미설정 — 음성 없이 진행");
     }
 
     return new Response(
