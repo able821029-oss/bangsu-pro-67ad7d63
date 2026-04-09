@@ -1,19 +1,27 @@
 {
   "name": "sms-video-server",
-  "version": "1.0.0",
-  "description": "SMS 쇼츠 영상 서버사이드 렌더링",
+  "version": "3.0.0",
+  "description": "SMS 쇼츠 영상 서버사이드 렌더링 (Remotion)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "bundle": "npx remotion bundle remotion/index.tsx --out-dir remotion-bundle"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.44",
+    "@remotion/renderer": "4.0.447",
+    "@remotion/bundler": "4.0.447",
+    "@remotion/cli": "4.0.447",
     "@supabase/supabase-js": "^2.39.0",
-    "cors": "^2.8.5",
     "express": "^4.18.2",
     "ffmpeg-static": "^5.2.0",
-    "fluent-ffmpeg": "^2.1.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "4.0.447",
     "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.3.0"
   }
 }

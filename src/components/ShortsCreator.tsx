@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { createBgmTrack, previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/mirraRenderer";
+import { previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/bgmSynth";
+
 import { Player } from "@remotion/player";
 import { SmsComposition, calculateTotalFrames } from "@/remotion/SmsComposition";
 import { mirraToRemotionScene, type SmsScene, type SmsVideoProps } from "@/remotion/types";
