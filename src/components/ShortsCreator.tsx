@@ -52,6 +52,16 @@ const PLAN_LIMITS: Record<string, number> = {
 
 const PREVIEW_TEXT = "안녕하세요. 방수 전문 시공업체입니다.";
 
+// ElevenLabs 인기 음성 ID 매핑
+const ELEVENLABS_VOICE_MAP: Record<string, string> = {
+  "male_calm": "ErXwobaYiN019PkySvjV",      // Antoni
+  "male_pro": "VR6AewLTigWG4xSOukaG",       // Arnold
+  "male_strong": "pNInz6obpgDQGcFmaJgB",    // Adam
+  "female_friendly": "EXAVITQu4vr4xnSDxMaL", // Bella
+  "female_pro": "21m00Tcm4TlvDq8ikWAM",     // Rachel
+  "female_bright": "AZnzlk1XvdvUeBnXmlld",  // Domi
+};
+
 function getKoreanVoice(voiceOption: VoiceOption): SpeechSynthesisVoice | null {
   const voices = speechSynthesis.getVoices();
   const koVoices = voices.filter(v => v.lang.startsWith("ko"));
@@ -244,8 +254,14 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     }
   }, [autoStart]);
 
-  const handlePreviewVoice = useCallback((voice: VoiceOption) => {
-    // Stop any current speech
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handlePreviewVoice = useCallback(async (voice: VoiceOption) => {
+    // 현재 재생 중이면 정지
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
     speechSynthesis.cancel();
 
     if (playingVoice === voice.id) {
@@ -253,18 +269,46 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       return;
     }
 
+    setPlayingVoice(voice.id);
+
+    // ElevenLabs TTS 시도
+    const voiceId = ELEVENLABS_VOICE_MAP[voice.id];
+    if (voiceId) {
+      try {
+        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+          method: "POST",
+          headers: {
+            "xi-api-key": "sk_d047fc7edfef08126a17c29f89550712adf4eb4c370bd98f",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: PREVIEW_TEXT,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3 },
+          }),
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          previewAudioRef.current = audio;
+          audio.onended = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
+          audio.onerror = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
+          audio.play();
+          return;
+        }
+      } catch {}
+    }
+
+    // ElevenLabs 실패 시 Web Speech API 폴백
     const utterance = new SpeechSynthesisUtterance(PREVIEW_TEXT);
     utterance.lang = voice.lang;
     utterance.pitch = voice.pitch;
     utterance.rate = voice.rate;
-
     const synthVoice = getKoreanVoice(voice);
     if (synthVoice) utterance.voice = synthVoice;
-
     utterance.onend = () => setPlayingVoice(null);
     utterance.onerror = () => setPlayingVoice(null);
-
-    setPlayingVoice(voice.id);
     speechSynthesis.speak(utterance);
   }, [playingVoice]);
 
