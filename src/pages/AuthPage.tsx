@@ -29,8 +29,15 @@ export default function AuthPage() {
         });
         if (error) throw error;
         if (data.session) {
+          // 신규 가입 + 자동 로그인 성공
           toast.success("가입 완료! 자동 로그인됩니다.");
+        } else if (data.user && data.user.identities?.length === 0) {
+          // 이미 가입된 이메일 (Supabase가 에러 대신 빈 identities 반환)
+          toast.error("이미 가입된 이메일입니다. 로그인해주세요.");
+          setMode("login");
+          return;
         } else {
+          // 세션이 없으면 수동 로그인 시도
           const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
           if (loginErr) throw loginErr;
           toast.success("가입 완료! 로그인되었습니다.");
