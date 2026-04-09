@@ -57,9 +57,72 @@ export function CameraTab({
   const [constructionDate, setConstructionDate] = useState(new Date().toISOString().slice(0, 10));
   const [isLocating, setIsLocating] = useState(false);
   const [gpsTimedOut, setGpsTimedOut] = useState(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
+
+  // ── 임시저장 키 ──
+  const DRAFT_KEY = "sms_draft_blog";
+
+  // ── 작성 중 이탈 방지 ──
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (photos.length > 0 || wizardStep === 2) {
+        saveDraft();
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [photos, wizardStep, location, constructionDate, selectedPlatforms, selectedPersona]);
+
+  // ── 임시저장 함수 ──
+  const saveDraft = () => {
+    if (photos.length === 0) return;
+    const draft = {
+      photos: photos.map(p => ({ id: p.id, dataUrl: p.dataUrl })),
+      location,
+      constructionDate,
+      platforms: [...selectedPlatforms],
+      persona: selectedPersona,
+      wizardStep,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  };
+
+  // ── 임시저장 복원 체크 ──
+  useEffect(() => {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw || photos.length > 0) return;
+    try {
+      const draft = JSON.parse(raw);
+      if (draft.photos?.length > 0) {
+        setShowDraftBanner(true);
+      }
+    } catch {}
+  }, []);
+
+  const restoreDraft = () => {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw);
+      draft.photos?.forEach((p: any) => addPhoto(p));
+      if (draft.location) setLocation(draft.location);
+      if (draft.constructionDate) setConstructionDate(draft.constructionDate);
+      if (draft.persona) setSelectedPersona(draft.persona);
+      if (draft.wizardStep === 2) setWizardStep(2);
+      toast({ title: "임시저장된 글을 불러왔습니다" });
+    } catch {}
+    setShowDraftBanner(false);
+  };
+
+  const discardDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    setShowDraftBanner(false);
+  };
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -217,6 +280,7 @@ export function CameraTab({
       };
 
       addPost(newPost);
+      localStorage.removeItem(DRAFT_KEY); // 임시저장 삭제
       setTimeout(() => {
         setIsGenerating(false);
         onViewPost(newPost);
@@ -308,6 +372,25 @@ export function CameraTab({
   if (wizardStep === 1) {
     return (
       <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
+        {/* 이어서 작성하기 배너 */}
+        {showDraftBanner && (
+          <div className="bg-[#4C8EFF]/10 border border-[#4C8EFF]/30 rounded-xl p-4 flex items-center gap-3"
+            style={{ animation: "fadeUp .3s ease-out" }}>
+            <span className="text-2xl">📝</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-[#DEE1F7]">작성 중이던 글이 있습니다</p>
+              <p className="text-xs text-[#8B90A0]">이어서 작성하시겠어요?</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={discardDraft}
+                className="text-xs text-[#8B90A0] px-2 py-1 rounded-lg hover:bg-white/5">삭제</button>
+              <button onClick={restoreDraft}
+                className="text-xs font-bold text-white px-3 py-1 rounded-lg"
+                style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>불러오기</button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <button

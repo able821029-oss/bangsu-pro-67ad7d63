@@ -80,7 +80,6 @@ export function PostDetailPage({
       if (!document.hidden && sessionStorage.getItem("sms-publishing")) {
         sessionStorage.removeItem("sms-publishing");
         setReturnPrompt(true);
-        setTimeout(() => setReturnPrompt(false), 5000);
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
@@ -296,13 +295,17 @@ export function PostDetailPage({
           className="fixed top-0 left-0 right-0 z-[90] max-w-lg mx-auto px-4 pt-4"
           style={{ animation: "fadeUp .3s ease-out" }}
         >
-          <div className="bg-green-600 text-white rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl">
+          <div className="bg-[#4AE176] text-[#0E1322] rounded-xl px-4 py-3 flex items-center gap-3 shadow-xl">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
-            <p className="text-sm font-semibold flex-1">SMS로 돌아왔습니다! 발행 완료로 표시하시겠어요?</p>
+            <p className="text-sm font-bold flex-1">SNS 발행 완료하셨나요?</p>
             <button
               onClick={() => { handleMarkPublished(); setReturnPrompt(false); }}
-              className="text-xs font-bold bg-white/20 px-2 py-1 rounded-lg"
-            >완료</button>
+              className="text-xs font-bold bg-[#0E1322]/20 px-3 py-1.5 rounded-lg"
+            >발행 완료</button>
+            <button
+              onClick={() => setReturnPrompt(false)}
+              className="text-xs bg-[#0E1322]/10 px-2 py-1.5 rounded-lg"
+            >닫기</button>
           </div>
         </div>
       )}
