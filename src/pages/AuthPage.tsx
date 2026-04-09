@@ -32,14 +32,24 @@ export default function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("가입 완료! 이메일을 확인해주세요.");
+        toast.success("가입 완료! 자동 로그인됩니다.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("로그인 성공!");
       }
     } catch (e: any) {
-      toast.error(e.message || "인증 오류가 발생했습니다");
+      const msg = e.message || "인증 오류";
+      if (msg.includes("Invalid login")) {
+        toast.error("이메일 또는 비밀번호가 올바르지 않습니다");
+      } else if (msg.includes("already registered") || msg.includes("already exists")) {
+        toast.error("이미 가입된 이메일입니다. 로그인해주세요.");
+        setMode("login");
+      } else if (msg.includes("rate limit")) {
+        toast.error("잠시 후 다시 시도해주세요 (요청 제한)");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
