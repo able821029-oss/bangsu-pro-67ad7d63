@@ -13,7 +13,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
     { id: "home" as TabId, icon: Home, label: "홈" },
     { id: "calendar" as TabId, icon: Calendar, label: "일정" },
     { id: "shorts" as TabId, icon: Film, label: "쇼츠", center: true },
-    { id: "content" as TabId, icon: Sparkles, label: "콘텐츠" },
+    { id: "content" as TabId, icon: Sparkles, label: "글작성" },
     { id: "mypage" as TabId, icon: User, label: "마이" },
   ];
 

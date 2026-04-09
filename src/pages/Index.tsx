@@ -7,6 +7,7 @@ import AuthPage from "@/pages/AuthPage";
 import { HomeTab } from "@/pages/HomeTab";
 import { CalendarTab } from "@/pages/CalendarTab";
 import { ContentTab } from "@/pages/ContentTab";
+import { ShortsTab } from "@/pages/ShortsTab";
 import { MyPage } from "@/pages/MyPage";
 import { PostDetailPage } from "@/pages/PostDetailPage";
 import { ReviewsPage } from "@/pages/ReviewsPage";
@@ -94,7 +95,7 @@ function AppContent() {
       case "calendar": return <CalendarTab />;
       case "content":  return <ContentTab onNavigate={nav} onViewPost={handleViewPost} />;
       case "publish":  return <ContentTab onNavigate={nav} onViewPost={handleViewPost} initialSubTab="publish" />;
-      case "shorts":   return <ContentTab onNavigate={nav} onViewPost={handleViewPost} initialSubTab="shorts" />;
+      case "shorts":   return <ShortsTab onNavigate={nav} />;
       case "camera":   return <ContentTab onNavigate={nav} onViewPost={handleViewPost} initialSubTab="write" />;
       case "mypage":   return <MyPage />;
       default:         return <HomeTab onNavigate={nav} onViewPost={handleViewPost} />;

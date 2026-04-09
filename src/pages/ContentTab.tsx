@@ -1,31 +1,31 @@
 import { useState } from "react";
 import { CameraTab } from "@/pages/CameraTab";
-import { ShortsTab } from "@/pages/ShortsTab";
 import { PublishTab } from "@/pages/PublishTab";
 import { BlogPost } from "@/stores/appStore";
 import { cn } from "@/lib/utils";
-import { PenLine, Film, Upload } from "lucide-react";
+import { PenLine, Upload } from "lucide-react";
 
-type SubTab = "write" | "shorts" | "publish";
+type SubTab = "write" | "publish";
 
 interface ContentTabProps {
   onNavigate: (tab: string) => void;
   onViewPost: (post: BlogPost) => void;
-  initialSubTab?: SubTab;
+  initialSubTab?: string;
 }
 
 export function ContentTab({ onNavigate, onViewPost, initialSubTab }: ContentTabProps) {
-  const [subTab, setSubTab] = useState<SubTab>(initialSubTab || "write");
+  const [subTab, setSubTab] = useState<SubTab>(
+    initialSubTab === "publish" ? "publish" : "write"
+  );
 
   return (
     <div className="min-h-screen bg-[#0E1322]">
-      {/* Sub-tab bar — Stitch */}
+      {/* Sub-tab bar — 글작성 + 발행 */}
       <div className="sticky top-0 z-10 bg-[#0E1322]/95 backdrop-blur-md px-4 pt-3">
         <div className="flex gap-1">
           {([
-            { id: "write" as SubTab, icon: PenLine, label: "글작성" },
-            { id: "shorts" as SubTab, icon: Film, label: "영상" },
-            { id: "publish" as SubTab, icon: Upload, label: "발행" },
+            { id: "write" as SubTab, icon: PenLine, label: "AI 글작성" },
+            { id: "publish" as SubTab, icon: Upload, label: "발행 현황" },
           ]).map(({ id, icon: Icon, label }) => (
             <button key={id} onClick={() => setSubTab(id)}
               className={cn(
@@ -41,7 +41,6 @@ export function ContentTab({ onNavigate, onViewPost, initialSubTab }: ContentTab
       </div>
 
       {subTab === "write" && <CameraTab onNavigate={onNavigate} onViewPost={onViewPost} />}
-      {subTab === "shorts" && <ShortsTab onNavigate={onNavigate} />}
       {subTab === "publish" && <PublishTab onNavigate={onNavigate} onViewPost={onViewPost} />}
     </div>
   );
