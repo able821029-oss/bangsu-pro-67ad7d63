@@ -275,7 +275,7 @@ export function PostDetailPage({
   const handleOpenPlatform = (platform: Platform) => {
     sessionStorage.setItem("sms-publishing", "true");
     setUploadGuide(null);
-    window.location.href = deeplinks[platform];
+    window.open(deeplinks[platform], "_blank");
   };
 
   const orderedPlatforms = ["naver", "instagram", "tiktok"].filter((p) =>

@@ -465,8 +465,14 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
   };
 
   const handleDeeplink = (platform: string) => {
-    const links: Record<string, string> = { tiktok: "snssdk1233://", instagram: "instagram://" };
-    window.location.href = links[platform] || "";
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    const links: Record<string, { mobile: string; pc: string }> = {
+      tiktok: { mobile: "snssdk1233://", pc: "https://www.tiktok.com/upload" },
+      instagram: { mobile: "instagram://", pc: "https://www.instagram.com/" },
+    };
+    const target = links[platform];
+    if (!target) return;
+    window.open(isMobile ? target.mobile : target.pc, "_blank");
   };
 
   const handleReset = () => {
