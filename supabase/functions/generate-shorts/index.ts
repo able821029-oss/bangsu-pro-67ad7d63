@@ -24,8 +24,8 @@ async function generateNarration(
         },
         body: JSON.stringify({
           text,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true },
+          model_id: "eleven_turbo_v2_5",
+          voice_settings: { stability: 0.4, similarity_boost: 0.8, style: 0.5, use_speaker_boost: true },
         }),
       }
     );
@@ -52,16 +52,16 @@ serve(async (req) => {
   try {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    // ElevenLabs 인기 한국어 지원 음성 매핑
+    // ElevenLabs 한국어 자연스러운 음성 매핑
     const VOICE_MAP: Record<string, string> = {
-      "male_calm": "ErXwobaYiN019PkySvjV",      // Antoni — 차분한 남성
-      "male_pro": "VR6AewLTigWG4xSOukaG",       // Arnold — 전문적 남성
-      "male_strong": "pNInz6obpgDQGcFmaJgB",    // Adam — 힘있는 남성
-      "female_friendly": "EXAVITQu4vr4xnSDxMaL", // Bella — 친근한 여성
-      "female_pro": "21m00Tcm4TlvDq8ikWAM",     // Rachel — 전문적 여성
-      "female_bright": "AZnzlk1XvdvUeBnXmlld",  // Domi — 밝은 여성
+      "male_calm": "nPczCjzI2devNBz1zQrb",      // Brian — 차분한 남성
+      "male_pro": "onwK4e9ZLuTAKqWW03F9",       // Daniel — 전문적 남성
+      "male_strong": "cgSgspJ2msm6clMCkdW9",    // George — 힘있는 남성
+      "female_friendly": "FGY2WhTYpPnrIDTdsKH5", // Laura — 친근한 여성
+      "female_pro": "iP95p4xoKVk53GoZ742B",     // Chris — 전문적 여성
+      "female_bright": "nPczCjzI2devNBz1zQrb",   // Brian — 밝은 (폴백)
     };
-    const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "pNInz6obpgDQGcFmaJgB";
+    const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "nPczCjzI2devNBz1zQrb";
 
     const body = await req.json();
     const { photos, videoStyle, narrationType, location, buildingType, constructionDate, companyName, phoneNumber, voiceId: requestedVoiceId } = body;

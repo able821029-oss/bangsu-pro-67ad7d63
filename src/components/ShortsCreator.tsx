@@ -52,15 +52,18 @@ const PLAN_LIMITS: Record<string, number> = {
 
 const PREVIEW_TEXT = "안녕하세요. 방수 전문 시공업체입니다.";
 
-// ElevenLabs 인기 음성 ID 매핑
+// ElevenLabs 한국어 자연스러운 음성 ID 매핑
 const ELEVENLABS_VOICE_MAP: Record<string, string> = {
-  "male_calm": "ErXwobaYiN019PkySvjV",      // Antoni
-  "male_pro": "VR6AewLTigWG4xSOukaG",       // Arnold
-  "male_strong": "pNInz6obpgDQGcFmaJgB",    // Adam
-  "female_friendly": "EXAVITQu4vr4xnSDxMaL", // Bella
-  "female_pro": "21m00Tcm4TlvDq8ikWAM",     // Rachel
-  "female_bright": "AZnzlk1XvdvUeBnXmlld",  // Domi
+  "male_calm": "nPczCjzI2devNBz1zQrb",      // Brian — 차분한 남성 (한국어 네이티브)
+  "male_pro": "onwK4e9ZLuTAKqWW03F9",       // Daniel — 전문적 남성
+  "male_strong": "cgSgspJ2msm6clMCkdW9",    // George — 힘있는 남성
+  "female_friendly": "FGY2WhTYpPnrIDTdsKH5", // Laura — 친근한 여성
+  "female_pro": "iP95p4xoKVk53GoZ742B",     // Chris — 전문적 여성
+  "female_bright": "nPczCjzI2devNBz1zQrb",   // Brian — 밝은 (폴백)
 };
+
+// ElevenLabs 모델: eleven_turbo_v2_5 = 더 자연스럽고 빠름
+const ELEVENLABS_MODEL = "eleven_turbo_v2_5";
 
 function getKoreanVoice(voiceOption: VoiceOption): SpeechSynthesisVoice | null {
   const voices = speechSynthesis.getVoices();
@@ -283,8 +286,8 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           },
           body: JSON.stringify({
             text: PREVIEW_TEXT,
-            model_id: "eleven_multilingual_v2",
-            voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3 },
+            model_id: ELEVENLABS_MODEL,
+            voice_settings: { stability: 0.4, similarity_boost: 0.8, style: 0.5, use_speaker_boost: true },
           }),
         });
         if (res.ok) {
