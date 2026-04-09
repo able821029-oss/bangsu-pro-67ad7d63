@@ -480,53 +480,45 @@ export async function renderMirraVideo(
   const totalAllFrames = scenes.reduce((s, sc) => s + (sc.duration || 100), 0);
   // FRAME_MS는 requestAnimationFrame 방식에서는 브라우저가 자동 관리
 
-  // requestAnimationFrame 기반 실시간 렌더링 — 브라우저 프레임과 동기화
-  let globalFrameIdx = 0;
-  let sceneIdx = 0;
-  let frameInScene = 0;
+  // setTimeout 기반 정밀 타이밍 렌더링 — 정확히 1000/FPS ms 간격 보장
+  const FRAME_INTERVAL = 1000 / FPS; // 33.33ms
   let currentNarrationSource: AudioBufferSourceNode | null = null;
 
-  await new Promise<void>((resolveRender) => {
-    function renderFrame() {
-      if (sceneIdx >= scenes.length) {
-        onProgress(scenes.length, scenes.length);
-        if (recorder.state !== "inactive") {
-          try { recorder.requestData(); } catch {}
-          recorder.stop();
-        }
-        resolveRender();
-        return;
+  const renderStartTime = performance.now();
+  let globalFrameIdx = 0;
+
+  for (let si = 0; si < scenes.length; si++) {
+    const scene = scenes[si];
+    const totalFrames = scene.duration || 100;
+    const isEnding = si === scenes.length - 1 && !scene.photo;
+    const photoImg = scene.photo ? imageMap[scene.photo] : null;
+
+    narrationTexts.push(narrationEnabled && scene.narration ? scene.narration : "");
+    onProgress(si, scenes.length);
+
+    // 나레이션 재생
+    const narrationBuffer = narrationBuffers[si] || null;
+    if (narrationBuffer && audioCtx && audioDest) {
+      try {
+        if (currentNarrationSource) { try { currentNarrationSource.stop(); } catch {} }
+        const source = audioCtx.createBufferSource();
+        source.buffer = narrationBuffer;
+        source.connect(audioDest);
+        source.start();
+        currentNarrationSource = source;
+        source.onended = () => { if (currentNarrationSource === source) currentNarrationSource = null; };
+      } catch {}
+    }
+
+    for (let fi = 0; fi < totalFrames; fi++, globalFrameIdx++) {
+      // 정확한 타이밍 대기
+      const targetTime = renderStartTime + globalFrameIdx * FRAME_INTERVAL;
+      const now = performance.now();
+      if (now < targetTime) {
+        await new Promise<void>(r => setTimeout(r, targetTime - now));
       }
 
-      const scene = scenes[sceneIdx];
-      const totalFrames = scene.duration || 100;
-      const isEnding = sceneIdx === scenes.length - 1 && !scene.photo;
-      const photoImg = scene.photo ? imageMap[scene.photo] : null;
-
-      // 장면 시작 시 나레이션/진행상황 업데이트
-      if (frameInScene === 0) {
-        narrationTexts.push(narrationEnabled && scene.narration ? scene.narration : "");
-        onProgress(sceneIdx, scenes.length);
-
-        const narrationBuffer = narrationBuffers[sceneIdx] || null;
-        if (narrationBuffer && audioCtx && audioDest) {
-          try {
-            // 이전 나레이션 정지
-            if (currentNarrationSource) {
-              try { currentNarrationSource.stop(); } catch {}
-              currentNarrationSource = null;
-            }
-            const source = audioCtx.createBufferSource();
-            source.buffer = narrationBuffer;
-            source.connect(audioDest);
-            source.start();
-            currentNarrationSource = source;
-            source.onended = () => { if (currentNarrationSource === source) currentNarrationSource = null; };
-          } catch {}
-        }
-      }
-
-      const t = frameInScene / totalFrames;
+      const t = fi / totalFrames;
       drawGradientBg(ctx, scene.bg_colors || ["#001130", "#0d2847"]);
       if (photoImg && scene.bg_type === "photo") {
         drawFullScreenPhoto(ctx, photoImg, scene.bg_colors || ["#001130", "#0d2847"], t);
@@ -543,21 +535,17 @@ export async function renderMirraVideo(
         drawDividerLine(ctx, textCenterY + 110, scene.accent_color || "#237FFF", Math.max(0, (t - 0.28) / 0.25));
         drawSubtitleTyping(ctx, scene.subtitle, scene.accent_color || "#237FFF", textCenterY + 175, Math.max(0, (t - 0.38) / 0.5));
       }
-
-      frameInScene++;
-      globalFrameIdx++;
-
-      if (frameInScene >= totalFrames) {
-        sceneIdx++;
-        frameInScene = 0;
-      }
-
-      // 다음 프레임을 requestAnimationFrame으로 예약 — 브라우저 렌더 사이클과 동기화
-      requestAnimationFrame(renderFrame);
     }
+  }
 
-    requestAnimationFrame(renderFrame);
-  });
+  const actualDuration = (performance.now() - renderStartTime) / 1000;
+  console.warn(`[mirra] 렌더링 완료: ${scenes.length}장면, ${globalFrameIdx}프레임, ${actualDuration.toFixed(1)}초`);
+
+  onProgress(scenes.length, scenes.length);
+  if (recorder.state !== "inactive") {
+    try { recorder.requestData(); } catch {}
+    recorder.stop();
+  }
 
   // 렌더링 완료 후 최대 8초 대기
   const blob = await Promise.race([
