@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff, Mail } from "lucide-react";
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -15,6 +15,7 @@ export default function AuthPage() {
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const handleEmailAuth = async () => {
     if (!email || !password) { toast.error("이메일과 비밀번호를 입력해주세요"); return; }
@@ -50,6 +51,23 @@ export default function AuthPage() {
       } else {
         toast.error(msg);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) { toast.error("이메일을 입력해주세요"); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      toast.success("비밀번호 재설정 링크를 이메일로 보냈습니다");
+    } catch (e: any) {
+      toast.error(e.message || "재설정 메일 발송 실패");
     } finally {
       setLoading(false);
     }
@@ -187,19 +205,54 @@ export default function AuthPage() {
           </div>
         )}
 
-        <button onClick={handleEmailAuth} disabled={loading}
-          className="w-full h-11 rounded-xl text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
-          style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
-          <Mail className="w-4 h-4" />
-          {mode === "login" ? "로그인" : "회원가입"}
-        </button>
+        {mode === "reset" ? (
+          <>
+            {resetSent ? (
+              <div className="bg-[#4AE176]/10 border border-[#4AE176]/30 rounded-xl p-4 text-center space-y-2">
+                <span className="text-3xl">✉️</span>
+                <p className="text-sm font-semibold text-[#4AE176]">재설정 링크를 보냈습니다</p>
+                <p className="text-xs text-[#8B90A0]">{email} 메일함을 확인해주세요</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-[#8B90A0] text-center">가입한 이메일을 입력하면 비밀번호 재설정 링크를 보내드립니다</p>
+                <input type="email" placeholder="가입한 이메일" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-11 rounded-xl bg-[#1A1F2F] px-4 text-[#DEE1F7] placeholder-[#8B90A0] text-sm focus:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
+                  style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+                <button onClick={handleResetPassword} disabled={loading}
+                  className="w-full h-11 rounded-xl text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
+                  재설정 링크 보내기
+                </button>
+              </>
+            )}
+            <p className="text-center text-sm text-[#8B90A0]">
+              <button onClick={() => { setMode("login"); setResetSent(false); }} className="text-[#ADC6FF] font-medium">← 로그인으로 돌아가기</button>
+            </p>
+          </>
+        ) : (
+          <>
+            <button onClick={handleEmailAuth} disabled={loading}
+              className="w-full h-11 rounded-xl text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
+              <Mail className="w-4 h-4" />
+              {mode === "login" ? "로그인" : "회원가입"}
+            </button>
 
-        <p className="text-center text-sm text-[#8B90A0]">
-          {mode === "login" ? "계정이 없으신가요?" : "이미 계정이 있으신가요?"}{" "}
-          <button onClick={() => setMode(mode === "login" ? "signup" : "login")} className="text-[#ADC6FF] font-medium">
-            {mode === "login" ? "회원가입" : "로그인"}
-          </button>
-        </p>
+            {mode === "login" && (
+              <button onClick={() => setMode("reset")} className="w-full text-center text-xs text-[#8B90A0] hover:text-[#ADC6FF] transition-colors">
+                비밀번호를 잊으셨나요?
+              </button>
+            )}
+
+            <p className="text-center text-sm text-[#8B90A0]">
+              {mode === "login" ? "계정이 없으신가요?" : "이미 계정이 있으신가요?"}{" "}
+              <button onClick={() => setMode(mode === "login" ? "signup" : "login")} className="text-[#ADC6FF] font-medium">
+                {mode === "login" ? "회원가입" : "로그인"}
+              </button>
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
