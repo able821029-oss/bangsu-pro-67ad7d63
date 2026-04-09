@@ -1,4 +1,4 @@
-import { Composition } from "remotion";
+import { Composition, registerRoot } from "remotion";
 import { SmsComposition, calculateTotalFrames } from "./SmsComposition";
 import type { SmsVideoProps } from "./types";
 
@@ -27,7 +27,7 @@ const defaultProps: SmsVideoProps = {
   bgmType: "none",
 };
 
-export const RemotionRoot: React.FC = () => {
+const RemotionRoot: React.FC = () => {
   return (
     <Composition
       id="SmsShorts"
@@ -40,3 +40,5 @@ export const RemotionRoot: React.FC = () => {
     />
   );
 };
+
+registerRoot(RemotionRoot);
