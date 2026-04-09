@@ -55,6 +55,8 @@ interface Settings {
   phoneNumber: string;
   serviceArea: string;
   logoUrl: string;
+  facePhotoUrl: string;
+  companyDescription: string;
   autoInsertCompany: boolean;
   autoInsertSeo: boolean;
   naverConnected: boolean;
@@ -117,6 +119,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     phoneNumber: "",
     serviceArea: "",
     logoUrl: "",
+    facePhotoUrl: "",
+    companyDescription: "",
     autoInsertCompany: true,
     autoInsertSeo: true,
     naverConnected: false,

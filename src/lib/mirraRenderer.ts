@@ -458,7 +458,25 @@ export async function renderMirraVideo(
 
   const narrationTexts: string[] = [];
 
-  // 총 프레임 수 계산
+  // 나레이션 오디오 길이에 맞춰 장면 duration 확장 (겹침 방지)
+  for (let i = 0; i < scenes.length; i++) {
+    const buf = narrationBuffers[i];
+    if (buf) {
+      const audioDurationFrames = Math.ceil(buf.duration * FPS) + 15; // 오디오 길이 + 0.5초 여유
+      if (audioDurationFrames > (scenes[i].duration || 100)) {
+        scenes[i].duration = audioDurationFrames;
+      }
+    }
+  }
+
+  // 2분(3600프레임) 제한
+  let totalFrameCount = scenes.reduce((s, sc) => s + (sc.duration || 100), 0);
+  const MAX_FRAMES = FPS * 120; // 2분
+  if (totalFrameCount > MAX_FRAMES) {
+    const ratio = MAX_FRAMES / totalFrameCount;
+    for (const sc of scenes) sc.duration = Math.max(30, Math.floor((sc.duration || 100) * ratio));
+  }
+
   const totalAllFrames = scenes.reduce((s, sc) => s + (sc.duration || 100), 0);
   // FRAME_MS는 requestAnimationFrame 방식에서는 브라우저가 자동 관리
 
@@ -466,6 +484,7 @@ export async function renderMirraVideo(
   let globalFrameIdx = 0;
   let sceneIdx = 0;
   let frameInScene = 0;
+  let currentNarrationSource: AudioBufferSourceNode | null = null;
 
   await new Promise<void>((resolveRender) => {
     function renderFrame() {
@@ -492,10 +511,17 @@ export async function renderMirraVideo(
         const narrationBuffer = narrationBuffers[sceneIdx] || null;
         if (narrationBuffer && audioCtx && audioDest) {
           try {
+            // 이전 나레이션 정지
+            if (currentNarrationSource) {
+              try { currentNarrationSource.stop(); } catch {}
+              currentNarrationSource = null;
+            }
             const source = audioCtx.createBufferSource();
             source.buffer = narrationBuffer;
             source.connect(audioDest);
             source.start();
+            currentNarrationSource = source;
+            source.onended = () => { if (currentNarrationSource === source) currentNarrationSource = null; };
           } catch {}
         }
       }

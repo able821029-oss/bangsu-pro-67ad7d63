@@ -166,6 +166,8 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
   const [previewingBgm, setPreviewingBgm] = useState<BgmType | null>(null);
   const previewCtxRef = useRef<AudioContext | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string | null>("male_calm");
+  const [scriptMode, setScriptMode] = useState<"ai" | "manual">("ai");
+  const [manualScript, setManualScript] = useState("");
   const [step, setStep] = useState<ShortsStep>("config");
   const [progressText, setProgressText] = useState("");
   const [progressPct, setProgressPct] = useState(0);
@@ -389,6 +391,9 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           videoStyle,
           narrationType: narrationEnabled ? "있음" : "없음",
           voiceId: selectedVoice || "male_pro",
+          scriptMode,
+          manualScript: scriptMode === "manual" ? manualScript : undefined,
+          maxDurationSec: 120, // 2분 제한
           location: "",
           buildingType: "",
           constructionDate: new Date().toISOString().slice(0, 10),
@@ -594,6 +599,41 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
               </button>
             ))}
           </div>
+        </div>
+
+        {/* 스크립트 작성 모드 */}
+        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
+          <p className="text-sm font-semibold flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-primary" style={{ fontSize: "16px" }}>edit_note</span>
+            스크립트 작성
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setScriptMode("ai")}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${scriptMode === "ai" ? "bg-[#4C8EFF] text-[#00285C]" : "bg-[#25293A] text-[#8B90A0]"}`}>
+              🤖 AI 자동 작성
+            </button>
+            <button onClick={() => setScriptMode("manual")}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${scriptMode === "manual" ? "bg-[#4C8EFF] text-[#00285C]" : "bg-[#25293A] text-[#8B90A0]"}`}>
+              ✍️ 직접 작성
+            </button>
+          </div>
+          {scriptMode === "manual" && (
+            <div className="space-y-2">
+              <textarea
+                value={manualScript}
+                onChange={e => setManualScript(e.target.value)}
+                placeholder={"장면별 나레이션을 줄바꿈으로 구분해주세요\n\n예시:\n현장 점검을 시작합니다\n방수 시공을 진행합니다\n깔끔하게 완료했습니다\n문의는 전화주세요"}
+                rows={6}
+                className="w-full bg-[#161B2B] border border-white/5 rounded-xl p-3 text-sm text-[#DEE1F7] placeholder-[#8B90A0] focus:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40 resize-none"
+              />
+              <p className="text-[10px] text-[#8B90A0]">
+                최대 2분 영상 · 줄바꿈 = 장면 구분 · {manualScript.split("\n").filter(Boolean).length}개 장면
+              </p>
+            </div>
+          )}
+          {scriptMode === "ai" && (
+            <p className="text-xs text-[#8B90A0]">사진을 분석하여 AI가 자동으로 나레이션 스크립트를 생성합니다 (최대 2분)</p>
+          )}
         </div>
 
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
