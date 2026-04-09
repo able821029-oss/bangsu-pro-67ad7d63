@@ -255,11 +255,24 @@ function drawEndingCard(
   ctx.save();
   ctx.globalAlpha = p;
 
-  // 로고 (프리로드된 경우)
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // 로고 (크게 — 200px 원형)
+  let logoBottomY = H / 2 - 180;
   if (_logoImg && _logoImg.complete && _logoImg.naturalWidth > 0) {
-    const logoSize = 120;
+    const logoSize = 200;
     const lx = W / 2 - logoSize / 2;
-    const ly = H / 2 - 250;
+    const ly = H / 2 - 360;
+    // 원형 그라데이션 테두리
+    const grad = ctx.createLinearGradient(lx, ly, lx + logoSize, ly + logoSize);
+    grad.addColorStop(0, "#237FFF");
+    grad.addColorStop(1, "#AB5EBE");
+    ctx.beginPath();
+    ctx.arc(lx + logoSize / 2, ly + logoSize / 2, logoSize / 2 + 6, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // 원형 클리핑
     ctx.beginPath();
     ctx.arc(lx + logoSize / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
     ctx.clip();
@@ -267,38 +280,40 @@ function drawEndingCard(
     ctx.restore();
     ctx.save();
     ctx.globalAlpha = p;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    logoBottomY = ly + logoSize + 40;
   }
 
-  // 회사명 배경박스
-  ctx.font = 'bold 80px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  const cw = ctx.measureText(company).width;
-  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  // 회사명 (크게 — 120px)
+  ctx.font = 'bold 120px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.fillStyle = "#FFFFFF";
+  ctx.shadowColor = "rgba(0,0,0,0.8)";
+  ctx.shadowBlur = 30;
+  ctx.fillText(company, W / 2, logoBottomY);
+
+  // 전화번호 (크게 — 72px, 그라데이션 필 버튼)
+  ctx.font = 'bold 72px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  const pw = ctx.measureText(phone).width;
+  const pillY = logoBottomY + 80;
+  const pillGrad = ctx.createLinearGradient(W / 2 - pw / 2 - 40, pillY - 50, W / 2 + pw / 2 + 40, pillY + 50);
+  pillGrad.addColorStop(0, "#237FFF");
+  pillGrad.addColorStop(1, "#AB5EBE");
+  ctx.fillStyle = pillGrad;
+  ctx.shadowBlur = 0;
   ctx.beginPath();
-  ctx.roundRect(W / 2 - cw / 2 - 40, H / 2 - 120, cw + 80, 100, 16);
+  ctx.roundRect(W / 2 - pw / 2 - 50, pillY - 50, pw + 100, 100, 50);
   ctx.fill();
   ctx.fillStyle = "#FFFFFF";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.shadowColor = "rgba(0,0,0,0.8)";
-  ctx.shadowBlur = 20;
-  ctx.fillText(company, W / 2, H / 2 - 70);
-
-  // 전화번호
-  ctx.font = 'bold 52px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  const pw = ctx.measureText(phone).width;
-  ctx.fillStyle = hexToRgba(accentColor, 0.25);
-  ctx.beginPath();
-  ctx.roundRect(W / 2 - pw / 2 - 32, H / 2 + 10, pw + 64, 72, 36);
-  ctx.fill();
-  ctx.fillStyle = accentColor;
-  ctx.shadowBlur = 12;
-  ctx.fillText(phone, W / 2, H / 2 + 46);
+  ctx.shadowColor = "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = 8;
+  ctx.fillText(phone, W / 2, pillY);
 
   // SMS 브랜드
-  ctx.font = '28px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.font = '32px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.shadowBlur = 0;
-  ctx.fillText("SMS 셀프마케팅서비스", W / 2, H - 140);
+  ctx.fillText("SMS 셀프마케팅서비스", W / 2, H - 120);
 
   ctx.restore();
 }

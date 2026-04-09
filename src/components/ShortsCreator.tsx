@@ -228,7 +228,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     const files = e.target.files;
     if (!files) return;
     Array.from(files).forEach((file) => {
-      if (photos.length >= 10) return;
+      if (photos.length >= 6) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
         addPhoto({ id: crypto.randomUUID(), dataUrl: ev.target?.result as string });
@@ -386,7 +386,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
     try {
       const { data: scriptData, error: scriptErr } = await supabase.functions.invoke("generate-shorts", {
         body: {
-          photos: photos.slice(0, 5).map((p, i) => ({ dataUrl: p.dataUrl, index: i + 1 })),
+          photos: photos.slice(0, 6).map((p, i) => ({ dataUrl: p.dataUrl, index: i + 1 })),
           workType: "자동판단",
           videoStyle,
           narrationType: narrationEnabled ? "있음" : "없음",
@@ -426,7 +426,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       const { data: renderData, error: renderErr } = await supabase.functions.invoke("render-video", {
         body: {
           scenes,
-          photos: photos.slice(0, 5).map(p => p.dataUrl),
+          photos: photos.slice(0, 6).map(p => p.dataUrl),
           narrationAudios,
           companyName: settings.companyName,
           phoneNumber: settings.phoneNumber,
@@ -466,7 +466,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         }
 
         const result = await renderMirraVideo(
-          photos.slice(0, 5).map(p => ({ dataUrl: p.dataUrl })),
+          photos.slice(0, 6).map(p => ({ dataUrl: p.dataUrl })),
           scenes,
           settings.companyName,
           settings.phoneNumber,

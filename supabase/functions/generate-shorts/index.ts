@@ -119,46 +119,40 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       const photoCount = (photos || []).length;
       const manualScenes: any[] = [];
 
-      // 인트로
-      manualScenes.push({
-        duration: 90, bg_type: "gradient", bg_colors: ["#0a1628", "#1a3a6a"],
-        badge: companyName || "SMS", title: lines[0] || "시공 현장",
-        subtitle: lines[1] || "", accent_color: "#237FFF",
-        animation: "slide_up", photo: null, narration: lines[0] || "",
-      });
-
-      // 사진 장면 (대본 줄과 매핑)
-      for (let i = 0; i < photoCount; i++) {
-        const lineIdx = Math.min(i + 1, lines.length - 1);
+      // 각 대본 줄 = 1개 장면, 사진이 있으면 배경으로 사용
+      for (let i = 0; i < lines.length; i++) {
+        const hasPhoto = i < photoCount;
         manualScenes.push({
-          duration: 120, bg_type: "photo", bg_colors: ["#001130", "#0d2847"],
-          badge: `${i + 1}단계`,
-          title: lines[lineIdx] || `시공 ${i + 1}단계`,
-          subtitle: lines[lineIdx + 1] || "",
+          duration: 120,
+          bg_type: hasPhoto ? "photo" : "gradient",
+          bg_colors: ["#0a1628", "#1a3a6a"],
+          badge: hasPhoto ? `${i + 1}단계` : "",
+          title: lines[i],
+          subtitle: "",
           accent_color: i % 2 === 0 ? "#237FFF" : "#AB5EBE",
           animation: animations[i % 4],
-          photo: `photo_${i + 1}`,
-          narration: lines[lineIdx] || "",
+          photo: hasPhoto ? `photo_${i + 1}` : null,
+          narration: lines[i],
         });
       }
 
-      // 나머지 대본 줄 (사진 없는 텍스트 장면)
-      const usedLines = photoCount + 2;
-      for (let i = usedLines; i < lines.length; i++) {
+      // 사진이 대본보다 많으면 나머지 사진도 장면 추가
+      for (let i = lines.length; i < photoCount; i++) {
         manualScenes.push({
-          duration: 100, bg_type: "gradient", bg_colors: ["#0d2847", "#1a3a6a"],
-          badge: "", title: lines[i],
-          subtitle: "", accent_color: i % 2 === 0 ? "#237FFF" : "#AB5EBE",
-          animation: animations[i % 4], photo: null, narration: lines[i],
+          duration: 120, bg_type: "photo", bg_colors: ["#001130", "#0d2847"],
+          badge: `${i + 1}단계`, title: `시공 ${i + 1}단계`, subtitle: "",
+          accent_color: i % 2 === 0 ? "#237FFF" : "#AB5EBE",
+          animation: animations[i % 4], photo: `photo_${i + 1}`, narration: "",
         });
       }
 
-      // 엔딩
+      // 엔딩 — 업체명 + 로고 + 연락처 강조
       manualScenes.push({
-        duration: 100, bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"],
-        badge: "문의", title: companyName || "SMS",
-        subtitle: phoneNumber || "", accent_color: "#237FFF",
-        animation: "fade_in", photo: null, narration: `${companyName || "SMS"}에 문의하세요.`,
+        duration: 150, bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"],
+        badge: "시공 문의", title: companyName || "SMS",
+        subtitle: phoneNumber || "연락주세요", accent_color: "#237FFF",
+        animation: "fade_in", photo: null,
+        narration: `${companyName || "SMS"}에 문의하세요. ${phoneNumber || ""}`,
       });
 
       result = { scenes: manualScenes };
