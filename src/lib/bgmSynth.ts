@@ -209,6 +209,8 @@ function _synthBgm(audioCtx: AudioContext, out: AudioNode, bgmType: BgmType, dur
 export function previewBgm(bgmType: BgmType): AudioContext | null {
   if (bgmType === "none") return null;
   const ctx = new AudioContext();
+  // 브라우저 autoplay 정책: 사용자 제스처 후 resume 필요
+  if (ctx.state === "suspended") ctx.resume();
   _synthBgm(ctx, ctx.destination, bgmType, 6);
   return ctx;
 }

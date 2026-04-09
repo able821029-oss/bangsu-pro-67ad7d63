@@ -108,7 +108,7 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
           </p>
           {plan !== "비즈니스" && plan !== "무제한" && (
             <Button size="sm" variant="outline" className="text-xs border-primary text-primary"
-              onClick={() => { sessionStorage.setItem("sms-open-settings-page", "pricing"); onClose(); }}>
+              onClick={() => { sessionStorage.setItem("sms-open-settings-page", "pricing"); onNavigate ? onNavigate("mypage") : onClose(); }}>
               플랜 업그레이드
             </Button>
           )}
@@ -157,7 +157,7 @@ function VoiceCard({
   );
 }
 
-export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => void; autoStart?: boolean }) {
+export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onClose: () => void; onNavigate?: (tab: string) => void; autoStart?: boolean }) {
   const { photos, settings, subscription, addPhoto, removePhoto, posts } = useAppStore();
   const hasAutoStarted = useRef(false);
   const { toast } = useToast();
