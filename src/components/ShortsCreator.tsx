@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { renderMirraVideo, createBgmTrack, previewBgm, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/mirraRenderer";
+import { renderMirraVideo, createBgmTrack, previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/mirraRenderer";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
 type ShortsStep = "config" | "generating" | "done" | "error" | "ios_guide";
@@ -23,12 +23,12 @@ interface VoiceOption {
 
 // Web Speech API voices — mapped to Korean-compatible system voices
 const VOICES: VoiceOption[] = [
-  { id: "male_calm", label: "남성 — 차분한", desc: "낮고 안정적", gender: "male", lang: "ko-KR", pitch: 0.5, rate: 0.75, voiceNameHint: ["Google 한국의", "Korean Male"] },
-  { id: "male_pro", label: "남성 — 전문적", desc: "신뢰감 있는", gender: "male", lang: "ko-KR", pitch: 0.7, rate: 0.85, voiceNameHint: ["Google 한국의", "Korean Male"] },
-  { id: "male_strong", label: "남성 — 힘있는", desc: "에너지 넘치는", gender: "male", lang: "ko-KR", pitch: 0.9, rate: 1.1, voiceNameHint: ["Google 한국의", "Korean Male"] },
-  { id: "female_friendly", label: "여성 — 친근한", desc: "따뜻하고 밝은", gender: "female", lang: "ko-KR", pitch: 1.4, rate: 0.85, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
-  { id: "female_pro", label: "여성 — 전문적", desc: "자신감 있는", gender: "female", lang: "ko-KR", pitch: 1.15, rate: 0.95, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
-  { id: "female_bright", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female", lang: "ko-KR", pitch: 1.7, rate: 1.15, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
+  { id: "male_calm", label: "남성 — 차분한", desc: "낮고 안정적", gender: "male", lang: "ko-KR", pitch: 0.5, rate: 0.6, voiceNameHint: ["Google 한국의", "Korean Male"] },
+  { id: "male_pro", label: "남성 — 전문적", desc: "신뢰감 있는", gender: "male", lang: "ko-KR", pitch: 0.7, rate: 0.7, voiceNameHint: ["Google 한국의", "Korean Male"] },
+  { id: "male_strong", label: "남성 — 힘있는", desc: "에너지 넘치는", gender: "male", lang: "ko-KR", pitch: 0.9, rate: 0.85, voiceNameHint: ["Google 한국의", "Korean Male"] },
+  { id: "female_friendly", label: "여성 — 친근한", desc: "따뜻하고 밝은", gender: "female", lang: "ko-KR", pitch: 1.4, rate: 0.7, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
+  { id: "female_pro", label: "여성 — 전문적", desc: "자신감 있는", gender: "female", lang: "ko-KR", pitch: 1.15, rate: 0.75, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
+  { id: "female_bright", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female", lang: "ko-KR", pitch: 1.7, rate: 0.9, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
 ];
 
 const videoStyles: { id: VideoStyle; label: string; desc: string; icon: string }[] = [
@@ -288,7 +288,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
           body: JSON.stringify({
             text: PREVIEW_TEXT,
             model_id: ELEVENLABS_MODEL,
-            voice_settings: { stability: 0.4, similarity_boost: 0.8, style: 0.5, use_speaker_boost: true },
+            voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.4, use_speaker_boost: true, speed: 0.8 },
           }),
         });
         if (res.ok) {
@@ -370,6 +370,9 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       URL.revokeObjectURL(videoUrl);
       setVideoUrl(null);
     }
+
+    // 업체 로고 프리로드 (엔딩 카드에 표시)
+    preloadLogo(settings.logoUrl || "");
 
     setStep("generating");
     setProgressText("📝 현장 사진 분석 중...");

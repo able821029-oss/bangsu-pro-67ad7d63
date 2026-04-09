@@ -245,6 +245,8 @@ function drawDividerLine(ctx: CanvasRenderingContext2D, y: number, accentColor: 
 }
 
 // ── 엔딩 카드 ──
+let _logoImg: HTMLImageElement | null = null;
+
 function drawEndingCard(
   ctx: CanvasRenderingContext2D, company: string, phone: string,
   accentColor: string, progress: number,
@@ -252,6 +254,20 @@ function drawEndingCard(
   const p = easeOut(progress);
   ctx.save();
   ctx.globalAlpha = p;
+
+  // 로고 (프리로드된 경우)
+  if (_logoImg && _logoImg.complete && _logoImg.naturalWidth > 0) {
+    const logoSize = 120;
+    const lx = W / 2 - logoSize / 2;
+    const ly = H / 2 - 250;
+    ctx.beginPath();
+    ctx.arc(lx + logoSize / 2, ly + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(_logoImg, lx, ly, logoSize, logoSize);
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = p;
+  }
 
   // 회사명 배경박스
   ctx.font = 'bold 80px "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
@@ -285,6 +301,15 @@ function drawEndingCard(
   ctx.fillText("SMS 셀프마케팅서비스", W / 2, H - 140);
 
   ctx.restore();
+}
+
+/** 로고 이미지를 프리로드 (엔딩 카드에 표시) */
+export function preloadLogo(logoUrl: string) {
+  if (!logoUrl) { _logoImg = null; return; }
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = logoUrl;
+  _logoImg = img;
 }
 
 // ── 크로스브라우저 MIME 감지 ──
