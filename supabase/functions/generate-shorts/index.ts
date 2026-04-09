@@ -52,14 +52,14 @@ serve(async (req) => {
   try {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    // ElevenLabs 한국어 자연스러운 음성 매핑
+    // ElevenLabs 성별 구분 자연스러운 음성 매핑
     const VOICE_MAP: Record<string, string> = {
       "male_calm": "nPczCjzI2devNBz1zQrb",      // Brian — 차분한 남성
-      "male_pro": "onwK4e9ZLuTAKqWW03F9",       // Daniel — 전문적 남성
-      "male_strong": "cgSgspJ2msm6clMCkdW9",    // George — 힘있는 남성
-      "female_friendly": "FGY2WhTYpPnrIDTdsKH5", // Laura — 친근한 여성
-      "female_pro": "iP95p4xoKVk53GoZ742B",     // Chris — 전문적 여성
-      "female_bright": "nPczCjzI2devNBz1zQrb",   // Brian — 밝은 (폴백)
+      "male_pro": "N2lVS1w4EtoT3dr4eOWO",       // Marcus — 전문적 남성
+      "male_strong": "TX3LPaxmHKxFdv7VOQHJ",    // Thomas — 힘있는 남성
+      "female_friendly": "EXAVITQu4vr4xnSDxMaL", // Bella — 친근한 여성
+      "female_pro": "XrExE9yKIg1WjnnlVkGX",     // Lily — 전문적 여성
+      "female_bright": "pFZP5JQG7iQjIQuC4Bku",  // Freya — 밝은 여성
     };
     const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "nPczCjzI2devNBz1zQrb";
 
