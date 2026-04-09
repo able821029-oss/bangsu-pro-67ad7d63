@@ -64,8 +64,7 @@ serve(async (req) => {
     const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "nPczCjzI2devNBz1zQrb";
 
     const body = await req.json();
-    const { photos, videoStyle, narrationType, location, buildingType, constructionDate, companyName, phoneNumber, voiceId: requestedVoiceId } = body;
-    // voiceId를 요청에서 받거나 기본 VOICE_MAP에서 매핑
+    const { photos, videoStyle, narrationType, location, buildingType, constructionDate, companyName, phoneNumber, voiceId: requestedVoiceId, scriptMode, manualScript, maxDurationSec } = body;
     const resolvedVoiceId = VOICE_MAP[requestedVoiceId || ""] || requestedVoiceId || ELEVENLABS_VOICE_ID;
 
     const styleGuide: Record<string, string> = {
@@ -114,8 +113,59 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
 
     let result: any;
 
-    // ── Step 1: Claude로 장면 스크립트 생성 ──
-    if (ANTHROPIC_API_KEY) {
+    // ── 직접 작성 대본 → 장면 변환 ──
+    if (scriptMode === "manual" && manualScript) {
+      const lines = manualScript.split("\n").filter((l: string) => l.trim());
+      const photoCount = (photos || []).length;
+      const manualScenes: any[] = [];
+
+      // 인트로
+      manualScenes.push({
+        duration: 90, bg_type: "gradient", bg_colors: ["#0a1628", "#1a3a6a"],
+        badge: companyName || "SMS", title: lines[0] || "시공 현장",
+        subtitle: lines[1] || "", accent_color: "#237FFF",
+        animation: "slide_up", photo: null, narration: lines[0] || "",
+      });
+
+      // 사진 장면 (대본 줄과 매핑)
+      for (let i = 0; i < photoCount; i++) {
+        const lineIdx = Math.min(i + 1, lines.length - 1);
+        manualScenes.push({
+          duration: 120, bg_type: "photo", bg_colors: ["#001130", "#0d2847"],
+          badge: `${i + 1}단계`,
+          title: lines[lineIdx] || `시공 ${i + 1}단계`,
+          subtitle: lines[lineIdx + 1] || "",
+          accent_color: i % 2 === 0 ? "#237FFF" : "#AB5EBE",
+          animation: animations[i % 4],
+          photo: `photo_${i + 1}`,
+          narration: lines[lineIdx] || "",
+        });
+      }
+
+      // 나머지 대본 줄 (사진 없는 텍스트 장면)
+      const usedLines = photoCount + 2;
+      for (let i = usedLines; i < lines.length; i++) {
+        manualScenes.push({
+          duration: 100, bg_type: "gradient", bg_colors: ["#0d2847", "#1a3a6a"],
+          badge: "", title: lines[i],
+          subtitle: "", accent_color: i % 2 === 0 ? "#237FFF" : "#AB5EBE",
+          animation: animations[i % 4], photo: null, narration: lines[i],
+        });
+      }
+
+      // 엔딩
+      manualScenes.push({
+        duration: 100, bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"],
+        badge: "문의", title: companyName || "SMS",
+        subtitle: phoneNumber || "", accent_color: "#237FFF",
+        animation: "fade_in", photo: null, narration: `${companyName || "SMS"}에 문의하세요.`,
+      });
+
+      result = { scenes: manualScenes };
+    }
+
+    // ── Step 1: Claude로 장면 스크립트 생성 (AI 모드) ──
+    if (!result && ANTHROPIC_API_KEY) {
       const userContent: any[] = [];
       const photoSlice = (photos || []).slice(0, 5);
       for (const photo of photoSlice) {
