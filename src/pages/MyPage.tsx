@@ -32,9 +32,9 @@ export function MyPage() {
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("name, google_refresh_token").eq("user_id", user.id).single()
+    supabase.from("profiles").select("name").eq("user_id", user.id).single()
       .then(({ data }) => {
-        if (data) { setName(data.name || ""); setGoogleConnected(!!data.google_refresh_token); }
+        if (data) { setName(data.name || ""); }
       });
   }, [user]);
 

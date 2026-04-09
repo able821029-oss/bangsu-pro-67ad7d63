@@ -27,13 +27,27 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// ── Supabase JWT 인증 미들웨어 ──
+const authMiddleware = async (req, res, next) => {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) {
+    return res.status(401).json({ error: "인증 토큰이 필요합니다" });
+  }
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    return res.status(401).json({ error: "인증 실패" });
+  }
+  req.user = user;
+  next();
+};
+
 // ── 헬스체크 ──
 app.get("/health", (_, res) => {
   res.json({ ok: true, ts: Date.now(), version: "3.0-remotion" });
 });
 
-// ── 영상 렌더링 ──
-app.post("/render-video", async (req, res) => {
+// ── 영상 렌더링 (인증 필수) ──
+app.post("/render-video", authMiddleware, async (req, res) => {
   const jobId = uuidv4();
   const videoPath = `/tmp/sms_${jobId}.mp4`;
   const audioPath = `/tmp/sms_${jobId}_audio.mp3`;
@@ -157,7 +171,7 @@ app.post("/render-video", async (req, res) => {
     });
   } catch (err) {
     console.error(`[${jobId}] 오류:`, err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "영상 생성에 실패했습니다. 다시 시도해주세요." });
   } finally {
     [videoPath, audioPath, bgmPath, mixedPath, finalPath].forEach((p) => {
       try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch {}

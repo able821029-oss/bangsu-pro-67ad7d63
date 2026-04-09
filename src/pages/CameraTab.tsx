@@ -18,6 +18,7 @@ import { useAppStore, Platform, Persona, BlogPost, ContentBlock } from "@/stores
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
 
 const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
@@ -51,6 +52,7 @@ export function CameraTab({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [wizardStep, setWizardStep] = useState<WizardStep>(1);
   const [location, setLocation] = useState("");
@@ -257,6 +259,7 @@ export function CameraTab({
           location,
           building_type: "AI자동판단",
           work_date: constructionDate,
+          user_id: user?.id,
         })
         .select()
         .single();

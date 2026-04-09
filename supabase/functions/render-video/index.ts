@@ -13,12 +13,17 @@ serve(async (req) => {
   }
 
   try {
+    // 클라이언트의 Supabase JWT를 그대로 전달
+    const authHeader = req.headers.get("authorization") || "";
     const body = await req.json();
 
     // Railway 서버로 프록시 (서버↔서버 = CORS 없음)
     const railwayRes = await fetch(`${RAILWAY_URL}/render-video`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": authHeader,
+      },
       body: JSON.stringify(body),
     });
 
