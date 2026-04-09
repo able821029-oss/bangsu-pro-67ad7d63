@@ -305,10 +305,12 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
           previewAudioRef.current = audio;
           audio.onended = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
           audio.onerror = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
-          audio.play();
+          await audio.play();
           return;
         }
-      } catch {}
+      } catch (err) {
+        console.warn("[TTS] ElevenLabs 실패, Web Speech 폴백:", err);
+      }
     }
 
     // ElevenLabs 실패 시 Web Speech API 폴백
