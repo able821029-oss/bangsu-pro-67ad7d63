@@ -5,7 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { renderMirraVideo, createBgmTrack, previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/mirraRenderer";
+import { createBgmTrack, previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/mirraRenderer";
+import { Player } from "@remotion/player";
+import { SmsComposition, calculateTotalFrames } from "@/remotion/SmsComposition";
+import { mirraToRemotionScene, type SmsScene, type SmsVideoProps } from "@/remotion/types";
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
 type ShortsStep = "config" | "generating" | "done" | "error" | "ios_guide";
@@ -169,6 +172,7 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
   const [scriptMode, setScriptMode] = useState<"ai" | "manual">("ai");
   const [manualScript, setManualScript] = useState("");
   const [step, setStep] = useState<ShortsStep>("config");
+  const [remotionScenes, setRemotionScenes] = useState<SmsScene[]>([]);
   const [progressText, setProgressText] = useState("");
   const [progressPct, setProgressPct] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -407,8 +411,10 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
       const scenes: MirraScene[] = scriptData?.scenes || [];
       if (scenes.length === 0) throw new Error("스크립트 생성 실패");
 
-      // 대본 반영 확인 로그
-      console.warn("[SMS] 영상 장면:", scenes.map((s, i) => `${i}: ${s.title}`).join(" | "));
+      // Remotion 형식으로 변환
+      const rScenes = scenes.map((s, i) => mirraToRemotionScene(s, i));
+      setRemotionScenes(rScenes);
+      console.warn("[SMS] 영상 장면:", rScenes.map((s, i) => `${i}: ${s.title}`).join(" | "));
 
       setProgressText("🎬 텍스트 애니메이션 합성 중...");
       setProgressPct(25);
@@ -437,69 +443,16 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         },
       });
 
-      if (renderErr || renderData?.error) {
-        // 서버 실패 시 브라우저 렌더링으로 fallback
-        console.warn("서버 렌더링 실패, 브라우저로 전환:", renderErr?.message || renderData?.error);
-        setProgressText("🖥️ 브라우저에서 렌더링 중...");
-        setProgressPct(25);
-      } else {
-        const videoUrl = renderData?.videoUrl;
-        setProgressPct(100);
-        setVideoUrl(videoUrl);
-        setStep("done");
-        toast({ title: "영상이 완성되었습니다! 🎬" });
-        incrementVideoUsed();
-        return; // 서버 성공 시 종료
+      if (!renderErr && !renderData?.error && renderData?.videoUrl) {
+        // 서버 렌더링 성공 → MP4 URL
+        setVideoUrl(renderData.videoUrl);
       }
 
-      // ── 브라우저 렌더링 fallback ──
-      if (true) {
-        // ── 브라우저 렌더링 fallback ──
-        const hasElevenLabsAudio = narrationAudios.some(Boolean);
-        if (hasElevenLabsAudio) {
-          setProgressText("🎙️ 나레이션 음성 합성 중...");
-          setProgressPct(22);
-        }
-
-        const bgmAudioCtx = bgm !== "none" ? new AudioContext() : null;
-        const bgmDest = bgmAudioCtx ? bgmAudioCtx.createMediaStreamDestination() : null;
-        const totalDurationSec = scenes.reduce((sum: number, s: any) => sum + (s.duration || 100) / 30, 0);
-        if (bgmAudioCtx && bgmDest && bgm !== "none") {
-          await createBgmTrack(bgmAudioCtx, bgmDest, bgm as BgmType, totalDurationSec + 2);
-        }
-
-        const result = await renderMirraVideo(
-          photos.slice(0, 6).map(p => ({ dataUrl: p.dataUrl })),
-          scenes,
-          settings.companyName,
-          settings.phoneNumber,
-          narrationEnabled,
-          (current, total) => {
-            const pct = 25 + Math.round((current / total) * 70);
-            setProgressPct(pct);
-            setProgressText(`🖼️ 장면 렌더링 중... ${current}/${total}컷`);
-          },
-          hasElevenLabsAudio ? narrationAudios : undefined,
-          hasElevenLabsAudio ? undefined : voiceConfig,
-          bgmDest ?? undefined,
-        );
-
-        const url = URL.createObjectURL(result.blob);
-        setVideoUrl(url);
-        setProgressPct(100);
-        setStep("done");
-
-        if (narrationEnabled && voiceConfig && result.narrationTexts.some(Boolean) && !hasElevenLabsAudio) {
-          requestAnimationFrame(() => setPendingNarration({ texts: result.narrationTexts, voiceConfig }));
-        }
-
-        toast({ title: "영상이 완성되었습니다!" });
-        if (bgmAudioCtx && bgmAudioCtx.state !== "closed") {
-          setTimeout(() => bgmAudioCtx.close().catch(() => {}), 500);
-        }
-        incrementVideoUsed();
-      }
-
+      // Remotion Player로 즉시 미리보기 (서버 성공/실패 무관)
+      setProgressPct(100);
+      setStep("done");
+      toast({ title: "영상이 완성되었습니다! 🎬" });
+      incrementVideoUsed();
 
     } catch (err: any) {
       console.error("Shorts generation error:", err);
@@ -794,14 +747,30 @@ export function ShortsCreator({ onClose, autoStart = false }: { onClose: () => v
         <h2 className="text-xl font-bold">영상이 완성되었습니다!</h2>
         {/* ElevenLabs 연동 완료 시 안내 제거, 미연동 시 안내 표시 */}
 
-        {videoUrl ? (
-          <video
-            src={videoUrl}
-            controls
-            autoPlay
-            playsInline
-            className="w-full max-w-xs rounded-xl border border-border aspect-[9/16]"
-          />
+        {remotionScenes.length > 0 ? (
+          <div className="w-full max-w-xs rounded-xl border border-border overflow-hidden">
+            <Player
+              component={SmsComposition}
+              inputProps={{
+                scenes: remotionScenes,
+                photos: photos.slice(0, 6).map(p => p.dataUrl),
+                companyName: settings.companyName || "SMS",
+                phoneNumber: settings.phoneNumber || "",
+                logoUrl: settings.logoUrl || undefined,
+                bgmType: bgm,
+              }}
+              durationInFrames={calculateTotalFrames(remotionScenes)}
+              compositionWidth={1080}
+              compositionHeight={1920}
+              fps={30}
+              style={{ width: "100%", aspectRatio: "9/16" }}
+              controls
+              autoPlay
+            />
+          </div>
+        ) : videoUrl ? (
+          <video src={videoUrl} controls autoPlay playsInline
+            className="w-full max-w-xs rounded-xl border border-border aspect-[9/16]" />
         ) : (
           <div className="w-full max-w-xs rounded-xl border border-border aspect-[9/16] flex items-center justify-center bg-card">
             <p className="text-sm text-muted-foreground">미리보기를 불러오는 중...</p>
