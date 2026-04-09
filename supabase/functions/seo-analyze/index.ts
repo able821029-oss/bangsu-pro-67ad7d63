@@ -13,12 +13,6 @@ serve(async (req) => {
 
   try {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) {
-      return new Response(JSON.stringify({ error: "API key not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const body = await req.json();
     const { mode, title, blocks, hashtags, location, workType, posts, companyName } = body;
@@ -166,7 +160,7 @@ JSON 형식:
       });
     }
 
-    const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
+    const anthropicResponse = ANTHROPIC_API_KEY ? await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "x-api-key": ANTHROPIC_API_KEY,
@@ -179,11 +173,11 @@ JSON 형식:
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       }),
-    });
+    }) : null;
 
-    if (!anthropicResponse.ok) {
-      const errText = await anthropicResponse.text();
-      console.error("Claude API error:", anthropicResponse.status, errText);
+    if (!anthropicResponse || !anthropicResponse.ok) {
+      const errText = anthropicResponse ? await anthropicResponse.text() : "API key not configured";
+      console.error("Claude API error:", anthropicResponse?.status || 0, errText);
 
       // Fallback mock responses
       if (mode === "seo_score") {

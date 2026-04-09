@@ -11,10 +11,11 @@ type SubTab = "write" | "shorts" | "publish";
 interface ContentTabProps {
   onNavigate: (tab: string) => void;
   onViewPost: (post: BlogPost) => void;
+  initialSubTab?: SubTab;
 }
 
-export function ContentTab({ onNavigate, onViewPost }: ContentTabProps) {
-  const [subTab, setSubTab] = useState<SubTab>("write");
+export function ContentTab({ onNavigate, onViewPost, initialSubTab }: ContentTabProps) {
+  const [subTab, setSubTab] = useState<SubTab>(initialSubTab || "write");
 
   return (
     <div className="min-h-screen bg-[#0E1322]">

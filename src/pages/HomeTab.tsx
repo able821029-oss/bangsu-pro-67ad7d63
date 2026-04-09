@@ -216,7 +216,7 @@ export function HomeTab({
           </div>
           <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{published}건</div>
         </button>
-        <button onClick={() => onNavigate("content")} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
+        <button onClick={() => onNavigate("shorts")} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
           <span className="text-[#8B90A0] text-xs">이번달 영상</span>
           <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{videoCount}개</div>
         </button>

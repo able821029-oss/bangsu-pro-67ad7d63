@@ -88,12 +88,16 @@ function AppContent() {
   }
 
   const renderTab = () => {
+    const nav = (t: string) => setActiveTab(t as TabId);
     switch (activeTab) {
-      case "home":     return <HomeTab onNavigate={(t) => setActiveTab(t as TabId)} onViewPost={handleViewPost} />;
+      case "home":     return <HomeTab onNavigate={nav} onViewPost={handleViewPost} />;
       case "calendar": return <CalendarTab />;
-      case "content":  return <ContentTab onNavigate={(t) => setActiveTab(t as TabId)} onViewPost={handleViewPost} />;
+      case "content":  return <ContentTab onNavigate={nav} onViewPost={handleViewPost} />;
+      case "publish":  return <ContentTab onNavigate={nav} onViewPost={handleViewPost} initialSubTab="publish" />;
+      case "shorts":   return <ContentTab onNavigate={nav} onViewPost={handleViewPost} initialSubTab="shorts" />;
+      case "camera":   return <ContentTab onNavigate={nav} onViewPost={handleViewPost} initialSubTab="write" />;
       case "mypage":   return <MyPage />;
-      default:         return <HomeTab onNavigate={(t) => setActiveTab(t as TabId)} onViewPost={handleViewPost} />;
+      default:         return <HomeTab onNavigate={nav} onViewPost={handleViewPost} />;
     }
   };
 
