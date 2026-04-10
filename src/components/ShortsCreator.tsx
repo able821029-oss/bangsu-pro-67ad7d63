@@ -84,7 +84,7 @@ function getKoreanVoice(voiceOption: VoiceOption): SpeechSynthesisVoice | null {
   return koVoices[0] || null;
 }
 
-function UsageMeter({ used, max, plan }: { used: number; max: number; plan: string }) {
+function UsageMeter({ used, max, plan, onUpgrade }: { used: number; max: number; plan: string; onUpgrade: () => void }) {
   const ratio = max > 0 ? used / max : 1;
   const barColor = ratio >= 1 ? "#EF4444" : ratio >= 0.8 ? "#F97316" : "#237FFF";
   const pct = Math.min(ratio * 100, 100);
@@ -108,7 +108,7 @@ function UsageMeter({ used, max, plan }: { used: number; max: number; plan: stri
           </p>
           {plan !== "비즈니스" && plan !== "무제한" && (
             <Button size="sm" variant="outline" className="text-xs border-primary text-primary"
-              onClick={() => { sessionStorage.setItem("sms-open-settings-page", "pricing"); onNavigate ? onNavigate("mypage") : onClose(); }}>
+              onClick={onUpgrade}>
               플랜 업그레이드
             </Button>
           )}
@@ -449,12 +449,17 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       if (!renderErr && !renderData?.error && renderData?.videoUrl) {
         // 서버 렌더링 성공 → MP4 URL
         setVideoUrl(renderData.videoUrl);
+        setProgressPct(100);
+        setStep("done");
+        toast({ title: "영상이 완성되었습니다! 🎬" });
+      } else {
+        // 서버 렌더링 실패 — Remotion Player 미리보기만 제공
+        const errMsg = renderData?.error || renderErr?.message || "서버 렌더링 실패";
+        console.warn("[SMS] 서버 렌더링 실패:", errMsg);
+        setProgressPct(100);
+        setStep("done");
+        toast({ title: "미리보기만 가능합니다", description: "서버 렌더링에 실패했습니다. 다시 시도해주세요.", variant: "destructive" });
       }
-
-      // Remotion Player로 즉시 미리보기 (서버 성공/실패 무관)
-      setProgressPct(100);
-      setStep("done");
-      toast({ title: "영상이 완성되었습니다! 🎬" });
       incrementVideoUsed();
 
     } catch (err: any) {
@@ -662,7 +667,8 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         </div>
 
         {/* 이번달 영상 현황 */}
-        <UsageMeter used={videoUsed} max={videoLimit} plan={subscription.plan} />
+        <UsageMeter used={videoUsed} max={videoLimit} plan={subscription.plan}
+          onUpgrade={() => { sessionStorage.setItem("sms-open-settings-page", "pricing"); onNavigate ? onNavigate("mypage") : onClose(); }} />
 
         <div className="space-y-2">
           {(() => {

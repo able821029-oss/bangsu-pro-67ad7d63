@@ -27,17 +27,17 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// ── Supabase JWT 인증 미들웨어 ──
-const authMiddleware = async (req, res, next) => {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  if (!token) {
-    return res.status(401).json({ error: "인증 토큰이 필요합니다" });
+// ── API 시크릿 인증 미들웨어 (Edge Function → Railway 서버간 통신) ──
+const API_SECRET = process.env.VIDEO_API_SECRET || "";
+const authMiddleware = (req, res, next) => {
+  const token = req.headers["x-api-secret"] || req.headers.authorization?.replace("Bearer ", "");
+  if (!API_SECRET) {
+    // 시크릿 미설정 시 통과 (개발 환경)
+    return next();
   }
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
+  if (token !== API_SECRET) {
     return res.status(401).json({ error: "인증 실패" });
   }
-  req.user = user;
   next();
 };
 
