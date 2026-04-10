@@ -2,6 +2,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+// 저장된 테마 즉시 적용 (FOUC 방지)
+const savedTheme = localStorage.getItem("sms_theme") || "dark";
+if (savedTheme === "light" || (savedTheme === "system" && window.matchMedia("(prefers-color-scheme: light)").matches)) {
+  document.documentElement.classList.add("light");
+}
+
 // SW registration — only in production, not in iframes/preview
 const isInIframe = (() => {
   try { return window.self !== window.top; } catch { return true; }

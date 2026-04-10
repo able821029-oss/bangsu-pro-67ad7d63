@@ -63,6 +63,64 @@
     --sidebar-border: 222 14% 29%;
     --sidebar-ring: 216 100% 65%;
   }
+
+  /* ── Light Mode ── */
+  .light {
+    --background: 0 0% 98%;            /* #FAFAFA */
+    --foreground: 222 20% 14%;         /* #1A1F2F */
+
+    --card: 0 0% 100%;                 /* #FFFFFF */
+    --card-foreground: 222 20% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 20% 14%;
+
+    --primary: 215 100% 50%;           /* #0066FF */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 92%;          /* #E8EAF0 */
+    --secondary-foreground: 222 20% 14%;
+
+    --muted: 220 14% 95%;              /* #F0F1F5 */
+    --muted-foreground: 220 10% 46%;   /* #6B7080 */
+
+    --accent: 220 14% 92%;
+    --accent-foreground: 222 20% 14%;
+
+    --destructive: 0 84% 60%;          /* #E53E3E */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 87%;             /* #D8DAE3 */
+    --input: 220 13% 87%;
+    --ring: 215 100% 50%;
+
+    --radius: 1rem;
+
+    --success: 142 71% 45%;            /* #22C55E */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;             /* #F59E0B */
+    --warning-foreground: 0 0% 100%;
+    --info: 215 100% 50%;
+    --info-foreground: 0 0% 100%;
+
+    --naver: 142 71% 45%;
+    --naver-foreground: 0 0% 100%;
+
+    --nav-background: 0 0% 100%;
+    --nav-foreground: 220 13% 70%;
+    --nav-active: 215 100% 50%;
+
+    --brand-gradient: linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222 20% 14%;
+    --sidebar-primary: 215 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 92%;
+    --sidebar-accent-foreground: 222 20% 14%;
+    --sidebar-border: 220 13% 87%;
+    --sidebar-ring: 215 100% 50%;
+  }
 }
 
 @layer base {
@@ -106,6 +164,10 @@
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius);
+  }
+  .light .glass-card {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.08);
   }
   /* Stitch Tonal Card (No-Line rule) */
   .tonal-card {

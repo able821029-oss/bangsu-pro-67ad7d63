@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { ArrowLeft, Bell, Moon, Globe, Shield, Smartphone } from "lucide-react";
+import { ArrowLeft, Bell, Moon, Sun, Monitor, Globe, Shield, Smartphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/hooks/useTheme";
 
 export function UserSettings({ onBack }: { onBack: () => void }) {
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const [settings, setSettings] = useState({
-    pushBlog: true,       // 블로그 발행 알림
-    pushWeather: true,    // 날씨 알림
-    pushRanking: false,   // 순위 변동 알림
-    darkMode: false,      // 다크모드 (시스템 따름)
-    language: "ko",       // 언어
-    autoSave: true,       // 자동 저장
-    analytics: true,      // 이용 분석 동의
+    pushBlog: true,
+    pushWeather: true,
+    pushRanking: false,
+    language: "ko",
+    autoSave: true,
+    analytics: true,
   });
 
   const toggle = (key: keyof typeof settings) => {
@@ -37,10 +38,16 @@ export function UserSettings({ onBack }: { onBack: () => void }) {
     </div>
   );
 
+  const themeOptions: { id: "dark" | "light" | "system"; label: string; icon: React.ElementType }[] = [
+    { id: "dark", label: "다크", icon: Moon },
+    { id: "light", label: "라이트", icon: Sun },
+    { id: "system", label: "시스템", icon: Monitor },
+  ];
+
   return (
     <div className="pb-24 max-w-lg mx-auto">
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-3">
-        <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-secondary">
+        <button onClick={onBack} aria-label="뒤로가기" className="p-2 -ml-2 rounded-lg hover:bg-secondary">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
@@ -50,6 +57,24 @@ export function UserSettings({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="px-4 pt-4 space-y-4">
+        {/* 테마 설정 */}
+        <div className="bg-card border border-border rounded-2xl px-4 py-3 space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">테마</p>
+          <div className="flex gap-2">
+            {themeOptions.map(({ id, label, icon: Icon }) => (
+              <button key={id} onClick={() => { setTheme(id); toast({ title: `${label} 모드로 변경되었습니다` }); }}
+                className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-medium transition-all ${
+                  theme === id
+                    ? "bg-primary text-primary-foreground shadow-lg"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                }`}>
+                <Icon className="w-5 h-5" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* 알림 설정 */}
         <div className="bg-card border border-border rounded-2xl px-4">
           <p className="text-xs font-semibold text-muted-foreground pt-3 pb-1 uppercase tracking-wide">알림</p>
@@ -74,7 +99,7 @@ export function UserSettings({ onBack }: { onBack: () => void }) {
             </div>
             <select value={settings.language}
               onChange={e => { setSettings(prev => ({ ...prev, language: e.target.value })); toast({ title: "언어가 변경되었습니다" }); }}
-              className="text-sm bg-secondary rounded-lg px-2 py-1 border-0 outline-none">
+              className="text-sm bg-secondary rounded-lg px-2 py-1 border-0 outline-none text-foreground">
               <option value="ko">한국어</option>
               <option value="en">English</option>
             </select>

@@ -83,23 +83,23 @@ export default function AuthPage() {
 
   if (showTerms) {
     return (
-      <div className="min-h-screen bg-[#0A0F1E] p-6">
-        <button onClick={() => setShowTerms(false)} className="text-[#ADC6FF] mb-4 text-sm font-medium">← 돌아가기</button>
-        <h1 className="text-xl font-bold mb-4 text-[#DEE1F7]">이용약관</h1>
-        <div className="space-y-4 text-sm text-[#8B90A0] leading-relaxed">
-          <section><h2 className="font-semibold text-[#DEE1F7] mb-1">1. 서비스 목적</h2><p>본 서비스는 콘텐츠 생성 및 일정 관리 기능을 제공합니다.</p></section>
-          <section><h2 className="font-semibold text-[#DEE1F7] mb-1">2. 개인정보 수집</h2><p>이메일, 이름, 일정 정보 등 서비스 제공에 필요한 정보를 수집합니다.</p></section>
-          <section><h2 className="font-semibold text-[#DEE1F7] mb-1">3. 데이터 활용</h2><p>사용자가 입력한 데이터는 서비스 기능 제공에만 사용됩니다.</p></section>
-          <section><h2 className="font-semibold text-[#DEE1F7] mb-1">4. 외부 연동</h2><p>구글 캘린더 연동 시 사용자 동의 하에 데이터가 전송됩니다.</p></section>
-          <section><h2 className="font-semibold text-[#DEE1F7] mb-1">5. 책임 제한</h2><p>서비스 사용으로 발생한 손해에 대해 책임이 제한됩니다.</p></section>
-          <section><h2 className="font-semibold text-[#DEE1F7] mb-1">6. 서비스 변경</h2><p>기능은 사전 공지 없이 변경될 수 있습니다.</p></section>
+      <div className="min-h-screen bg-background p-6">
+        <button onClick={() => setShowTerms(false)} className="text-primary mb-4 text-sm font-medium">← 돌아가기</button>
+        <h1 className="text-xl font-bold mb-4 text-foreground">이용약관</h1>
+        <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
+          <section><h2 className="font-semibold text-foreground mb-1">1. 서비스 목적</h2><p>본 서비스는 콘텐츠 생성 및 일정 관리 기능을 제공합니다.</p></section>
+          <section><h2 className="font-semibold text-foreground mb-1">2. 개인정보 수집</h2><p>이메일, 이름, 일정 정보 등 서비스 제공에 필요한 정보를 수집합니다.</p></section>
+          <section><h2 className="font-semibold text-foreground mb-1">3. 데이터 활용</h2><p>사용자가 입력한 데이터는 서비스 기능 제공에만 사용됩니다.</p></section>
+          <section><h2 className="font-semibold text-foreground mb-1">4. 외부 연동</h2><p>구글 캘린더 연동 시 사용자 동의 하에 데이터가 전송됩니다.</p></section>
+          <section><h2 className="font-semibold text-foreground mb-1">5. 책임 제한</h2><p>서비스 사용으로 발생한 손해에 대해 책임이 제한됩니다.</p></section>
+          <section><h2 className="font-semibold text-foreground mb-1">6. 서비스 변경</h2><p>기능은 사전 공지 없이 변경될 수 있습니다.</p></section>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0F1E] flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
       {/* Logo */}
       <div className="mb-8 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-3"
@@ -107,24 +107,24 @@ export default function AuthPage() {
           <span className="text-3xl font-black text-white">S</span>
         </div>
         <h1 className="text-2xl font-black" style={{ background: "linear-gradient(90deg,#237FFF,#AB5EBE)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>SMS</h1>
-        <p className="text-xs text-[#8B90A0] mt-1 tracking-widest">셀프마케팅서비스</p>
+        <p className="text-xs text-muted-foreground mt-1 tracking-widest">셀프마케팅서비스</p>
       </div>
 
       <div className="w-full max-w-sm space-y-3">
         {/* Email Form */}
         {mode === "signup" && (
           <input placeholder="이름" value={name} onChange={(e) => setName(e.target.value)}
-            className="w-full h-11 rounded-xl bg-[#1A1F2F] px-4 text-[#DEE1F7] placeholder-[#8B90A0] text-sm focus:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
-            style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+            className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+            style={{ border: "1px solid hsl(var(--border))" }} />
         )}
         <input type="email" placeholder="이메일" value={email} onChange={(e) => setEmail(e.target.value)}
-          className="w-full h-11 rounded-xl bg-[#1A1F2F] px-4 text-[#DEE1F7] placeholder-[#8B90A0] text-sm focus:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
-          style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+          className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+          style={{ border: "1px solid hsl(var(--border))" }} />
         <div className="relative">
           <input type={showPw ? "text" : "password"} placeholder="비밀번호" value={password} onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-11 rounded-xl bg-[#1A1F2F] px-4 pr-10 text-[#DEE1F7] placeholder-[#8B90A0] text-sm focus:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
-            style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
-          <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8B90A0]">
+            className="w-full h-11 rounded-xl bg-card px-4 pr-10 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+            style={{ border: "1px solid hsl(var(--border))" }} />
+          <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
             {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
@@ -132,8 +132,8 @@ export default function AuthPage() {
         {mode === "signup" && (
           <div className="flex items-start gap-2">
             <Checkbox id="terms" checked={termsAgreed} onCheckedChange={(v) => setTermsAgreed(!!v)} className="mt-0.5 border-white/10 data-[state=checked]:bg-[#4C8EFF] data-[state=checked]:border-[#4C8EFF]" />
-            <label htmlFor="terms" className="text-xs text-[#8B90A0]">
-              <button type="button" onClick={() => setShowTerms(true)} className="text-[#ADC6FF] underline">이용약관</button>에 동의합니다 (필수)
+            <label htmlFor="terms" className="text-xs text-muted-foreground">
+              <button type="button" onClick={() => setShowTerms(true)} className="text-primary underline">이용약관</button>에 동의합니다 (필수)
             </label>
           </div>
         )}
@@ -141,17 +141,17 @@ export default function AuthPage() {
         {mode === "reset" ? (
           <>
             {resetSent ? (
-              <div className="bg-[#4AE176]/10 border border-[#4AE176]/30 rounded-xl p-4 text-center space-y-2">
+              <div className="bg-success/10 border border-success/30 rounded-xl p-4 text-center space-y-2">
                 <span className="text-3xl">✉️</span>
-                <p className="text-sm font-semibold text-[#4AE176]">재설정 링크를 보냈습니다</p>
-                <p className="text-xs text-[#8B90A0]">{email} 메일함을 확인해주세요</p>
+                <p className="text-sm font-semibold text-success">재설정 링크를 보냈습니다</p>
+                <p className="text-xs text-muted-foreground">{email} 메일함을 확인해주세요</p>
               </div>
             ) : (
               <>
-                <p className="text-xs text-[#8B90A0] text-center">가입한 이메일을 입력하면 비밀번호 재설정 링크를 보내드립니다</p>
+                <p className="text-xs text-muted-foreground text-center">가입한 이메일을 입력하면 비밀번호 재설정 링크를 보내드립니다</p>
                 <input type="email" placeholder="가입한 이메일" value={email} onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-11 rounded-xl bg-[#1A1F2F] px-4 text-[#DEE1F7] placeholder-[#8B90A0] text-sm focus:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
-                  style={{ border: "1px solid rgba(255,255,255,0.1)" }} />
+                  className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  style={{ border: "1px solid hsl(var(--border))" }} />
                 <button onClick={handleResetPassword} disabled={loading}
                   className="w-full h-11 rounded-xl text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
                   style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
@@ -159,8 +159,8 @@ export default function AuthPage() {
                 </button>
               </>
             )}
-            <p className="text-center text-sm text-[#8B90A0]">
-              <button onClick={() => { setMode("login"); setResetSent(false); }} className="text-[#ADC6FF] font-medium">← 로그인으로 돌아가기</button>
+            <p className="text-center text-sm text-muted-foreground">
+              <button onClick={() => { setMode("login"); setResetSent(false); }} className="text-primary font-medium">← 로그인으로 돌아가기</button>
             </p>
           </>
         ) : (
@@ -173,14 +173,14 @@ export default function AuthPage() {
             </button>
 
             {mode === "login" && (
-              <button onClick={() => setMode("reset")} className="w-full text-center text-xs text-[#8B90A0] hover:text-[#ADC6FF] transition-colors">
+              <button onClick={() => setMode("reset")} className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors">
                 비밀번호를 잊으셨나요?
               </button>
             )}
 
-            <p className="text-center text-sm text-[#8B90A0]">
+            <p className="text-center text-sm text-muted-foreground">
               {mode === "login" ? "계정이 없으신가요?" : "이미 계정이 있으신가요?"}{" "}
-              <button onClick={() => setMode(mode === "login" ? "signup" : "login")} className="text-[#ADC6FF] font-medium">
+              <button onClick={() => setMode(mode === "login" ? "signup" : "login")} className="text-primary font-medium">
                 {mode === "login" ? "회원가입" : "로그인"}
               </button>
             </p>
