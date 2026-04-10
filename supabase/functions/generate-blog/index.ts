@@ -145,9 +145,10 @@ ${platformText}
 
     const userContent: any[] = [];
 
+    // 사진은 첫 1장만 Claude에 전송 (타임아웃 방지)
     const photoSlice = (photos || []).slice(0, 5);
-    for (let i = 0; i < photoSlice.length; i++) {
-      const dataUrl = photoSlice[i].dataUrl || photoSlice[i];
+    if (photoSlice.length > 0) {
+      const dataUrl = photoSlice[0].dataUrl || photoSlice[0];
       const base64Match = dataUrl.match(/^data:image\/([^;]+);base64,(.+)$/);
       if (base64Match) {
         userContent.push({
@@ -202,7 +203,7 @@ JSON 형식으로만 응답해주세요.`,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: "user", content: userContent }],
