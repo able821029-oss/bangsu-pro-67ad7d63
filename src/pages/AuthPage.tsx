@@ -13,7 +13,9 @@ export default function AuthPage() {
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleEmailAuth = async () => {
     if (!email || !password) { toast.error("이메일과 비밀번호를 입력해주세요"); return; }
@@ -63,16 +65,21 @@ export default function AuthPage() {
 
   const handleResetPassword = async () => {
     if (!email) { toast.error("이메일을 입력해주세요"); return; }
+    if (!newPassword) { toast.error("새 비밀번호를 입력해주세요"); return; }
+    if (newPassword.length < 6) { toast.error("비밀번호는 6자 이상이어야 합니다"); return; }
+    if (newPassword !== confirmPassword) { toast.error("비밀번호가 일치하지 않습니다"); return; }
+
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}${window.location.pathname}#/reset-password`,
+      const { data, error } = await supabase.functions.invoke("reset-password", {
+        body: { email, newPassword },
       });
       if (error) throw error;
-      setResetSent(true);
-      toast.success("비밀번호 재설정 링크를 이메일로 보냈습니다");
+      if (data?.error) { toast.error(data.error); return; }
+      setResetDone(true);
+      toast.success("비밀번호가 변경되었습니다!");
     } catch (e: any) {
-      toast.error(e.message || "재설정 메일 발송 실패");
+      toast.error(e.message || "비밀번호 변경 실패");
     } finally {
       setLoading(false);
     }
@@ -134,25 +141,35 @@ export default function AuthPage() {
 
         {mode === "reset" ? (
           <>
-            {resetSent ? (
-              <div className="bg-success/10 border border-success/30 rounded-xl p-4 text-center space-y-2">
-                <p className="text-sm font-semibold text-success">재설정 링크를 보냈습니다</p>
-                <p className="text-xs text-muted-foreground">{email} 메일함을 확인해주세요</p>
+            {resetDone ? (
+              <div className="bg-success/10 border border-success/30 rounded-xl p-4 text-center space-y-3">
+                <p className="text-sm font-semibold text-success">비밀번호가 변경되었습니다</p>
+                <p className="text-xs text-muted-foreground">새 비밀번호로 로그인해주세요</p>
+                <button onClick={() => { setMode("login"); setResetDone(false); setPassword(""); }}
+                  className="w-full h-11 rounded-xl text-white font-semibold active:scale-[0.98]"
+                  style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
+                  로그인하기
+                </button>
               </div>
             ) : (
               <>
-                <p className="text-xs text-muted-foreground text-center">가입한 이메일을 입력하면 비밀번호 재설정 링크를 보내드립니다</p>
+                <p className="text-xs text-muted-foreground text-center">가입한 이메일과 새 비밀번호를 입력하세요</p>
                 <input type="email" placeholder="가입한 이메일" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
+                <input type="password" placeholder="새 비밀번호 (6자 이상)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
+                <input type="password" placeholder="새 비밀번호 확인" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleResetPassword()}
                   className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
                 <button onClick={handleResetPassword} disabled={loading}
                   className="w-full h-11 rounded-xl text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
                   style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
-                  재설정 링크 보내기
+                  {loading ? "변경 중..." : "비밀번호 변경"}
                 </button>
               </>
             )}
             <p className="text-center text-sm text-muted-foreground">
-              <button onClick={() => { setMode("login"); setResetSent(false); }} className="text-primary font-medium">← 로그인으로 돌아가기</button>
+              <button onClick={() => { setMode("login"); setResetDone(false); }} className="text-primary font-medium">← 로그인으로 돌아가기</button>
             </p>
           </>
         ) : (
