@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -62,6 +61,7 @@ serve(async (req) => {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    console.log("[generate-blog] ANTHROPIC_API_KEY present:", !!ANTHROPIC_API_KEY, "length:", ANTHROPIC_API_KEY?.length || 0, "starts:", ANTHROPIC_API_KEY?.slice(0, 10) || "NONE");
 
     const body = await req.json();
     const {
@@ -80,9 +80,12 @@ serve(async (req) => {
     let customPersonas = personaPrompts;
     let customPlatforms = platformFormats;
     try {
-      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const { data: rows } = await sb.from("admin_config").select("key, value").in("key", ["persona_prompts", "platform_prompts"]);
-      if (rows) {
+      const configRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/admin_config?key=in.("persona_prompts","platform_prompts")&select=key,value`,
+        { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } }
+      );
+      if (configRes.ok) {
+        const rows = await configRes.json();
         for (const r of rows) {
           if (r.key === "persona_prompts") customPersonas = { ...personaPrompts, ...r.value };
           if (r.key === "platform_prompts") customPlatforms = { ...platformFormats, ...r.value };

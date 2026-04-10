@@ -1,118 +1,90 @@
 import { useState } from "react";
-import { ArrowLeft, Send, Paperclip } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useAppStore } from "@/stores/appStore";
-import { useToast } from "@/hooks/use-toast";
-
-const inquiryTypes = ["이용 방법", "결제·환불", "오류 신고", "기능 제안", "기타"];
-
-const statusColor: Record<string, "info" | "warning" | "success"> = {
-  "접수완료": "info",
-  "처리중": "warning",
-  "답변완료": "success",
-};
+import { ArrowLeft, Send, CheckCircle2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
+import { toast } from "sonner";
 
 export function ContactPage({ onBack }: { onBack: () => void }) {
-  const { inquiries, addInquiry } = useAppStore();
-  const { toast } = useToast();
-  const [type, setType] = useState(inquiryTypes[0]);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const { user } = useAuth();
+  const [category, setCategory] = useState("일반 문의");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
 
-  const handleSubmit = () => {
-    if (!title.trim() || !content.trim()) {
-      toast({ title: "제목과 내용을 입력해주세요.", variant: "destructive" });
-      return;
+  const categories = ["일반 문의", "버그 신고", "기능 요청", "결제 문의", "계정 문제"];
+
+  const handleSend = async () => {
+    if (!message.trim()) { toast.error("내용을 입력해주세요"); return; }
+    setLoading(true);
+    try {
+      const { error } = await supabase.from("admin_config").upsert({
+        key: `inquiry_${Date.now()}`,
+        value: {
+          user_id: user?.id,
+          email: user?.email,
+          category,
+          message: message.trim(),
+          created_at: new Date().toISOString(),
+          status: "pending",
+        },
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "key" });
+
+      if (error) throw error;
+      setSent(true);
+      toast.success("문의가 접수되었습니다");
+    } catch (e: any) {
+      toast.error("전송 실패: " + (e.message || "다시 시도해주세요"));
+    } finally {
+      setLoading(false);
     }
-    addInquiry({
-      id: crypto.randomUUID(),
-      type,
-      title: title.trim(),
-      content: content.trim(),
-      status: "접수완료",
-      createdAt: new Date().toISOString().slice(0, 10),
-    });
-    toast({ title: "문의가 접수되었습니다. 영업일 1일 이내 답변드립니다." });
-    setTitle("");
-    setContent("");
   };
 
+  if (sent) {
+    return (
+      <div className="pb-24 max-w-lg mx-auto">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-3">
+          <button onClick={onBack} aria-label="뒤로가기" className="p-2 -ml-2 rounded-lg hover:bg-secondary"><ArrowLeft className="w-5 h-5" /></button>
+          <h1 className="text-lg font-bold">문의하기</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center"><CheckCircle2 className="w-8 h-8 text-success" /></div>
+          <h2 className="text-lg font-bold text-foreground">문의가 접수되었습니다</h2>
+          <p className="text-sm text-muted-foreground">빠른 시일 내 확인 후 답변드리겠습니다.</p>
+          <button onClick={onBack} className="h-11 px-8 rounded-xl text-white font-semibold active:scale-[0.98]" style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>돌아가기</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-      <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 -ml-2 rounded-lg hover:bg-secondary">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-xl font-bold">💬 문의하기</h1>
+    <div className="pb-24 max-w-lg mx-auto">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-3">
+        <button onClick={onBack} aria-label="뒤로가기" className="p-2 -ml-2 rounded-lg hover:bg-secondary"><ArrowLeft className="w-5 h-5" /></button>
+        <h1 className="text-lg font-bold">문의하기</h1>
       </div>
-
-      {/* Form */}
-      <div className="bg-card rounded-xl border border-border p-4 space-y-4">
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">문의 유형</label>
+      <div className="px-4 pt-4 space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-foreground">문의 유형</label>
           <div className="flex flex-wrap gap-2">
-            {inquiryTypes.map((t) => (
-              <Badge
-                key={t}
-                variant={type === t ? "chipActive" : "chip"}
-                className="text-sm px-3 py-1.5 cursor-pointer"
-                onClick={() => setType(t)}
-              >
-                {t}
-              </Badge>
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setCategory(cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${category === cat ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>{cat}</button>
             ))}
           </div>
         </div>
-
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">제목</label>
-          <input
-            className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground"
-            placeholder="문의 제목을 입력하세요"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-foreground">내용</label>
+          <textarea placeholder="문의 내용을 입력해주세요..." value={message} onChange={(e) => setMessage(e.target.value.slice(0, 500))}
+            className="w-full min-h-[200px] bg-card border border-border rounded-xl p-4 text-sm text-foreground placeholder-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary/40" />
+          <p className="text-xs text-muted-foreground text-right">{message.length}/500자</p>
         </div>
-
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">내용 (최대 500자)</label>
-          <textarea
-            className="w-full bg-secondary rounded-lg px-3 py-3 text-sm outline-none text-foreground resize-none min-h-[120px]"
-            placeholder="문의 내용을 입력하세요"
-            maxLength={500}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground text-right">{content.length}/500</p>
-        </div>
-
-        <Button variant="secondary" size="sm" className="w-full">
-          <Paperclip className="w-4 h-4" /> 스크린샷 첨부 (선택)
-        </Button>
-
-        <Button size="lg" className="w-full" onClick={handleSubmit}>
-          <Send className="w-5 h-5" /> 문의 접수
-        </Button>
+        <button onClick={handleSend} disabled={loading || !message.trim()}
+          className="w-full h-12 rounded-xl text-white font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
+          style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
+          <Send className="w-4 h-4" /> {loading ? "전송 중..." : "문의 보내기"}
+        </button>
       </div>
-
-      {/* History */}
-      {inquiries.length > 0 && (
-        <div>
-          <p className="text-sm font-semibold mb-3">문의 내역</p>
-          <div className="space-y-3">
-            {inquiries.map((inq) => (
-              <div key={inq.id} className="bg-card rounded-xl border border-border p-3">
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-sm truncate flex-1">{inq.title}</p>
-                  <Badge variant={statusColor[inq.status]} className="text-xs shrink-0 ml-2">{inq.status}</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{inq.type} · {inq.createdAt}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

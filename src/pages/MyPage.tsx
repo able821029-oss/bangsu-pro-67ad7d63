@@ -15,8 +15,10 @@ import { TermsPage } from "@/pages/settings/TermsPage";
 import { UserSettings } from "@/pages/settings/UserSettings";
 import { ReviewsPage } from "@/pages/ReviewsPage";
 import { FieldToolsPage } from "@/pages/FieldToolsPage";
+import { FaqPage } from "@/pages/settings/FaqPage";
+import { ContactPage } from "@/pages/settings/ContactPage";
 
-type Page = "main" | "pricing" | "profile" | "terms" | "usersettings" | "reviews" | "fieldtools";
+type Page = "main" | "pricing" | "profile" | "terms" | "usersettings" | "reviews" | "fieldtools" | "faq" | "contact";
 
 export function MyPage() {
   const { user, signOut } = useAuth();
@@ -45,6 +47,8 @@ export function MyPage() {
   if (page === "usersettings") return <UserSettings onBack={() => setPage("main")} />;
   if (page === "reviews") return <ReviewsPage onBack={() => setPage("main")} />;
   if (page === "fieldtools") return <FieldToolsPage onBack={() => setPage("main")} />;
+  if (page === "faq") return <FaqPage onBack={() => setPage("main")} />;
+  if (page === "contact") return <ContactPage onBack={() => setPage("main")} />;
 
   const planColor = subscription.plan === "무제한" ? "#F97316"
     : subscription.plan === "프로" ? "#AB5EBE"
@@ -81,8 +85,12 @@ export function MyPage() {
       onClick: () => setPage("terms"),
     },
     {
-      icon: Phone, label: "고객센터", desc: "카카오 채널",
-      onClick: () => window.open("https://pf.kakao.com", "_blank"),
+      icon: MessageSquare, label: "자주 묻는 질문", desc: "FAQ",
+      onClick: () => setPage("faq"),
+    },
+    {
+      icon: Phone, label: "문의하기", desc: "관리자에게 메시지",
+      onClick: () => setPage("contact"),
     },
     {
       icon: Shield, label: "관리자 모드", desc: "",
