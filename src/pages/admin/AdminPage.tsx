@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Shield, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminDashboard } from "./AdminDashboard";
-
-const ADMIN_PASSWORD = "bangsu2026!";
+import { getAdminPassword } from "./sections/AdminPasswordChange";
 
 export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(false);
@@ -11,7 +10,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
 
   const handleLogin = () => {
-    if (password === ADMIN_PASSWORD) {
+    if (password === getAdminPassword()) {
       setAuthenticated(true);
       setError("");
     } else {
