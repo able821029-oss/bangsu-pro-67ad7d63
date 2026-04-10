@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +60,8 @@ serve(async (req) => {
 
   try {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
     const body = await req.json();
     const {
@@ -73,8 +76,24 @@ serve(async (req) => {
       phoneNumber,
     } = body;
 
-    const personaText = personaPrompts[persona] || personaPrompts["장인형"];
-    const platformText = platformFormats[platform] || platformFormats["naver"];
+    // admin_config에서 커스텀 프롬프트 로드 (없으면 기본값 사용)
+    let customPersonas = personaPrompts;
+    let customPlatforms = platformFormats;
+    try {
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: rows } = await sb.from("admin_config").select("key, value").in("key", ["persona_prompts", "platform_prompts"]);
+      if (rows) {
+        for (const r of rows) {
+          if (r.key === "persona_prompts") customPersonas = { ...personaPrompts, ...r.value };
+          if (r.key === "platform_prompts") customPlatforms = { ...platformFormats, ...r.value };
+        }
+      }
+    } catch (e) {
+      console.warn("admin_config 로드 실패 (기본값 사용):", e);
+    }
+
+    const personaText = customPersonas[persona] || customPersonas["장인형"];
+    const platformText = customPlatforms[platform] || customPlatforms["naver"];
 
     const systemPrompt = `당신은 네이버 블로그 상위노출 전문가입니다.
 현장직 사장님의 시공 현장 사진과 정보를 바탕으로

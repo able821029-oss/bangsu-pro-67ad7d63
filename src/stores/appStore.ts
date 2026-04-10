@@ -179,14 +179,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({ inquiries: [inquiry, ...state.inquiries] })),
   updateSubscription: (sub) =>
     set((state) => ({ subscription: { ...state.subscription, ...sub } })),
-  upgradePlan: (planName: string) => {
-    const limits: Record<string, { maxCount: number; maxVideo: number }> = {
+  upgradePlan: async (planName: string) => {
+    // 기본값 (DB 미연결 시 폴백)
+    const defaultLimits: Record<string, { maxCount: number; maxVideo: number }> = {
       "무료": { maxCount: 5, maxVideo: 1 },
       "베이직": { maxCount: 50, maxVideo: 5 },
       "프로": { maxCount: 150, maxVideo: 20 },
       "무제한": { maxCount: 9999, maxVideo: 50 },
     };
-    const planLimits = limits[planName] || limits["무료"];
+
+    let planLimits = defaultLimits[planName] || defaultLimits["무료"];
+
+    // admin_config에서 관리자가 설정한 요금제 로드
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.from("admin_config").select("value").eq("key", "plans").single();
+      if (data?.value && Array.isArray(data.value)) {
+        const dbPlan = data.value.find((p: any) => p.name === planName);
+        if (dbPlan) {
+          planLimits = {
+            maxCount: dbPlan.monthlyLimit ?? 9999,
+            maxVideo: dbPlan.monthlyVideoLimit ?? 50,
+          };
+        }
+      }
+    } catch {}
+
     set((state) => ({
       subscription: {
         ...state.subscription,

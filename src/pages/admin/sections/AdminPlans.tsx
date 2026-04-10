@@ -1,35 +1,64 @@
-import { useState } from "react";
-import { CreditCard, Save } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CreditCard, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PlanData {
   name: string;
   price: number;
   monthlyLimit: number | null;
+  monthlyVideoLimit: number | null;
   platforms: string;
   personas: string;
   maxPhotos: number;
 }
 
 const defaultPlans: PlanData[] = [
-  { name: "무료", price: 0, monthlyLimit: 5, platforms: "네이버만", personas: "1종", maxPhotos: 2 },
-  { name: "베이직", price: 9900, monthlyLimit: 50, platforms: "3개", personas: "3종", maxPhotos: 5 },
-  { name: "프로", price: 19900, monthlyLimit: 150, platforms: "전체", personas: "전체", maxPhotos: 10 },
-  { name: "무제한", price: 39900, monthlyLimit: null, platforms: "전체", personas: "전체", maxPhotos: 10 },
+  { name: "무료", price: 0, monthlyLimit: 5, monthlyVideoLimit: 1, platforms: "네이버만", personas: "1종", maxPhotos: 2 },
+  { name: "베이직", price: 9900, monthlyLimit: 50, monthlyVideoLimit: 5, platforms: "3개", personas: "3종", maxPhotos: 5 },
+  { name: "프로", price: 19900, monthlyLimit: 150, monthlyVideoLimit: 20, platforms: "전체", personas: "전체", maxPhotos: 10 },
+  { name: "무제한", price: 39900, monthlyLimit: null, monthlyVideoLimit: null, platforms: "전체", personas: "전체", maxPhotos: 10 },
 ];
 
 export function AdminPlans() {
-  const { toast } = useToast();
   const [plans, setPlans] = useState(defaultPlans);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("admin_config")
+        .select("value")
+        .eq("key", "plans")
+        .single();
+      if (data?.value && Array.isArray(data.value)) {
+        setPlans(data.value as PlanData[]);
+      }
+      setLoading(false);
+    })();
+  }, []);
 
   const updatePlan = (idx: number, field: keyof PlanData, value: string | number | null) => {
     setPlans((prev) => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
   };
 
-  const handleSave = () => {
-    toast({ title: "요금제가 저장되었습니다." });
+  const handleSave = async () => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("admin_config")
+      .upsert({ key: "plans", value: plans, updated_at: new Date().toISOString() }, { onConflict: "key" });
+
+    if (error) {
+      toast.error("저장 실패: " + error.message);
+    } else {
+      toast.success("요금제가 저장되었습니다. 앱에 즉시 반영됩니다.");
+    }
+    setSaving(false);
   };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="space-y-5">
@@ -44,47 +73,41 @@ export function AdminPlans() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">가격 (원)</label>
-                <input
-                  type="number"
-                  className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
-                  value={plan.price}
-                  onChange={(e) => updatePlan(idx, "price", Number(e.target.value))}
-                />
+                <input type="number" className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
+                  value={plan.price} onChange={(e) => updatePlan(idx, "price", Number(e.target.value))} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">월 건수</label>
-                <input
-                  type="number"
-                  className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
-                  value={plan.monthlyLimit ?? 999}
-                  onChange={(e) => updatePlan(idx, "monthlyLimit", e.target.value === "999" ? null : Number(e.target.value))}
-                  placeholder="무제한은 999"
-                />
+                <label className="text-xs text-muted-foreground">월 글 건수</label>
+                <input type="number" className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
+                  value={plan.monthlyLimit ?? 999} onChange={(e) => updatePlan(idx, "monthlyLimit", e.target.value === "999" ? null : Number(e.target.value))} placeholder="무제한은 999" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">월 영상 건수</label>
+                <input type="number" className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
+                  value={plan.monthlyVideoLimit ?? 999} onChange={(e) => updatePlan(idx, "monthlyVideoLimit", e.target.value === "999" ? null : Number(e.target.value))} placeholder="무제한은 999" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">최대 사진</label>
-                <input
-                  type="number"
-                  className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
-                  value={plan.maxPhotos}
-                  onChange={(e) => updatePlan(idx, "maxPhotos", Number(e.target.value))}
-                />
+                <input type="number" className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
+                  value={plan.maxPhotos} onChange={(e) => updatePlan(idx, "maxPhotos", Number(e.target.value))} />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">플랫폼</label>
-                <input
-                  className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
-                  value={plan.platforms}
-                  onChange={(e) => updatePlan(idx, "platforms", e.target.value)}
-                />
+                <input className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
+                  value={plan.platforms} onChange={(e) => updatePlan(idx, "platforms", e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">페르소나</label>
+                <input className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none text-foreground"
+                  value={plan.personas} onChange={(e) => updatePlan(idx, "personas", e.target.value)} />
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <Button className="w-full" onClick={handleSave}>
-        <Save className="w-4 h-4" /> 전체 저장
+      <Button className="w-full" onClick={handleSave} disabled={saving}>
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 전체 저장
       </Button>
     </div>
   );
