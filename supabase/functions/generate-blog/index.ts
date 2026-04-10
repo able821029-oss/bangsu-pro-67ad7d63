@@ -254,8 +254,7 @@ JSON 형식으로만 응답해주세요.`,
       parsed = JSON.parse(jsonStr);
     } catch {
       console.error("Failed to parse Claude response:", rawText);
-      return new Response(JSON.stringify({ error: "AI 응답 파싱 실패", raw: rawText }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: "AI 응답 파싱 실패" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -265,8 +264,7 @@ JSON 형식으로만 응답해주세요.`,
     });
   } catch (e) {
     console.error("generate-blog error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500,
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

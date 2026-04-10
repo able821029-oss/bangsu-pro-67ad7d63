@@ -214,7 +214,7 @@ export function CameraTab({
 
       const { data, error } = await supabase.functions.invoke("generate-blog", {
         body: {
-          photos: photos.slice(0, 5).map((p) => ({ dataUrl: p.dataUrl })),
+          photos: photos.slice(0, 5).map((p, i) => ({ dataUrl: p.dataUrl, index: i + 1 })),
           persona: selectedPersona,
           platform: primaryPlatform,
           location,

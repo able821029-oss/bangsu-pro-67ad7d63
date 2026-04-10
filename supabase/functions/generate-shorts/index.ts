@@ -277,7 +277,7 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
     console.error("generate-shorts error:", e);
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "다시 시도해 주세요" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
