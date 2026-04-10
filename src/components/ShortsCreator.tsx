@@ -6,6 +6,7 @@ import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/bgmSynth";
+import { compressPhotos } from "@/lib/imageCompress";
 
 import { Player } from "@remotion/player";
 import { SmsComposition, calculateTotalFrames } from "@/remotion/SmsComposition";
@@ -391,9 +392,11 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     const voice = VOICES.find(v => v.id === selectedVoice);
 
     try {
+      // 사진 압축 (Edge Function 6MB 제한 대응)
+      const compressedPhotos = await compressPhotos(photos.slice(0, 6));
       const { data: scriptData, error: scriptErr } = await supabase.functions.invoke("generate-shorts", {
         body: {
-          photos: photos.slice(0, 6).map((p, i) => ({ dataUrl: p.dataUrl, index: i + 1 })),
+          photos: compressedPhotos.map((dataUrl, i) => ({ dataUrl, index: i + 1 })),
           workType: "자동판단",
           videoStyle,
           narrationType: narrationEnabled ? "있음" : "없음",
@@ -438,7 +441,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       const { data: renderData, error: renderErr } = await supabase.functions.invoke("render-video", {
         body: {
           scenes,
-          photos: photos.slice(0, 6).map(p => p.dataUrl),
+          photos: compressedPhotos,
           narrationAudios,
           companyName: settings.companyName,
           phoneNumber: settings.phoneNumber,

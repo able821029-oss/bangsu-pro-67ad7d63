@@ -19,6 +19,7 @@ import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
+import { compressPhotos } from "@/lib/imageCompress";
 
 const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
@@ -212,9 +213,11 @@ export function CameraTab({
       setGenStep("analyzing");
       const primaryPlatform = selectedPlatforms[0];
 
+      // 사진 압축 (Edge Function 6MB 제한 대응)
+      const compressed = await compressPhotos(photos.slice(0, 5));
       const { data, error } = await supabase.functions.invoke("generate-blog", {
         body: {
-          photos: photos.slice(0, 5).map((p, i) => ({ dataUrl: p.dataUrl, index: i + 1 })),
+          photos: compressed.map((dataUrl, i) => ({ dataUrl, index: i + 1 })),
           persona: selectedPersona,
           platform: primaryPlatform,
           location,
