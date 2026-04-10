@@ -300,11 +300,11 @@ export function PostDetailPage({
             <p className="text-sm font-bold flex-1">SNS 발행 완료하셨나요?</p>
             <button
               onClick={() => { handleMarkPublished(); setReturnPrompt(false); }}
-              className="text-xs font-bold bg-[#0E1322]/20 px-3 py-1.5 rounded-lg"
+              className="text-xs font-bold bg-background/20 px-3 py-1.5 rounded-lg"
             >발행 완료</button>
             <button
               onClick={() => setReturnPrompt(false)}
-              className="text-xs bg-[#0E1322]/10 px-2 py-1.5 rounded-lg"
+              className="text-xs bg-background/10 px-2 py-1.5 rounded-lg"
             >닫기</button>
           </div>
         </div>

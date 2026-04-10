@@ -20,7 +20,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 safe-bottom">
       <div
-        className="h-[84px] bg-[#0E1322]/80 backdrop-blur-xl border-t border-white/10 rounded-t-[40px] shadow-[0_-12px_32px_rgba(0,0,0,0.4)] flex justify-around items-center px-4 pb-6"
+        className="h-[84px] bg-background/80 backdrop-blur-xl border-t border-white/10 rounded-t-[40px] shadow-[0_-12px_32px_rgba(0,0,0,0.4)] flex justify-around items-center px-4 pb-6"
       >
         {tabs.map(({ id, icon: Icon, label, center }) => {
           const isActive = activeTab === id || (id === "shorts" && activeTab === "shorts");
@@ -37,7 +37,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 >
                   <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
                 </div>
-                <span className="text-[10px] font-bold mt-1 text-[#ADC6FF]">{label}</span>
+                <span className="text-[10px] font-bold mt-1 text-primary">{label}</span>
               </button>
             );
           }

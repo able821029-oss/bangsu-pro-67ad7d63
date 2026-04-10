@@ -337,13 +337,13 @@ export function CameraTab({
     return (
       <div className="px-4 pt-6 pb-28 space-y-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
         <div className="w-20 h-20 rounded-full bg-[#4C8EFF]/15 flex items-center justify-center">
-          <Sparkles className="w-10 h-10 text-[#ADC6FF] animate-pulse" />
+          <Sparkles className="w-10 h-10 text-primary animate-pulse" />
         </div>
-        <h2 className="text-xl font-bold text-center text-[#DEE1F7] font-[Manrope]">
+        <h2 className="text-xl font-bold text-center text-foreground font-[Manrope]">
           {genStep === "error" ? "생성 실패" : "AI가 글을 작성하고 있습니다"}
         </h2>
         <div className="w-full max-w-xs">
-          <div className="w-full bg-[#1A1F2F] rounded-full h-3">
+          <div className="w-full bg-card rounded-full h-3">
             <div
               className="bg-gradient-to-r from-[#4C8EFF] to-[#ADC6FF] rounded-full h-3 transition-all duration-300"
               style={{ width: `${progress}%` }}
@@ -362,7 +362,7 @@ export function CameraTab({
         {genStep === "error" && (
           <button
             onClick={() => setIsGenerating(false)}
-            className="bg-[#2F3445] text-[#ADC6FF] rounded-full h-[52px] px-8 font-bold text-sm"
+            className="bg-secondary text-primary rounded-full h-[52px] px-8 font-bold text-sm"
           >
             돌아가기
           </button>
@@ -381,12 +381,12 @@ export function CameraTab({
             style={{ animation: "fadeUp .3s ease-out" }}>
             <span className="text-2xl">📝</span>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-[#DEE1F7]">작성 중이던 글이 있습니다</p>
-              <p className="text-xs text-[#8B90A0]">이어서 작성하시겠어요?</p>
+              <p className="text-sm font-semibold text-foreground">작성 중이던 글이 있습니다</p>
+              <p className="text-xs text-muted-foreground">이어서 작성하시겠어요?</p>
             </div>
             <div className="flex gap-2">
               <button onClick={discardDraft}
-                className="text-xs text-[#8B90A0] px-2 py-1 rounded-lg hover:bg-white/5">삭제</button>
+                className="text-xs text-muted-foreground px-2 py-1 rounded-lg hover:bg-white/5">삭제</button>
               <button onClick={restoreDraft}
                 className="text-xs font-bold text-white px-3 py-1 rounded-lg"
                 style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>불러오기</button>
@@ -398,12 +398,12 @@ export function CameraTab({
         <div className="flex items-center justify-between">
           <button
             onClick={() => onNavigate("home")}
-            className="flex items-center gap-1 text-sm text-[#ADC6FF] font-medium font-[Inter]"
+            className="flex items-center gap-1 text-sm text-primary font-medium font-[Inter]"
           >
             <ArrowLeft className="w-4 h-4" /> 홈
           </button>
-          <h1 className="text-xl font-bold flex items-center gap-2 text-[#DEE1F7] font-[Manrope]">
-            <Camera className="w-5 h-5 text-[#ADC6FF]" /> 사진 + 현장 정보
+          <h1 className="text-xl font-bold flex items-center gap-2 text-foreground font-[Manrope]">
+            <Camera className="w-5 h-5 text-primary" /> 사진 + 현장 정보
           </h1>
           {/* Wizard progress dots */}
           <div className="flex gap-1.5 items-center">
@@ -422,7 +422,7 @@ export function CameraTab({
             사진 촬영
           </button>
           <button
-            className="w-full h-[52px] rounded-full bg-[#2F3445] text-[#ADC6FF] font-bold text-sm flex items-center justify-center gap-2"
+            className="w-full h-[52px] rounded-full bg-secondary text-primary font-bold text-sm flex items-center justify-center gap-2"
             onClick={() => fileInputRef.current?.click()}
           >
             <ImagePlus className="w-5 h-5" />
@@ -449,8 +449,8 @@ export function CameraTab({
 
         {/* Photo grid */}
         <div>
-          <p className="text-sm text-[#8B90A0] mb-2 font-[Inter]">
-            현장 사진 <span className="font-semibold text-[#DEE1F7]">{photos.length}</span>/10장{" "}
+          <p className="text-sm text-muted-foreground mb-2 font-[Inter]">
+            현장 사진 <span className="font-semibold text-foreground">{photos.length}</span>/10장{" "}
             {photos.length === 0 ? "— 많을수록 좋아요!" : photos.length >= 3 ? "✓ 충분해요" : "— 3장 이상 권장"}
           </p>
           <div className="flex gap-2 overflow-x-auto pb-2">
@@ -471,12 +471,12 @@ export function CameraTab({
             {photos.length === 0 && (
               <>
                 {[0, 1, 2].map(i => (
-                  <div key={i} className="w-20 h-20 rounded-xl border-2 border-dashed border-[#414754] bg-[#161B2B] flex items-center justify-center">
-                    <Camera className="w-6 h-6 text-[#8B90A0]" />
+                  <div key={i} className="w-20 h-20 rounded-xl border-2 border-dashed border-border bg-[#161B2B] flex items-center justify-center">
+                    <Camera className="w-6 h-6 text-muted-foreground" />
                   </div>
                 ))}
                 <div className="flex items-center ml-2">
-                  <p className="text-xs text-[#8B90A0] whitespace-nowrap font-[Inter]">사진을<br/>추가해요</p>
+                  <p className="text-xs text-muted-foreground whitespace-nowrap font-[Inter]">사진을<br/>추가해요</p>
                 </div>
               </>
             )}
@@ -486,20 +486,20 @@ export function CameraTab({
         {/* Location & Date card — glass-card style */}
         <div className="bg-white/[0.06] backdrop-blur-md rounded-xl border border-white/10 p-4 space-y-3">
           <div className="space-y-1">
-            <label className="text-xs text-[#8B90A0] flex items-center gap-1 font-[Inter]">
+            <label className="text-xs text-muted-foreground flex items-center gap-1 font-[Inter]">
               <MapPin className="w-3 h-3" /> 시공 위치
             </label>
             {gpsTimedOut && !location && <p className="text-xs text-yellow-500 font-[Inter]">위치 감지 실패 — 직접 입력해 주세요</p>}
             <div className="flex gap-2">
               <input
-                className="flex-1 bg-[#1A1F2F] border border-white/10 rounded-xl px-3 h-14 text-sm outline-none text-[#DEE1F7] placeholder:text-[#8B90A0] font-[Inter]"
+                className="flex-1 bg-card border border-white/10 rounded-xl px-3 h-14 text-sm outline-none text-foreground placeholder:text-muted-foreground font-[Inter]"
                 placeholder={isLocating ? "GPS 감지 중..." : "예) 강남구 역삼동"}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
               />
               <button
                 onClick={handleRetryGps}
-                className="bg-[#4C8EFF]/15 text-[#ADC6FF] rounded-xl px-3 h-14 text-xs font-medium shrink-0 flex items-center gap-1 font-[Inter]"
+                className="bg-[#4C8EFF]/15 text-primary rounded-xl px-3 h-14 text-xs font-medium shrink-0 flex items-center gap-1 font-[Inter]"
               >
                 {isLocating ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -512,18 +512,18 @@ export function CameraTab({
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-[#8B90A0] flex items-center gap-1 font-[Inter]">
+            <label className="text-xs text-muted-foreground flex items-center gap-1 font-[Inter]">
               <CalendarDays className="w-3 h-3" /> 시공 일자
             </label>
             <div className="relative">
               <input
                 type="date"
-                className="w-full bg-[#1A1F2F] border border-white/10 rounded-xl px-3 h-14 text-sm outline-none text-[#DEE1F7] font-[Inter]"
+                className="w-full bg-card border border-white/10 rounded-xl px-3 h-14 text-sm outline-none text-foreground font-[Inter]"
                 value={constructionDate}
                 max={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setConstructionDate(e.target.value)}
               />
-              <p className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#8B90A0] pointer-events-none font-[Inter]">
+              <p className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none font-[Inter]">
                 {constructionDate ? new Date(constructionDate).toLocaleDateString("ko-KR", { year:"numeric", month:"long", day:"numeric" }) : ""}
               </p>
             </div>
@@ -553,11 +553,11 @@ export function CameraTab({
     <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <button onClick={() => setWizardStep(1)} className="flex items-center gap-1 text-sm text-[#ADC6FF] font-medium font-[Inter]">
+        <button onClick={() => setWizardStep(1)} className="flex items-center gap-1 text-sm text-primary font-medium font-[Inter]">
           <ArrowLeft className="w-4 h-4" /> 이전
         </button>
-        <h1 className="text-xl font-bold flex items-center gap-2 text-[#DEE1F7] font-[Manrope]">
-          <PenLine className="w-5 h-5 text-[#ADC6FF]" /> 스타일 선택
+        <h1 className="text-xl font-bold flex items-center gap-2 text-foreground font-[Manrope]">
+          <PenLine className="w-5 h-5 text-primary" /> 스타일 선택
         </h1>
         {/* Wizard progress dots */}
         <div className="flex gap-1.5 items-center">
@@ -577,11 +577,11 @@ export function CameraTab({
               className={`w-full text-left px-4 py-3 rounded-xl transition-all ${
                 selectedPersona === p.id
                   ? "border border-[#4C8EFF] bg-[#4C8EFF]/10"
-                  : "border border-white/10 bg-[#1A1F2F]"
+                  : "border border-white/10 bg-card"
               }`}
             >
-              <p className="font-semibold text-sm text-[#DEE1F7] font-[Manrope]">{p.label}</p>
-              <p className="text-xs text-[#8B90A0] font-[Inter]">{p.desc}</p>
+              <p className="font-semibold text-sm text-foreground font-[Manrope]">{p.label}</p>
+              <p className="text-xs text-muted-foreground font-[Inter]">{p.desc}</p>
             </button>
           ))}
         </div>
@@ -616,7 +616,7 @@ export function CameraTab({
       <button
         className={`w-full h-[52px] rounded-full font-bold text-base flex items-center justify-center gap-2 transition-opacity ${
           selectedPlatforms.length === 0
-            ? "bg-[#2F3445] text-[#8B90A0] opacity-50 cursor-not-allowed"
+            ? "bg-secondary text-muted-foreground opacity-50 cursor-not-allowed"
             : "bg-gradient-to-r from-[#4C8EFF] to-[#6BA4FF] text-white"
         }`}
         onClick={handleStartAI}
@@ -637,11 +637,11 @@ function StepItem({ label, active, done }: { label: string; active: boolean; don
       ) : active ? (
         <Loader2 className="w-6 h-6 text-[#4C8EFF] animate-spin shrink-0" />
       ) : (
-        <div className="w-6 h-6 rounded-full border-2 border-[#414754] shrink-0" />
+        <div className="w-6 h-6 rounded-full border-2 border-border shrink-0" />
       )}
       <p
         className={`text-sm font-medium font-[Inter] ${
-          done ? "text-emerald-400" : active ? "text-[#DEE1F7]" : "text-[#8B90A0]"
+          done ? "text-emerald-400" : active ? "text-foreground" : "text-muted-foreground"
         }`}
       >
         {label}

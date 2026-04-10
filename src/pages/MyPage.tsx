@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   User, LogOut, Crown, FileText, Settings,
-  ChevronRight, Star, Download, MessageSquare, Phone, Hammer
+  ChevronRight, Star, Download, MessageSquare, Phone, Hammer, Shield
 } from "lucide-react";
 import { useAppStore } from "@/stores/appStore";
 import { PricingPlan } from "@/pages/settings/PricingPlan";
@@ -84,13 +84,17 @@ export function MyPage() {
       icon: Phone, label: "고객센터", desc: "카카오 채널",
       onClick: () => window.open("https://pf.kakao.com", "_blank"),
     },
+    {
+      icon: Shield, label: "관리자 모드", desc: "",
+      onClick: () => window.location.hash = "#/admin",
+    },
   ];
 
   return (
-    <div className="pb-28 min-h-screen bg-[#0E1322]">
+    <div className="pb-28 min-h-screen bg-background">
       {/* 헤더 */}
       <div className="px-5 pt-6 pb-2">
-        <h1 className="text-xl font-bold text-[#DEE1F7]">마이페이지</h1>
+        <h1 className="text-xl font-bold text-foreground">마이페이지</h1>
       </div>
 
       {/* 프로필 카드 — glass-card */}
@@ -100,17 +104,17 @@ export function MyPage() {
           <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl" style={{ background: "rgba(173,198,255,0.1)" }} />
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full p-0.5" style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
-              <div className="w-full h-full rounded-full bg-[#0E1322] flex items-center justify-center text-2xl font-bold text-white">
+              <div className="w-full h-full rounded-full bg-background flex items-center justify-center text-2xl font-bold text-white">
                 {name ? name[0] : "😊"}
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-lg font-bold text-[#DEE1F7]">{name || user?.email?.split("@")[0] || "사장님"}</p>
-              <p className="text-sm text-[#8B90A0]">{user?.email}</p>
+              <p className="text-lg font-bold text-foreground">{name || user?.email?.split("@")[0] || "사장님"}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
           </div>
           <div className="mt-4 inline-flex items-center px-3 py-1 bg-[#4C8EFF]/20 rounded-full" style={{ border: "1px solid rgba(76,142,255,0.3)" }}>
-            <span className="text-xs font-bold text-[#ADC6FF]">{subscription.plan} 플랜</span>
+            <span className="text-xs font-bold text-primary">{subscription.plan} 플랜</span>
           </div>
         </div>
       </div>
@@ -118,19 +122,19 @@ export function MyPage() {
       {/* 사용량 */}
       <div className="mx-5 mb-5 space-y-6">
         <div className="flex justify-between items-end">
-          <h3 className="text-lg font-bold text-[#DEE1F7]">이번달 사용량</h3>
+          <h3 className="text-lg font-bold text-foreground">이번달 사용량</h3>
         </div>
         <div className="space-y-5">
           {/* 블로그 프로그레스 */}
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm font-bold">
               <span className="text-[#C1C6D7]">블로그 발행</span>
-              <span className="text-[#DEE1F7]">
+              <span className="text-foreground">
                 {subscription.usedCount}/{subscription.maxCount}건
-                <span className="text-[#ADC6FF] ml-1">({usedPct}%)</span>
+                <span className="text-primary ml-1">({usedPct}%)</span>
               </span>
             </div>
-            <div className="h-2 w-full bg-[#1A1F2F] rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-card rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all" style={{ width: `${usedPct}%`, background: "linear-gradient(90deg,#237FFF,#AB5EBE)" }} />
             </div>
           </div>
@@ -138,12 +142,12 @@ export function MyPage() {
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm font-bold">
               <span className="text-[#C1C6D7]">영상 콘텐츠 제작</span>
-              <span className="text-[#DEE1F7]">
+              <span className="text-foreground">
                 {subscription.videoUsed || 0}/{subscription.maxVideo || 1}개
-                <span className="text-[#8B90A0] ml-1">({videoPct}%)</span>
+                <span className="text-muted-foreground ml-1">({videoPct}%)</span>
               </span>
             </div>
-            <div className="h-2 w-full bg-[#1A1F2F] rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-card rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all" style={{ width: `${videoPct}%`, background: videoPct > 0 ? "linear-gradient(90deg,#AB5EBE,#F97316)" : "#414754" }} />
             </div>
           </div>
@@ -159,20 +163,20 @@ export function MyPage() {
 
       {/* 구글 캘린더 */}
       <div className="mx-5 mb-5">
-        <div className="bg-[#1A1F2F] rounded-2xl p-4">
+        <div className="bg-card rounded-2xl p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-[#C1C6D7] flex items-center gap-2">
                 📅 구글 캘린더 연동
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${googleConnected ? "bg-green-500/10 text-green-500" : "bg-[#2F3445] text-[#8B90A0]"}`}>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${googleConnected ? "bg-green-500/10 text-green-500" : "bg-secondary text-muted-foreground"}`}>
                   {googleConnected ? "연동됨" : "미연동"}
                 </span>
               </p>
-              <p className="text-xs text-[#8B90A0] mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {googleConnected ? "일정이 구글 캘린더에 자동 동기화됩니다" : "일정 탭 → 구글 내보내기로 연동하세요"}
               </p>
             </div>
-            <Download className="w-4 h-4 text-[#8B90A0]" />
+            <Download className="w-4 h-4 text-muted-foreground" />
           </div>
         </div>
       </div>
@@ -183,12 +187,12 @@ export function MyPage() {
           <button key={i} onClick={onClick}
             className="w-full flex items-center justify-between p-4 hover:bg-white/5 rounded-xl transition-colors group">
             <div className="flex items-center gap-4">
-              <Icon className="w-5 h-5 text-[#8B90A0] group-hover:text-[#ADC6FF]" />
-              <span className="font-medium text-[#C1C6D7] group-hover:text-[#DEE1F7]">{label}</span>
+              <Icon className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+              <span className="font-medium text-[#C1C6D7] group-hover:text-foreground">{label}</span>
             </div>
             <div className="flex items-center gap-2">
-              {desc && <span className="text-xs text-[#8B90A0]">{desc}</span>}
-              <ChevronRight className="w-4 h-4 text-[#8B90A0]" />
+              {desc && <span className="text-xs text-muted-foreground">{desc}</span>}
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </div>
           </button>
         ))}

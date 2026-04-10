@@ -19,9 +19,9 @@ export function ContentTab({ onNavigate, onViewPost, initialSubTab }: ContentTab
   );
 
   return (
-    <div className="min-h-screen bg-[#0E1322]">
+    <div className="min-h-screen bg-background">
       {/* Sub-tab bar — 글작성 + 발행 */}
-      <div className="sticky top-0 z-10 bg-[#0E1322]/95 backdrop-blur-md px-4 pt-3">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-md px-4 pt-3">
         <div className="flex gap-1">
           {([
             { id: "write" as SubTab, icon: PenLine, label: "AI 글작성" },
@@ -32,7 +32,7 @@ export function ContentTab({ onNavigate, onViewPost, initialSubTab }: ContentTab
                 "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors font-[Inter]",
                 subTab === id
                   ? "bg-[#4C8EFF] text-[#00285C]"
-                  : "text-[#8B90A0] hover:bg-white/5"
+                  : "text-muted-foreground hover:bg-white/5"
               )}>
               <Icon className="w-4 h-4" />{label}
             </button>

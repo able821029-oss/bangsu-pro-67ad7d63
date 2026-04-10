@@ -157,9 +157,9 @@ export function HomeTab({
         <div className="space-y-2">
           <div className="flex justify-between items-end">
             <span className="text-sm font-medium text-[#C1C6D7]">블로그 이번달 사용량</span>
-            <span className="text-sm font-bold label-font text-primary">{subscription.usedCount} <span className="text-[#8B90A0] text-xs font-normal">/ {subscription.maxCount}건</span></span>
+            <span className="text-sm font-bold label-font text-primary">{subscription.usedCount} <span className="text-muted-foreground text-xs font-normal">/ {subscription.maxCount}건</span></span>
           </div>
-          <div className="h-2 w-full bg-[#2F3445] rounded-full overflow-hidden">
+          <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
             <div
               className="h-full bg-brand-gradient rounded-full transition-all duration-300"
               style={{ width: `${Math.min(usagePercent, 100)}%`, boxShadow: "0 0 8px rgba(35,127,255,0.4)" }}
@@ -198,31 +198,31 @@ export function HomeTab({
 
       {/* Stitch Stats Grid */}
       <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => onNavigate("publish")} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
+        <button onClick={() => onNavigate("publish")} className="bg-muted rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
           <div className="flex justify-between items-start">
-            <span className="text-[#8B90A0] text-xs">블로그 작성</span>
+            <span className="text-muted-foreground text-xs">블로그 작성</span>
             <span className="text-[#4AE176] text-[10px] font-bold flex items-center">
               <span className="material-symbols-outlined text-[12px]">arrow_drop_up</span>3
             </span>
           </div>
-          <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{completed}건</div>
+          <div className="headline-font font-bold text-2xl text-foreground">{completed}건</div>
         </button>
-        <button onClick={() => onNavigate("publish")} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
+        <button onClick={() => onNavigate("publish")} className="bg-muted rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
           <div className="flex justify-between items-start">
-            <span className="text-[#8B90A0] text-xs">게시 완료</span>
+            <span className="text-muted-foreground text-xs">게시 완료</span>
             <span className="text-[#4AE176] text-[10px] font-bold flex items-center">
               <span className="material-symbols-outlined text-[12px]">arrow_drop_up</span>2
             </span>
           </div>
-          <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{published}건</div>
+          <div className="headline-font font-bold text-2xl text-foreground">{published}건</div>
         </button>
-        <button onClick={() => onNavigate("shorts")} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
-          <span className="text-[#8B90A0] text-xs">이번달 영상</span>
-          <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{videoCount}개</div>
+        <button onClick={() => onNavigate("shorts")} className="bg-muted rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
+          <span className="text-muted-foreground text-xs">이번달 영상</span>
+          <div className="headline-font font-bold text-2xl text-foreground">{videoCount}개</div>
         </button>
-        <button onClick={() => setShowBadgeSheet(true)} className="bg-[#25293A] rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
-          <span className="text-[#8B90A0] text-xs">연속 사용</span>
-          <div className="headline-font font-bold text-2xl text-[#DEE1F7]">{subscription.consecutiveMonths}개월</div>
+        <button onClick={() => setShowBadgeSheet(true)} className="bg-muted rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
+          <span className="text-muted-foreground text-xs">연속 사용</span>
+          <div className="headline-font font-bold text-2xl text-foreground">{subscription.consecutiveMonths}개월</div>
         </button>
       </div>
 

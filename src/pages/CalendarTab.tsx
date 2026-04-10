@@ -238,7 +238,7 @@ export function CalendarTab() {
   const totalWorkers = monthSchedules.reduce((sum, s) => sum + (s.workers || 0), 0);
 
   return (
-    <div className="pb-28 min-h-screen bg-[#0E1322]">
+    <div className="pb-28 min-h-screen bg-background">
       {/* 헤더 */}
       <div className="sticky top-0 z-10 px-5 pt-4 pb-3"
         style={{ background: "rgba(14,19,34,0.92)", backdropFilter: "blur(20px)" }}>
@@ -248,7 +248,7 @@ export function CalendarTab() {
               className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors">
               <ChevronLeft className="w-5 h-5 text-[#C1C6D7]" />
             </button>
-            <h2 className="text-lg font-bold text-[#DEE1F7]"
+            <h2 className="text-lg font-bold text-foreground"
               style={{ fontFamily: "Manrope, sans-serif" }}>
               {format(currentDate, "yyyy년 M월", { locale: ko })}
             </h2>
@@ -258,7 +258,7 @@ export function CalendarTab() {
             </button>
           </div>
           <button onClick={exportToICS}
-            className="flex items-center gap-1.5 text-xs font-semibold text-[#ADC6FF] bg-[#ADC6FF]/10 px-3 py-1.5 rounded-full hover:bg-[#ADC6FF]/15 transition-colors">
+            className="flex items-center gap-1.5 text-xs font-semibold text-primary bg-[#ADC6FF]/10 px-3 py-1.5 rounded-full hover:bg-[#ADC6FF]/15 transition-colors">
             <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>download</span>
             구글 내보내기
           </button>
@@ -267,17 +267,17 @@ export function CalendarTab() {
         {/* 이달 통계 바 */}
         <div className="flex justify-between bg-[#161B2B] rounded-2xl px-4 py-2.5 mb-3">
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-[#8B90A0]" style={{ fontFamily: "Inter, sans-serif" }}>이달 현장</span>
-            <span className="text-sm font-bold text-[#DEE1F7]">{monthSchedules.length}건</span>
+            <span className="text-[10px] text-muted-foreground" style={{ fontFamily: "Inter, sans-serif" }}>이달 현장</span>
+            <span className="text-sm font-bold text-foreground">{monthSchedules.length}건</span>
           </div>
           <div className="w-px bg-white/5" />
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-[#8B90A0]" style={{ fontFamily: "Inter, sans-serif" }}>완료</span>
+            <span className="text-[10px] text-muted-foreground" style={{ fontFamily: "Inter, sans-serif" }}>완료</span>
             <span className="text-sm font-bold text-[#4AE176]">{completedCount}건</span>
           </div>
           <div className="w-px bg-white/5" />
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-[#8B90A0]" style={{ fontFamily: "Inter, sans-serif" }}>총 인부</span>
+            <span className="text-[10px] text-muted-foreground" style={{ fontFamily: "Inter, sans-serif" }}>총 인부</span>
             <span className="text-sm font-bold text-[#4C8EFF]">{totalWorkers}명</span>
           </div>
         </div>
@@ -290,7 +290,7 @@ export function CalendarTab() {
           {["일","월","화","수","목","금","토"].map((dayLabel, i) => (
             <div key={dayLabel} className={cn(
               "text-center text-xs font-medium py-1",
-              i === 0 ? "text-red-400/80" : i === 6 ? "text-[#4C8EFF]/80" : "text-[#8B90A0]"
+              i === 0 ? "text-red-400/80" : i === 6 ? "text-[#4C8EFF]/80" : "text-muted-foreground"
             )} style={{ fontFamily: "Inter, sans-serif" }}>{dayLabel}</div>
           ))}
         </div>
@@ -312,7 +312,7 @@ export function CalendarTab() {
                 <span className={cn(
                   "text-sm w-8 h-8 flex items-center justify-center rounded-full transition-all",
                   isToday && "bg-[#4C8EFF] text-[#00285C] font-bold",
-                  isSelected && !isToday && "text-[#ADC6FF] font-bold",
+                  isSelected && !isToday && "text-primary font-bold",
                   !isToday && !isSelected && "text-[#C1C6D7]"
                 )}>{format(day, "d")}</span>
                 {has && (
@@ -331,11 +331,11 @@ export function CalendarTab() {
       <div className="px-5 mt-6 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-sm text-[#DEE1F7]"
+            <h3 className="font-bold text-sm text-foreground"
               style={{ fontFamily: "Manrope, sans-serif" }}>
               {format(selectedDate, "M월 d일 (EEEE)", { locale: ko })}
             </h3>
-            <p className="text-xs text-[#8B90A0]" style={{ fontFamily: "Inter, sans-serif" }}>
+            <p className="text-xs text-muted-foreground" style={{ fontFamily: "Inter, sans-serif" }}>
               {daySchedules.length}개 현장
             </p>
           </div>
@@ -343,10 +343,10 @@ export function CalendarTab() {
 
         {daySchedules.length === 0 ? (
           <div className="text-center py-10 space-y-2">
-            <span className="material-symbols-outlined text-[#8B90A0]" style={{ fontSize: "40px" }}>event_note</span>
-            <p className="text-sm text-[#8B90A0]">이날 등록된 현장이 없습니다</p>
+            <span className="material-symbols-outlined text-muted-foreground" style={{ fontSize: "40px" }}>event_note</span>
+            <p className="text-sm text-muted-foreground">이날 등록된 현장이 없습니다</p>
             <button onClick={openNew}
-              className="text-xs text-[#ADC6FF] font-semibold underline underline-offset-2">
+              className="text-xs text-primary font-semibold underline underline-offset-2">
               현장 일지 추가하기
             </button>
           </div>
@@ -370,10 +370,10 @@ export function CalendarTab() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className={cn(
                         "font-bold text-sm",
-                        s.completed ? "line-through text-[#8B90A0]" : "text-[#DEE1F7]"
+                        s.completed ? "line-through text-muted-foreground" : "text-foreground"
                       )}>{s.title}</p>
                       {s.work_type && (
-                        <span className="text-[10px] bg-[#4C8EFF]/15 text-[#ADC6FF] px-1.5 py-0.5 rounded-md font-semibold">
+                        <span className="text-[10px] bg-[#4C8EFF]/15 text-primary px-1.5 py-0.5 rounded-md font-semibold">
                           {s.work_type}
                         </span>
                       )}
@@ -383,17 +383,17 @@ export function CalendarTab() {
                     </div>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                       {s.schedule_time && (
-                        <span className="text-xs text-[#8B90A0] flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="w-3 h-3" />{s.schedule_time}
                         </span>
                       )}
                       {s.location && (
-                        <span className="text-xs text-[#8B90A0] flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <MapPin className="w-3 h-3" />{s.location}
                         </span>
                       )}
                       {s.workers > 0 && (
-                        <span className="text-xs text-[#8B90A0]">👷 {s.workers}명</span>
+                        <span className="text-xs text-muted-foreground">👷 {s.workers}명</span>
                       )}
                     </div>
                     {s.memo && (
@@ -406,12 +406,12 @@ export function CalendarTab() {
                     <button onClick={() => toggleComplete(s)}
                       className={cn(
                         "p-1.5 rounded-lg transition-colors",
-                        s.completed ? "bg-[#4AE176]/20 text-[#4AE176]" : "hover:bg-white/5 text-[#8B90A0]"
+                        s.completed ? "bg-[#4AE176]/20 text-[#4AE176]" : "hover:bg-white/5 text-muted-foreground"
                       )}>
                       <Check className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => openEdit(s)} aria-label="수정"
-                      className="p-1.5 rounded-lg hover:bg-white/5 text-[#8B90A0]">
+                      className="p-1.5 rounded-lg hover:bg-white/5 text-muted-foreground">
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => handleDelete(s.id)}
@@ -444,7 +444,7 @@ export function CalendarTab() {
             border: "1px solid rgba(255,255,255,0.1)",
           }}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#DEE1F7]"
+            <DialogTitle className="flex items-center gap-2 text-foreground"
               style={{ fontFamily: "Manrope, sans-serif" }}>
               <span className="material-symbols-outlined" style={{ fontSize: "18px", color: "#ADC6FF" }}>construction</span>
               {editingId ? "현장 일지 수정" : "현장 일지 작성"}
@@ -458,7 +458,7 @@ export function CalendarTab() {
                   placeholder="현장명 (예: 강남구 방수 시공)"
                   value={formData.title}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
-                  className="bg-[#161B2B] border-white/5 text-[#DEE1F7] placeholder:text-[#8B90A0] focus:border-[#4C8EFF] focus:ring-0"
+                  className="bg-[#161B2B] border-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#4C8EFF] focus:ring-0"
                 />
               </div>
               <button
@@ -467,7 +467,7 @@ export function CalendarTab() {
                   "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors",
                   isRecording && recordingField === "title"
                     ? "bg-red-500 text-white animate-pulse"
-                    : "bg-[#25293A] text-[#8B90A0] hover:bg-[#4C8EFF]/15 hover:text-[#ADC6FF]"
+                    : "bg-muted text-muted-foreground hover:bg-[#4C8EFF]/15 hover:text-primary"
                 )}>
                 {isRecording && recordingField === "title" ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
@@ -477,21 +477,21 @@ export function CalendarTab() {
             <div className="grid grid-cols-2 gap-2">
               <Input type="date" value={formData.schedule_date}
                 onChange={e => setFormData({ ...formData, schedule_date: e.target.value })}
-                className="bg-[#161B2B] border-white/5 text-[#DEE1F7] focus:border-[#4C8EFF] focus:ring-0" />
+                className="bg-[#161B2B] border-white/5 text-foreground focus:border-[#4C8EFF] focus:ring-0" />
               <Input type="time" value={formData.schedule_time}
                 onChange={e => setFormData({ ...formData, schedule_time: e.target.value })}
-                className="bg-[#161B2B] border-white/5 text-[#DEE1F7] focus:border-[#4C8EFF] focus:ring-0" />
+                className="bg-[#161B2B] border-white/5 text-foreground focus:border-[#4C8EFF] focus:ring-0" />
             </div>
 
             {/* 위치 */}
             <Input placeholder="📍 위치 (선택)"
               value={formData.location}
               onChange={e => setFormData({ ...formData, location: e.target.value })}
-              className="bg-[#161B2B] border-white/5 text-[#DEE1F7] placeholder:text-[#8B90A0] focus:border-[#4C8EFF] focus:ring-0" />
+              className="bg-[#161B2B] border-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#4C8EFF] focus:ring-0" />
 
             {/* 공종 선택 */}
             <div>
-              <p className="text-xs text-[#8B90A0] mb-1.5" style={{ fontFamily: "Inter, sans-serif" }}>공종</p>
+              <p className="text-xs text-muted-foreground mb-1.5" style={{ fontFamily: "Inter, sans-serif" }}>공종</p>
               <div className="flex flex-wrap gap-1.5">
                 {workTypes.map(w => (
                   <button key={w} onClick={() => setFormData({ ...formData, work_type: w })}
@@ -499,7 +499,7 @@ export function CalendarTab() {
                       "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
                       formData.work_type === w
                         ? "bg-[#4C8EFF] text-[#00285C]"
-                        : "bg-[#25293A] text-[#C1C6D7] hover:bg-[#25293A]/80"
+                        : "bg-muted text-[#C1C6D7] hover:bg-muted/80"
                     )}>{w}</button>
                 ))}
               </div>
@@ -507,18 +507,18 @@ export function CalendarTab() {
 
             {/* 날씨 */}
             <div>
-              <p className="text-xs text-[#8B90A0] mb-1.5" style={{ fontFamily: "Inter, sans-serif" }}>날씨</p>
+              <p className="text-xs text-muted-foreground mb-1.5" style={{ fontFamily: "Inter, sans-serif" }}>날씨</p>
               <div className="flex gap-2">
                 {weatherOptions.map(w => (
                   <button key={w.label} onClick={() => setFormData({ ...formData, weather: w.label })}
                     className={cn(
                       "flex-1 py-2 rounded-xl text-center text-lg transition-all border",
                       formData.weather === w.label
-                        ? "border-[#4C8EFF] bg-[#25293A]"
-                        : "border-white/5 bg-[#25293A] hover:border-white/10"
+                        ? "border-[#4C8EFF] bg-muted"
+                        : "border-white/5 bg-muted hover:border-white/10"
                     )}>
                     {w.icon}
-                    <p className="text-[10px] text-[#8B90A0] mt-0.5">{w.label}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{w.label}</p>
                   </button>
                 ))}
               </div>
@@ -526,28 +526,28 @@ export function CalendarTab() {
 
             {/* 인부 수 */}
             <div className="flex items-center gap-3">
-              <p className="text-xs text-[#8B90A0]">👷 인부</p>
-              <div className="flex items-center gap-2 bg-[#25293A] rounded-lg px-3 py-1.5">
+              <p className="text-xs text-muted-foreground">👷 인부</p>
+              <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1.5">
                 <button onClick={() => setFormData({ ...formData, workers: Math.max(0, formData.workers - 1) })}
-                  className="text-[#ADC6FF] font-bold text-lg w-5">-</button>
-                <span className="text-sm font-semibold w-5 text-center text-[#DEE1F7]">{formData.workers}</span>
+                  className="text-primary font-bold text-lg w-5">-</button>
+                <span className="text-sm font-semibold w-5 text-center text-foreground">{formData.workers}</span>
                 <button onClick={() => setFormData({ ...formData, workers: formData.workers + 1 })}
-                  className="text-[#ADC6FF] font-bold text-lg w-5">+</button>
+                  className="text-primary font-bold text-lg w-5">+</button>
               </div>
-              <span className="text-xs text-[#8B90A0]">명</span>
+              <span className="text-xs text-muted-foreground">명</span>
             </div>
 
             {/* 메모 + 음성 */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-[#8B90A0]" style={{ fontFamily: "Inter, sans-serif" }}>작업 메모</p>
+                <p className="text-xs text-muted-foreground" style={{ fontFamily: "Inter, sans-serif" }}>작업 메모</p>
                 <button
                   onClick={() => isRecording && recordingField === "memo" ? stopVoice() : startVoiceMemo("memo")}
                   className={cn(
                     "flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors",
                     isRecording && recordingField === "memo"
                       ? "bg-red-500 text-white animate-pulse"
-                      : "bg-[#25293A] text-[#8B90A0] hover:text-[#ADC6FF]"
+                      : "bg-muted text-muted-foreground hover:text-primary"
                   )}>
                   {isRecording && recordingField === "memo" ? <MicOff className="w-3 h-3" /> : <Mic className="w-3 h-3" />}
                   {isRecording && recordingField === "memo" ? "중지" : "음성 메모"}
@@ -558,7 +558,7 @@ export function CalendarTab() {
                 value={formData.memo}
                 onChange={e => setFormData({ ...formData, memo: e.target.value })}
                 rows={3}
-                className="bg-[#161B2B] border-white/5 text-[#DEE1F7] placeholder:text-[#8B90A0] focus:border-[#4C8EFF] focus:ring-0"
+                className="bg-[#161B2B] border-white/5 text-foreground placeholder:text-muted-foreground focus:border-[#4C8EFF] focus:ring-0"
               />
             </div>
 
@@ -571,7 +571,7 @@ export function CalendarTab() {
                 )}>
                 {formData.completed && <Check className="w-3 h-3 text-[#0E1322]" />}
               </button>
-              <span className="text-sm text-[#DEE1F7]">현장 작업 완료</span>
+              <span className="text-sm text-foreground">현장 작업 완료</span>
             </div>
 
             <button onClick={handleSave}
