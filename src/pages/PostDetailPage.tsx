@@ -677,7 +677,7 @@ export function PostDetailPage({
         {/* ShortsCreator 오버레이 */}
         {showShortsCreator && (
           <div className="fixed inset-0 z-[80] bg-background overflow-y-auto">
-            <ShortsCreator onClose={() => setShowShortsCreator(false)} />
+            <ShortsCreator onClose={() => setShowShortsCreator(false)} onNavigate={onNavigate} />
           </div>
         )}
 

@@ -180,47 +180,108 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
-  const [pendingNarration, setPendingNarration] = useState<{ texts: string[]; voiceConfig: VoiceConfig } | null>(null);
+  const pendingAudioRef = useRef<{
+    narrationAudios: (string | null)[];
+    narrationTexts: string[];
+    voiceConfig: VoiceConfig | null;
+    bgmType: BgmType;
+  } | null>(null);
+  const audioPlayedRef = useRef(false);
+  const bgmCtxRef = useRef<AudioContext | null>(null);
+  const narrationAudioRefs = useRef<HTMLAudioElement[]>([]);
 
-  // Play TTS only after the result screen is visible
+  // Play narration + BGM when done screen appears
   useEffect(() => {
-    if (step !== "done" || !videoUrl || !pendingNarration) return;
-    const { texts, voiceConfig: vc } = pendingNarration;
-    setPendingNarration(null);
+    if (step !== "done") return;
+    const audio = pendingAudioRef.current;
+    if (!audio || audioPlayedRef.current) return;
+    audioPlayedRef.current = true; // 한 번만 재생
 
+    const { narrationAudios, narrationTexts, voiceConfig, bgmType } = audio;
     let cancelled = false;
+
+    // ── 1. BGM 재생 ──
+    if (bgmType !== "none") {
+      try {
+        const bgmCtx = previewBgm(bgmType);
+        bgmCtxRef.current = bgmCtx;
+        const totalSec = remotionScenes.reduce((sum, s) => sum + s.durationInFrames, 0) / 30 + 5;
+        setTimeout(() => {
+          if (!cancelled && bgmCtxRef.current) {
+            bgmCtxRef.current.close().catch(() => {});
+            bgmCtxRef.current = null;
+          }
+        }, totalSec * 1000);
+      } catch (e) {
+        console.warn("[BGM] 재생 실패:", e);
+      }
+    }
+
+    // ── 2. 나레이션 재생 ──
     (async () => {
-      for (const text of texts) {
-        if (cancelled || !text) continue;
-        await new Promise<void>((resolve) => {
-          if (!window.speechSynthesis) {
-            resolve();
-            return;
-          }
-          const utterance = new SpeechSynthesisUtterance(text);
-          utterance.lang = vc.lang;
-          utterance.pitch = vc.pitch;
-          utterance.rate = vc.rate;
-          const voices = speechSynthesis.getVoices();
-          const koVoices = voices.filter(v => v.lang.startsWith("ko"));
-          for (const hint of vc.voiceNameHint) {
-            const match = koVoices.find(v => v.name.includes(hint));
-            if (match) { utterance.voice = match; break; }
-          }
-          if (!utterance.voice && koVoices[0]) utterance.voice = koVoices[0];
-          const timeout = setTimeout(() => resolve(), 15000);
-          utterance.onend = () => { clearTimeout(timeout); resolve(); };
-          utterance.onerror = () => { clearTimeout(timeout); resolve(); };
-          speechSynthesis.speak(utterance);
-        });
+      // 약간 딜레이 후 나레이션 시작 (BGM과 겹치도록)
+      await new Promise(r => setTimeout(r, 500));
+
+      const hasElevenLabsAudio = narrationAudios.some(Boolean);
+
+      if (hasElevenLabsAudio) {
+        for (let i = 0; i < narrationAudios.length; i++) {
+          if (cancelled) break;
+          const b64 = narrationAudios[i];
+          if (!b64) continue;
+
+          await new Promise<void>((resolve) => {
+            try {
+              const binary = atob(b64);
+              const bytes = new Uint8Array(binary.length);
+              for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+              const blob = new Blob([bytes], { type: "audio/mpeg" });
+              const url = URL.createObjectURL(blob);
+              const a = new Audio(url);
+              narrationAudioRefs.current.push(a);
+              const timeout = setTimeout(() => resolve(), 20000);
+              a.onended = () => { clearTimeout(timeout); URL.revokeObjectURL(url); resolve(); };
+              a.onerror = () => { clearTimeout(timeout); URL.revokeObjectURL(url); resolve(); };
+              a.play().catch(() => { clearTimeout(timeout); resolve(); });
+            } catch {
+              resolve();
+            }
+          });
+          if (!cancelled) await new Promise(r => setTimeout(r, 300));
+        }
+      } else if (voiceConfig && narrationTexts.length > 0) {
+        for (const text of narrationTexts) {
+          if (cancelled || !text) continue;
+          await new Promise<void>((resolve) => {
+            if (!window.speechSynthesis) { resolve(); return; }
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = voiceConfig.lang;
+            u.pitch = voiceConfig.pitch;
+            u.rate = voiceConfig.rate;
+            const voices = speechSynthesis.getVoices();
+            const ko = voices.filter(v => v.lang.startsWith("ko"));
+            for (const hint of voiceConfig.voiceNameHint) {
+              const m = ko.find(v => v.name.includes(hint));
+              if (m) { u.voice = m; break; }
+            }
+            if (!u.voice && ko[0]) u.voice = ko[0];
+            const timeout = setTimeout(() => resolve(), 15000);
+            u.onend = () => { clearTimeout(timeout); resolve(); };
+            u.onerror = () => { clearTimeout(timeout); resolve(); };
+            speechSynthesis.speak(u);
+          });
+        }
       }
     })();
 
     return () => {
       cancelled = true;
+      narrationAudioRefs.current.forEach(a => { a.pause(); a.src = ""; });
+      narrationAudioRefs.current = [];
       if (window.speechSynthesis) speechSynthesis.cancel();
+      if (bgmCtxRef.current) { bgmCtxRef.current.close().catch(() => {}); bgmCtxRef.current = null; }
     };
-  }, [step, videoUrl, pendingNarration]);
+  }, [step]);
 
   // 심플 월 영상 횟수 시스템
   const { useVideo } = useAppStore();
@@ -372,8 +433,12 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     }
 
     if (window.speechSynthesis) speechSynthesis.cancel();
+    if (bgmCtxRef.current) { bgmCtxRef.current.close().catch(() => {}); bgmCtxRef.current = null; }
+    narrationAudioRefs.current.forEach(a => { a.pause(); a.src = ""; });
+    narrationAudioRefs.current = [];
+    pendingAudioRef.current = null;
+    audioPlayedRef.current = false;
     setPlayingVoice(null);
-    setPendingNarration(null);
     setErrorMsg("");
 
     if (videoUrl) {
@@ -433,6 +498,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       } : undefined;
 
       const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
+      console.warn(`[SMS] 나레이션: ${narrationAudios.filter(Boolean).length}/${narrationAudios.length}개 ElevenLabs 오디오, BGM: ${bgm}`);
 
       // ── Supabase Edge Function → Railway 서버 렌더링 (CORS 해결, iOS 지원) ──
       setProgressText("🖥️ 서버에서 영상 렌더링 중...");
@@ -452,17 +518,24 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       if (!renderErr && !renderData?.error && renderData?.videoUrl) {
         // 서버 렌더링 성공 → MP4 URL
         setVideoUrl(renderData.videoUrl);
-        setProgressPct(100);
-        setStep("done");
-        toast({ title: "영상이 완성되었습니다! 🎬" });
       } else {
-        // 서버 렌더링 실패 — Remotion Player 미리보기만 제공
-        const errMsg = renderData?.error || renderErr?.message || "서버 렌더링 실패";
-        console.warn("[SMS] 서버 렌더링 실패:", errMsg);
-        setProgressPct(100);
-        setStep("done");
-        toast({ title: "미리보기만 가능합니다", description: "서버 렌더링에 실패했습니다. 다시 시도해주세요.", variant: "destructive" });
+        // 서버 렌더링 실패 — Remotion Player 미리보기 + 클라이언트 오디오
+        console.warn("[SMS] 서버 렌더링 실패:", renderData?.error || renderErr?.message);
       }
+
+      // 나레이션 + BGM 재생 예약 (done 화면 진입 시 동시 재생)
+      const narrationTexts = scenes.map((s: MirraScene) => s.narration || "").filter(Boolean);
+      audioPlayedRef.current = false;
+      pendingAudioRef.current = {
+        narrationAudios: narrationEnabled ? narrationAudios : [],
+        narrationTexts: narrationEnabled ? narrationTexts : [],
+        voiceConfig: narrationEnabled && voice ? { lang: voice.lang, pitch: voice.pitch, rate: voice.rate, voiceNameHint: voice.voiceNameHint } : null,
+        bgmType: bgm,
+      };
+
+      setProgressPct(100);
+      setStep("done");
+      toast({ title: "영상이 완성되었습니다! 🎬" });
       incrementVideoUsed();
 
     } catch (err: any) {
@@ -485,6 +558,8 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       a.click();
       document.body.removeChild(a);
       toast({ title: "영상이 다운로드됩니다" });
+    } else {
+      toast({ title: "MP4 저장은 서버 렌더링이 필요합니다", description: "위 미리보기를 화면 녹화로 저장해 주세요.", variant: "destructive" });
     }
   };
 
@@ -502,7 +577,11 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
   const handleReset = () => {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
     if (window.speechSynthesis) speechSynthesis.cancel();
-    setPendingNarration(null);
+    if (bgmCtxRef.current) { bgmCtxRef.current.close().catch(() => {}); bgmCtxRef.current = null; }
+    narrationAudioRefs.current.forEach(a => { a.pause(); a.src = ""; });
+    narrationAudioRefs.current = [];
+    pendingAudioRef.current = null;
+    audioPlayedRef.current = false;
     setPlayingVoice(null);
     setStep("config");
     setProgressPct(0);
@@ -671,7 +750,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
 
         {/* 이번달 영상 현황 */}
         <UsageMeter used={videoUsed} max={videoLimit} plan={subscription.plan}
-          onUpgrade={() => { sessionStorage.setItem("sms-open-settings-page", "pricing"); onNavigate ? onNavigate("mypage") : onClose(); }} />
+          onUpgrade={() => { sessionStorage.setItem("sms-open-settings-page", "pricing"); if (onNavigate) { onNavigate("mypage"); } }} />
 
         <div className="space-y-2">
           {(() => {
@@ -792,7 +871,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         <div className="w-full max-w-xs space-y-3">
           {/* 저장 */}
           <Button className="w-full gap-2" style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)", color: "white" }}
-            onClick={handleDownload} disabled={!videoUrl}>
+            onClick={handleDownload}>
             <Download className="w-5 h-5" /> 갤러리에 저장
           </Button>
           {/* SNS 업로드 */}
