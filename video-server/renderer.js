@@ -77,14 +77,17 @@ async function renderVideo({
     codec: "h264",
     outputLocation: outputPath,
     inputProps,
-    // Railway Free (512MB) OOM 방지 — 저화질 540x960
+    // Railway Free (512MB) OOM 방지 — 저화질 + 메모리 최적화
     concurrency: 1,
-    jpegQuality: 75,
+    jpegQuality: 70,
     imageFormat: "jpeg",
     scale: 0.5,
+    muted: true, // Remotion 오디오는 사용 안 함 (ffmpeg로 후처리)
+    logLevel: "warn",
     chromiumOptions: {
       gl: "swangle",
       disableWebSecurity: true,
+      headless: true,
     },
     browserExecutable: process.env.CHROMIUM_PATH || undefined,
     onProgress: ({ progress }) => {
