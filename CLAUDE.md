@@ -40,6 +40,15 @@ Primary: #237FFF / #AB5EBE
 ## 확정된 기술 결정사항
 - Edge Function 모델: claude-haiku-4-5-20251001 (속도 우선)
 - 영상 렌더링: Remotion (Canvas/FFmpeg 교체 예정)
-- 배포: Cloudflare Pages (Lovable 대체)
+- 배포: Cloudflare Pages — https://sms-app-9p9.pages.dev
 - 결제: 카카오페이 + 토스페이먼츠 (키 미수령)
+
+## 패키지 매니저
+- npm만 사용 (bun 금지)
+- npm install / npm run dev / npm run build
+
+## 삭제된 파일 (재생성 금지)
+- .lovable/ → Lovable 미사용
+- bun.lock, bun.lockb → npm 전환
+- test-results/ → 자동 생성 임시 폴더
 ---

@@ -26,3 +26,15 @@ dist-ssr
 # Claude settings (contains API keys)
 .claude/
 supabase/.temp/
+
+# 자동 생성 폴더
+test-results/
+playwright-report/
+.playwright/
+
+# 패키지 매니저 (npm만 사용)
+bun.lock
+bun.lockb
+
+# Lovable 잔재
+.lovable/

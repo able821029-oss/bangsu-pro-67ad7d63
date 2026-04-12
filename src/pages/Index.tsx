@@ -1,17 +1,25 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { BottomNav, TabId } from "@/components/BottomNav";
 import { InstallBanner } from "@/components/InstallBanner";
 import { OnboardingSlides } from "@/components/OnboardingSlides";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
-import AuthPage from "@/pages/AuthPage";
 import { HomeTab } from "@/pages/HomeTab";
-import { CalendarTab } from "@/pages/CalendarTab";
-import { ContentTab } from "@/pages/ContentTab";
-import { ShortsTab } from "@/pages/ShortsTab";
-import { MyPage } from "@/pages/MyPage";
-import { PostDetailPage } from "@/pages/PostDetailPage";
-import { ReviewsPage } from "@/pages/ReviewsPage";
 import { BlogPost } from "@/stores/appStore";
+
+// 초기 로딩엔 HomeTab만 필요 — 나머지 탭/페이지는 lazy
+const AuthPage = lazy(() => import("@/pages/AuthPage"));
+const CalendarTab = lazy(() => import("@/pages/CalendarTab").then(m => ({ default: m.CalendarTab })));
+const ContentTab = lazy(() => import("@/pages/ContentTab").then(m => ({ default: m.ContentTab })));
+const ShortsTab = lazy(() => import("@/pages/ShortsTab").then(m => ({ default: m.ShortsTab })));
+const MyPage = lazy(() => import("@/pages/MyPage").then(m => ({ default: m.MyPage })));
+const PostDetailPage = lazy(() => import("@/pages/PostDetailPage").then(m => ({ default: m.PostDetailPage })));
+const ReviewsPage = lazy(() => import("@/pages/ReviewsPage").then(m => ({ default: m.ReviewsPage })));
+
+const LoadingFallback = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+  </div>
+);
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<"in" | "out">("in");
@@ -73,17 +81,19 @@ function AppContent() {
 
   if (showSplash) return <SplashScreen onDone={handleSplashDone} />;
   if (showOnboarding) return <OnboardingSlides onComplete={handleOnboardingComplete} />;
-  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>;
-  if (!user) return <AuthPage />;
+  if (loading) return <LoadingFallback />;
+  if (!user) return <Suspense fallback={<LoadingFallback />}><AuthPage /></Suspense>;
 
   if (showReviews) {
-    return <ReviewsPage onBack={() => setShowReviews(false)} />;
+    return <Suspense fallback={<LoadingFallback />}><ReviewsPage onBack={() => setShowReviews(false)} /></Suspense>;
   }
 
   if (viewingPost) {
     return (
       <div className="min-h-screen bg-background">
-        <PostDetailPage post={viewingPost} onBack={handleBackFromPost} onNavigate={(t) => setActiveTab(t as TabId)} />
+        <Suspense fallback={<LoadingFallback />}>
+          <PostDetailPage post={viewingPost} onBack={handleBackFromPost} onNavigate={(t) => setActiveTab(t as TabId)} />
+        </Suspense>
       </div>
     );
   }
@@ -104,7 +114,9 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      {renderTab()}
+      <Suspense fallback={<LoadingFallback />}>
+        {renderTab()}
+      </Suspense>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       <InstallBanner />
     </div>
