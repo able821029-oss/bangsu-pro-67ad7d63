@@ -77,13 +77,11 @@ async function renderVideo({
     codec: "h264",
     outputLocation: outputPath,
     inputProps,
-    // 메모리 절약 — Railway 512MB 대응
-    concurrency: 1,
-    jpegQuality: 80,
-    imageFormat: "jpeg",
-    scale: 0.5, // 1080x1920 → 540x960 (픽셀 수 75% 감소)
+    // Railway Hobby (8GB RAM) — full quality 1080x1920
+    concurrency: 2,
+    jpegQuality: 90,
     chromiumOptions: {
-      gl: "swangle",
+      gl: "angle",
       disableWebSecurity: true,
     },
     browserExecutable: process.env.CHROMIUM_PATH || undefined,
