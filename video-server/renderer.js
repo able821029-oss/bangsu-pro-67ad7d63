@@ -77,11 +77,13 @@ async function renderVideo({
     codec: "h264",
     outputLocation: outputPath,
     inputProps,
-    // Railway Hobby (8GB RAM) — full quality 1080x1920
-    concurrency: 2,
-    jpegQuality: 90,
+    // Railway Free (512MB) OOM 방지 — 저화질 540x960
+    concurrency: 1,
+    jpegQuality: 75,
+    imageFormat: "jpeg",
+    scale: 0.5,
     chromiumOptions: {
-      gl: "angle",
+      gl: "swangle",
       disableWebSecurity: true,
     },
     browserExecutable: process.env.CHROMIUM_PATH || undefined,
