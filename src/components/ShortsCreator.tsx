@@ -57,20 +57,6 @@ const PLAN_LIMITS: Record<string, number> = {
 
 const PREVIEW_TEXT = "안녕하세요. 방수 전문 시공업체입니다.";
 
-// ElevenLabs 성별 구분 자연스러운 음성 매핑
-const ELEVENLABS_VOICE_MAP: Record<string, string> = {
-  // 남성 (확인된 male 음성)
-  "male_calm": "nPczCjzI2devNBz1zQrb",      // Brian — 차분한 남성
-  "male_pro": "N2lVS1w4EtoT3dr4eOWO",       // Marcus — 전문적 남성 (깊은 목소리)
-  "male_strong": "TX3LPaxmHKxFdv7VOQHJ",    // Thomas — 힘있는 남성 (에너지)
-  // 여성 (확인된 female 음성)
-  "female_friendly": "EXAVITQu4vr4xnSDxMaL", // Bella — 친근한 여성 (따뜻)
-  "female_pro": "XrExE9yKIg1WjnnlVkGX",     // Lily — 전문적 여성 (자신감)
-  "female_bright": "pFZP5JQG7iQjIQuC4Bku",  // Freya — 밝은 여성 (활기찬)
-};
-
-const ELEVENLABS_MODEL = "eleven_turbo_v2_5";
-
 function getKoreanVoice(voiceOption: VoiceOption): SpeechSynthesisVoice | null {
   const voices = speechSynthesis.getVoices();
   const koVoices = voices.filter(v => v.lang.startsWith("ko"));
@@ -344,35 +330,26 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
 
     setPlayingVoice(voice.id);
 
-    // ElevenLabs TTS 시도
-    const voiceId = ELEVENLABS_VOICE_MAP[voice.id];
-    if (voiceId) {
-      try {
-        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-          method: "POST",
-          headers: {
-            "xi-api-key": "sk_d047fc7edfef08126a17c29f89550712adf4eb4c370bd98f",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text: PREVIEW_TEXT,
-            model_id: ELEVENLABS_MODEL,
-            voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.4, use_speaker_boost: true, speed: 0.8 },
-          }),
-        });
-        if (res.ok) {
-          const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          previewAudioRef.current = audio;
-          audio.onended = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
-          audio.onerror = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
-          await audio.play();
-          return;
-        }
-      } catch (err) {
-        console.warn("[TTS] ElevenLabs 실패, Web Speech 폴백:", err);
+    // ElevenLabs TTS via Edge Function 프록시 (API 키 보호)
+    try {
+      const { data, error } = await supabase.functions.invoke("tts-preview", {
+        body: { voiceId: voice.id, text: PREVIEW_TEXT },
+      });
+      if (!error && data?.ok && data?.audio) {
+        const binary = atob(data.audio);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: "audio/mpeg" });
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        previewAudioRef.current = audio;
+        audio.onended = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
+        audio.onerror = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
+        await audio.play();
+        return;
       }
+    } catch (err) {
+      console.warn("[TTS] Edge Function 실패, Web Speech 폴백");
     }
 
     // ElevenLabs 실패 시 Web Speech API 폴백

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SMS 앱 운영 이관 체크리스트</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Malgun Gothic", "맑은 고딕", -apple-system, sans-serif;
+    color: #1a1a1a;
+    line-height: 1.6;
+    font-size: 11pt;
+    max-width: 100%;
+  }
+  h1 {
+    font-size: 22pt;
+    color: #237FFF;
+    border-bottom: 3px solid #237FFF;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    color: #666;
+    font-size: 10pt;
+    margin-bottom: 24px;
+  }
+  h2 {
+    font-size: 15pt;
+    color: #AB5EBE;
+    margin-top: 28px;
+    margin-bottom: 12px;
+    padding-left: 10px;
+    border-left: 4px solid #AB5EBE;
+  }
+  h3 {
+    font-size: 12pt;
+    color: #237FFF;
+    margin-top: 18px;
+    margin-bottom: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 18px;
+    font-size: 10pt;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f0f4ff;
+    font-weight: 600;
+    color: #237FFF;
+  }
+  tr:nth-child(even) td { background: #fafafa; }
+  ul { margin: 8px 0 16px 20px; padding: 0; }
+  li { margin-bottom: 4px; }
+  .section-required { background: #fff5f5; border-left: 4px solid #e53e3e; padding: 12px 16px; margin-bottom: 8px; }
+  .section-recommended { background: #fffbeb; border-left: 4px solid #d69e2e; padding: 12px 16px; margin-bottom: 8px; }
+  .section-optional { background: #f0fff4; border-left: 4px solid #38a169; padding: 12px 16px; margin-bottom: 8px; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 9pt;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  .badge-req { background: #e53e3e; color: white; }
+  .badge-rec { background: #d69e2e; color: white; }
+  .badge-opt { background: #38a169; color: white; }
+  .checkbox { font-size: 11pt; margin-right: 6px; }
+  .footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid #ddd;
+    font-size: 9pt;
+    color: #666;
+    text-align: center;
+  }
+  .note {
+    background: #f0f4ff;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 10pt;
+  }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<h1>SMS 앱 운영 이관 체크리스트</h1>
+<p class="subtitle">
+  셀프마케팅서비스 · 클라이언트 수령 필요 항목 정리<br>
+  개발/배포는 개발자가 유지 · 운영에 필요한 항목만 준비
+</p>
+
+<div class="note">
+  <strong>💡 본 문서의 목적</strong><br>
+  클라이언트는 운영·마케팅·법적 문서에만 집중하고, 개발자는 기술 유지보수에 전념할 수 있도록 책임 범위를 명확히 합니다.
+</div>
+
+<h2><span class="badge badge-req">필수</span> 운영 시작 전 반드시 수령</h2>
+
+<h3>1. 결제 연동 (매출 발생 필수)</h3>
+<table>
+  <tr><th style="width:35%">항목</th><th>상세</th></tr>
+  <tr><td>사업자등록증 사본</td><td>PDF 또는 이미지 파일</td></tr>
+  <tr><td>통신판매업 신고증</td><td>결제사 심사용 필수 서류</td></tr>
+  <tr><td>카카오페이 가맹점 가입</td><td>CID, 비밀키, 가맹점 ID</td></tr>
+  <tr><td>토스페이먼츠 가맹점 가입</td><td>Client Key, Secret Key, 상점 ID</td></tr>
+  <tr><td>정산 계좌</td><td>은행명, 계좌번호, 예금주</td></tr>
+</table>
+
+<h3>2. 업체 정보 (앱 전면 노출)</h3>
+<table>
+  <tr><th style="width:35%">항목</th><th>상세</th></tr>
+  <tr><td>회사/서비스명</td><td>브랜드명 (기존: SMS 셀프마케팅서비스)</td></tr>
+  <tr><td>대표자명</td><td>결제 및 이용약관 표기</td></tr>
+  <tr><td>사업자번호</td><td>10자리</td></tr>
+  <tr><td>고객센터 전화번호</td><td>앱 내 표시용</td></tr>
+  <tr><td>대표 이메일</td><td>문의 수신용</td></tr>
+  <tr><td>사무실 주소</td><td>이용약관·개인정보처리방침</td></tr>
+</table>
+
+<h3>3. 법적 문서</h3>
+<table>
+  <tr><th style="width:35%">항목</th><th>상세</th></tr>
+  <tr><td>이용약관 원문</td><td>법률 검토본 권장</td></tr>
+  <tr><td>개인정보처리방침 원문</td><td>필수</td></tr>
+  <tr><td>환불 정책</td><td>유료 결제 필수</td></tr>
+  <tr><td>마케팅 수신 동의 문구</td><td>가입 폼 표시</td></tr>
+</table>
+
+<h2><span class="badge badge-rec">권장</span> 운영 품질 향상</h2>
+
+<h3>4. 브랜드 자산</h3>
+<table>
+  <tr><th style="width:35%">항목</th><th>형식</th></tr>
+  <tr><td>로고 원본</td><td>SVG 또는 고해상도 PNG</td></tr>
+  <tr><td>브랜드 컬러</td><td>HEX 코드 (기본: #237FFF / #AB5EBE)</td></tr>
+  <tr><td>홍보 문구</td><td>앱 메인/스플래시 용</td></tr>
+  <tr><td>회사 소개</td><td>1~3문장</td></tr>
+</table>
+
+<h3>5. 요금제 정책 (관리자 페이지 편집 가능)</h3>
+<table>
+  <tr><th style="width:35%">항목</th><th>예시</th></tr>
+  <tr><td>플랜명</td><td>무료 / 베이직 / 프로 / 비즈니스</td></tr>
+  <tr><td>가격</td><td>월 0원 / 19,900원 / 49,900원 / 99,900원</td></tr>
+  <tr><td>월 영상 횟수</td><td>1 / 5 / 20 / 50</td></tr>
+  <tr><td>월 글쓰기 횟수</td><td>플랜별 설정</td></tr>
+  <tr><td>할인/프로모션</td><td>연간 결제 할인율 등</td></tr>
+</table>
+
+<h3>6. 페르소나/콘텐츠 톤 (관리자 페이지 편집)</h3>
+<ul>
+  <li><strong>타겟 업종</strong>: 방수/도장/인테리어/조경 등 중점 업종</li>
+  <li><strong>페르소나 톤 기준</strong>: 장인형/친근형/전문기업형 실제 문체 예시</li>
+  <li><strong>금지 표현 목록</strong>: 피해야 할 단어·과장 문구</li>
+</ul>
+
+<h2><span class="badge badge-opt">선택</span> 향후 확장</h2>
+
+<h3>7. 마케팅 도구 계정 (연동 예정 시)</h3>
+<table>
+  <tr><th style="width:35%">도구</th><th>용도</th></tr>
+  <tr><td>Google Analytics</td><td>방문자 분석</td></tr>
+  <tr><td>네이버 검색광고</td><td>키워드 광고</td></tr>
+  <tr><td>카카오 비즈톡</td><td>알림톡 발송</td></tr>
+  <tr><td>Meta Pixel</td><td>페이스북/인스타그램 광고</td></tr>
+</table>
+
+<h3>8. 고객 지원 채널</h3>
+<table>
+  <tr><th style="width:35%">항목</th><th>필요</th></tr>
+  <tr><td>카카오톡 채널 ID</td><td>1:1 문의용</td></tr>
+  <tr><td>FAQ 초안</td><td>관리자 페이지에 등록</td></tr>
+  <tr><td>응대 매뉴얼</td><td>고객센터 운영 기준</td></tr>
+</table>
+
+<h2>⚠️ 클라이언트가 직접 해야 할 일</h2>
+<ul>
+  <li><span class="checkbox">☐</span> <strong>사업자 명의 카드</strong> — 운영비 결제용 (월 10~20만원 예상, 개발자가 집행)</li>
+  <li><span class="checkbox">☐</span> <strong>도메인 결정</strong> — 기본 sms-app-9p9.pages.dev 또는 자체 도메인</li>
+  <li><span class="checkbox">☐</span> <strong>고객 응대 담당자</strong> 지정</li>
+  <li><span class="checkbox">☐</span> <strong>결제 테스트 완료 후 런칭 승인</strong></li>
+  <li><span class="checkbox">☐</span> <strong>이용약관/개인정보처리방침 최종 확인</strong></li>
+</ul>
+
+<h2>💡 개발자가 처리할 항목 (참고)</h2>
+<ul>
+  <li>서버 배포, API 키 관리, 코드 유지보수</li>
+  <li>Supabase / Cloudflare / Railway 인프라 운영</li>
+  <li>버그 수정, 기능 추가, 보안 업데이트</li>
+  <li>Edge Function 배포, 데이터베이스 관리</li>
+</ul>
+
+<div class="note">
+  <strong>✅ 책임 분담 요약</strong><br>
+  • <strong>클라이언트</strong>: 운영 / 마케팅 / 법적 문서 / 고객 응대<br>
+  • <strong>개발자</strong>: 인프라 / 코드 / 보안 / 기능 개발
+</div>
+
+<div class="footer">
+  SMS 셀프마케팅서비스 · 운영 이관 체크리스트 · v1.0
+</div>
+
+</body>
+</html>

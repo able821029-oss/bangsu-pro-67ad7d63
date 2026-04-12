@@ -4,10 +4,27 @@ import { Lock, Check } from "lucide-react";
 import { toast } from "sonner";
 
 const STORAGE_KEY = "sms_admin_password";
-const DEFAULT_PASSWORD = "bangsu2026!";
+const ID_KEY = "sms_admin_id";
+const DEFAULT_PASSWORD = "1234";
+const DEFAULT_ID = "admin";
+const RESET_FLAG = "sms_admin_pw_reset_v2";
+
+// 비밀번호 기본값 변경 마이그레이션 — 이전 localStorage 값 초기화
+if (typeof window !== "undefined" && !localStorage.getItem(RESET_FLAG)) {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.setItem(RESET_FLAG, "1");
+}
 
 export function getAdminPassword(): string {
   return localStorage.getItem(STORAGE_KEY) || DEFAULT_PASSWORD;
+}
+
+export function getAdminId(): string {
+  return localStorage.getItem(ID_KEY) || DEFAULT_ID;
+}
+
+export function setAdminId(id: string) {
+  localStorage.setItem(ID_KEY, id);
 }
 
 export function AdminPasswordChange() {
@@ -26,8 +43,8 @@ export function AdminPasswordChange() {
       toast.error("현재 비밀번호가 올바르지 않습니다");
       return;
     }
-    if (newPw.length < 6) {
-      toast.error("새 비밀번호는 6자 이상이어야 합니다");
+    if (newPw.length < 4) {
+      toast.error("새 비밀번호는 4자 이상이어야 합니다");
       return;
     }
     if (newPw !== confirm) {
@@ -69,7 +86,7 @@ export function AdminPasswordChange() {
             value={newPw}
             onChange={(e) => setNewPw(e.target.value)}
             className="w-full bg-secondary rounded-lg px-3 py-2.5 text-sm outline-none text-foreground"
-            placeholder="6자 이상"
+            placeholder="4자 이상"
           />
         </div>
         <div className="space-y-1.5">

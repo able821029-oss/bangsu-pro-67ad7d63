@@ -28,8 +28,12 @@ serve(async (req) => {
 
     if (!railwayRes.ok) {
       const err = await railwayRes.json().catch(() => ({ error: "Railway 오류" }));
-      return new Response(JSON.stringify({ error: err.error || "렌더링 실패" }), {
-        status: 500,
+      return new Response(JSON.stringify({
+        error: err.error || "렌더링 실패",
+        detail: err.detail,
+        step: err.step,
+      }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

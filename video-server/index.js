@@ -170,8 +170,12 @@ app.post("/render-video", authMiddleware, async (req, res) => {
       frames: totalFrames,
     });
   } catch (err) {
-    console.error(`[${jobId}] 오류:`, err.message);
-    res.status(500).json({ error: "영상 생성에 실패했습니다. 다시 시도해주세요." });
+    console.error(`[${jobId}] 오류:`, err.stack || err.message);
+    res.status(500).json({
+      error: "영상 생성에 실패했습니다. 다시 시도해주세요.",
+      detail: err.message?.slice(0, 300) || "unknown",
+      step: err.step || "unknown",
+    });
   } finally {
     [videoPath, audioPath, bgmPath, mixedPath, finalPath].forEach((p) => {
       try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch {}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { BottomNav, TabId } from "@/components/BottomNav";
 import { InstallBanner } from "@/components/InstallBanner";
 import { OnboardingSlides } from "@/components/OnboardingSlides";
+import { AdminFab } from "@/components/AdminFab";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { HomeTab } from "@/pages/HomeTab";
 import { BlogPost } from "@/stores/appStore";
@@ -82,10 +83,20 @@ function AppContent() {
   if (showSplash) return <SplashScreen onDone={handleSplashDone} />;
   if (showOnboarding) return <OnboardingSlides onComplete={handleOnboardingComplete} />;
   if (loading) return <LoadingFallback />;
-  if (!user) return <Suspense fallback={<LoadingFallback />}><AuthPage /></Suspense>;
+  if (!user) return (
+    <>
+      <Suspense fallback={<LoadingFallback />}><AuthPage /></Suspense>
+      <AdminFab />
+    </>
+  );
 
   if (showReviews) {
-    return <Suspense fallback={<LoadingFallback />}><ReviewsPage onBack={() => setShowReviews(false)} /></Suspense>;
+    return (
+      <>
+        <Suspense fallback={<LoadingFallback />}><ReviewsPage onBack={() => setShowReviews(false)} /></Suspense>
+        <AdminFab />
+      </>
+    );
   }
 
   if (viewingPost) {
@@ -94,6 +105,7 @@ function AppContent() {
         <Suspense fallback={<LoadingFallback />}>
           <PostDetailPage post={viewingPost} onBack={handleBackFromPost} onNavigate={(t) => setActiveTab(t as TabId)} />
         </Suspense>
+        <AdminFab />
       </div>
     );
   }
@@ -119,6 +131,7 @@ function AppContent() {
       </Suspense>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       <InstallBanner />
+      <AdminFab />
     </div>
   );
 }

@@ -55,17 +55,15 @@ export function AdminApiKeys() {
       updateApi("Claude API", { status: "error", message: e.message?.slice(0, 60) || "호출 실패" });
     }
 
-    // 3. ElevenLabs (generate-shorts 경유, 짧은 테스트)
+    // 3. ElevenLabs (전용 테스트 Edge Function — 빠른 확인)
     try {
-      const { data, error } = await supabase.functions.invoke("generate-shorts", {
-        body: { photos: [{ dataUrl: "data:image/png;base64,iVBORw0KGgo=", index: 1 }], workType: "테스트", videoStyle: "시공일지형", narrationType: "있음", voiceId: "male_calm", scriptMode: "auto", maxDurationSec: 15, companyName: "테스트", phoneNumber: "010-0000-0000" },
-      });
+      const { data, error } = await supabase.functions.invoke("test-elevenlabs", { body: {} });
       if (error) throw error;
-      const narCount = data?.narrationAudios?.filter(Boolean).length || 0;
-      if (narCount > 0) {
-        updateApi("ElevenLabs", { status: "ok", message: `TTS 정상 — ${narCount}개 나레이션 생성` });
+      if (data?.ok) {
+        const kb = ((data.audioBytes || 0) / 1024).toFixed(1);
+        updateApi("ElevenLabs", { status: "ok", message: `TTS 정상 — 오디오 ${kb}KB 생성` });
       } else {
-        updateApi("ElevenLabs", { status: "error", message: "나레이션 생성 실패 (API 키 확인)" });
+        updateApi("ElevenLabs", { status: "error", message: data?.error?.slice(0, 60) || "키 확인 필요" });
       }
     } catch (e: any) {
       updateApi("ElevenLabs", { status: "error", message: e.message?.slice(0, 60) || "호출 실패" });
