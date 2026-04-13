@@ -43,15 +43,33 @@ const authMiddleware = (req, res, next) => {
 
 // ── 헬스체크 ──
 app.get("/health", (_, res) => {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  // JWT payload 디코딩 (role, ref, exp 확인)
+  let jwtInfo = null;
+  try {
+    const parts = key.split(".");
+    if (parts.length === 3) {
+      const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
+      jwtInfo = {
+        role: payload.role,
+        ref: payload.ref,
+        iat: payload.iat,
+        exp: payload.exp,
+      };
+    }
+  } catch {}
+
   res.json({
     ok: true,
     ts: Date.now(),
-    version: "3.1-remotion",
+    version: "3.2-remotion",
     envCheck: {
       hasSupabaseUrl: !!process.env.SUPABASE_URL,
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      serviceKeyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 20) || "missing",
-      serviceKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+      supabaseUrl: process.env.SUPABASE_URL,
+      hasServiceKey: !!key,
+      serviceKeyLength: key.length,
+      serviceKeyTail: key.slice(-20),
+      jwt: jwtInfo,
     },
   });
 });
