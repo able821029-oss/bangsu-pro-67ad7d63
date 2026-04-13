@@ -301,29 +301,30 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       result = { scenes: mockScenes, isMock: true };
     }
 
-    // ── Step 2: ElevenLabs로 나레이션 음성 생성 ──
+    // ── Step 2: ElevenLabs로 나레이션 음성 생성 (병렬 처리) ──
     const scenes: any[] = result.scenes || [];
-    const narrationAudios: (string | null)[] = [];
+    let narrationAudios: (string | null)[] = [];
 
     if (ELEVENLABS_API_KEY && narrationType !== "없음") {
-      console.log(`ElevenLabs TTS 시작 — ${scenes.length}개 장면, voiceId: ${resolvedVoiceId}`);
-      for (const scene of scenes) {
-        const text = scene.narration || "";
-        if (text) {
+      console.log(`ElevenLabs TTS 시작 (병렬) — ${scenes.length}개 장면, voiceId: ${resolvedVoiceId}`);
+      const t0 = Date.now();
+      narrationAudios = await Promise.all(
+        scenes.map(async (scene) => {
+          const text = scene.narration || "";
+          if (!text) return null;
           try {
-            const audio = await generateNarration(text, ELEVENLABS_API_KEY, resolvedVoiceId);
-            narrationAudios.push(audio);
+            return await generateNarration(text, ELEVENLABS_API_KEY, resolvedVoiceId);
           } catch (e) {
             console.warn("ElevenLabs TTS 실패:", e);
-            narrationAudios.push(null);
+            return null;
           }
-        } else {
-          narrationAudios.push(null);
-        }
-      }
-      console.log(`ElevenLabs TTS 완료 — 성공: ${narrationAudios.filter(Boolean).length}/${scenes.length}`);
+        })
+      );
+      console.log(
+        `ElevenLabs TTS 완료 — 성공: ${narrationAudios.filter(Boolean).length}/${scenes.length} (${Date.now() - t0}ms)`
+      );
     } else {
-      scenes.forEach(() => narrationAudios.push(null));
+      narrationAudios = scenes.map(() => null);
     }
 
     return new Response(

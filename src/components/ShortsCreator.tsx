@@ -57,20 +57,6 @@ const PLAN_LIMITS: Record<string, number> = {
 
 const PREVIEW_TEXT = "안녕하세요. 방수 전문 시공업체입니다.";
 
-function getKoreanVoice(voiceOption: VoiceOption): SpeechSynthesisVoice | null {
-  const voices = speechSynthesis.getVoices();
-  const koVoices = voices.filter(v => v.lang.startsWith("ko"));
-
-  // Try matching by hint names
-  for (const hint of voiceOption.voiceNameHint) {
-    const match = koVoices.find(v => v.name.includes(hint));
-    if (match) return match;
-  }
-
-  // Fallback to any Korean voice
-  return koVoices[0] || null;
-}
-
 function UsageMeter({ used, max, plan, onUpgrade }: { used: number; max: number; plan: string; onUpgrade: () => void }) {
   const ratio = max > 0 ? used / max : 1;
   const barColor = ratio >= 1 ? "#EF4444" : ratio >= 0.8 ? "#F97316" : "#237FFF";
@@ -235,36 +221,14 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
           });
           if (!cancelled) await new Promise(r => setTimeout(r, 300));
         }
-      } else if (voiceConfig && narrationTexts.length > 0) {
-        for (const text of narrationTexts) {
-          if (cancelled || !text) continue;
-          await new Promise<void>((resolve) => {
-            if (!window.speechSynthesis) { resolve(); return; }
-            const u = new SpeechSynthesisUtterance(text);
-            u.lang = voiceConfig.lang;
-            u.pitch = voiceConfig.pitch;
-            u.rate = voiceConfig.rate;
-            const voices = speechSynthesis.getVoices();
-            const ko = voices.filter(v => v.lang.startsWith("ko"));
-            for (const hint of voiceConfig.voiceNameHint) {
-              const m = ko.find(v => v.name.includes(hint));
-              if (m) { u.voice = m; break; }
-            }
-            if (!u.voice && ko[0]) u.voice = ko[0];
-            const timeout = setTimeout(() => resolve(), 15000);
-            u.onend = () => { clearTimeout(timeout); resolve(); };
-            u.onerror = () => { clearTimeout(timeout); resolve(); };
-            speechSynthesis.speak(u);
-          });
-        }
       }
+      // ElevenLabs 오디오가 없으면 무음 재생 (Web Speech API 폴백 제거)
     })();
 
     return () => {
       cancelled = true;
       narrationAudioRefs.current.forEach(a => { a.pause(); a.src = ""; });
       narrationAudioRefs.current = [];
-      if (window.speechSynthesis) speechSynthesis.cancel();
       if (bgmCtxRef.current) { bgmCtxRef.current.close().catch(() => {}); bgmCtxRef.current = null; }
     };
   }, [step]);
@@ -297,14 +261,6 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     }, 300);
   };
 
-  // Preload voices
-  useEffect(() => {
-    speechSynthesis.getVoices();
-    const handler = () => speechSynthesis.getVoices();
-    speechSynthesis.addEventListener("voiceschanged", handler);
-    return () => speechSynthesis.removeEventListener("voiceschanged", handler);
-  }, []);
-
   // Auto-start generation when opened with autoStart prop
   useEffect(() => {
     if (autoStart && !hasAutoStarted.current && photos.length >= 2) {
@@ -321,7 +277,6 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       previewAudioRef.current.pause();
       previewAudioRef.current = null;
     }
-    speechSynthesis.cancel();
 
     if (playingVoice === voice.id) {
       setPlayingVoice(null);
@@ -349,20 +304,17 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         return;
       }
     } catch (err) {
-      console.warn("[TTS] Edge Function 실패, Web Speech 폴백");
+      console.error("[TTS] ElevenLabs 호출 실패:", err);
     }
 
-    // ElevenLabs 실패 시 Web Speech API 폴백
-    const utterance = new SpeechSynthesisUtterance(PREVIEW_TEXT);
-    utterance.lang = voice.lang;
-    utterance.pitch = voice.pitch;
-    utterance.rate = voice.rate;
-    const synthVoice = getKoreanVoice(voice);
-    if (synthVoice) utterance.voice = synthVoice;
-    utterance.onend = () => setPlayingVoice(null);
-    utterance.onerror = () => setPlayingVoice(null);
-    speechSynthesis.speak(utterance);
-  }, [playingVoice]);
+    // ElevenLabs 실패 — 에러 토스트만, 기계음 폴백 없음
+    setPlayingVoice(null);
+    toast({
+      title: "음성 미리듣기 실패",
+      description: "잠시 후 다시 시도해 주세요.",
+      variant: "destructive",
+    });
+  }, [playingVoice, toast]);
 
   const handleBgmPreview = (id: BgmType) => {
     // 이미 재생 중이면 정지
@@ -409,7 +361,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       return;
     }
 
-    if (window.speechSynthesis) speechSynthesis.cancel();
+
     if (bgmCtxRef.current) { bgmCtxRef.current.close().catch(() => {}); bgmCtxRef.current = null; }
     narrationAudioRefs.current.forEach(a => { a.pause(); a.src = ""; });
     narrationAudioRefs.current = [];
@@ -492,22 +444,21 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         },
       });
 
-      if (!renderErr && !renderData?.error && renderData?.videoUrl) {
-        // 서버 렌더링 성공 → MP4 URL
+      const serverRenderOk = !renderErr && !renderData?.error && !!renderData?.videoUrl;
+      if (serverRenderOk) {
+        // 서버 렌더링 성공 → MP4에 나레이션/BGM이 이미 합쳐져 있음 (이중 재생 방지)
         setVideoUrl(renderData.videoUrl);
       } else {
-        // 서버 렌더링 실패 — Remotion Player 미리보기 + 클라이언트 오디오
         console.warn("[SMS] 서버 렌더링 실패:", renderData?.error || renderErr?.message);
       }
 
-      // 나레이션 + BGM 재생 예약 (done 화면 진입 시 동시 재생)
-      const narrationTexts = scenes.map((s: MirraScene) => s.narration || "").filter(Boolean);
+      // 나레이션 + BGM 재생 예약 (서버 렌더 실패 시 클라이언트 폴백 재생)
       audioPlayedRef.current = false;
       pendingAudioRef.current = {
-        narrationAudios: narrationEnabled ? narrationAudios : [],
-        narrationTexts: narrationEnabled ? narrationTexts : [],
-        voiceConfig: narrationEnabled && voice ? { lang: voice.lang, pitch: voice.pitch, rate: voice.rate, voiceNameHint: voice.voiceNameHint } : null,
-        bgmType: bgm,
+        narrationAudios: !serverRenderOk && narrationEnabled ? narrationAudios : [],
+        narrationTexts: [],
+        voiceConfig: null,
+        bgmType: serverRenderOk ? "none" : bgm,
       };
 
       setProgressPct(100);
@@ -553,7 +504,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
 
   const handleReset = () => {
     if (videoUrl) URL.revokeObjectURL(videoUrl);
-    if (window.speechSynthesis) speechSynthesis.cancel();
+
     if (bgmCtxRef.current) { bgmCtxRef.current.close().catch(() => {}); bgmCtxRef.current = null; }
     narrationAudioRefs.current.forEach(a => { a.pause(); a.src = ""; });
     narrationAudioRefs.current = [];
@@ -674,7 +625,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             ))}
           </div>
           <button
-            onClick={() => { setSelectedVoice(null); speechSynthesis.cancel(); setPlayingVoice(null); }}
+            onClick={() => { setSelectedVoice(null); setPlayingVoice(null); }}
             className="w-full text-center py-2.5 rounded-xl text-sm font-medium transition-all"
             style={{
               border: selectedVoice === null ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",

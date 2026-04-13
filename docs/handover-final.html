@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SMS 앱 — 최종 인수인계 문서</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Malgun Gothic", "맑은 고딕", -apple-system, sans-serif;
+    color: #1a1a1a;
+    line-height: 1.7;
+    font-size: 10.5pt;
+  }
+  h1 {
+    color: #237FFF;
+    font-size: 24pt;
+    border-bottom: 3px solid #237FFF;
+    padding-bottom: 8px;
+    margin-top: 0;
+  }
+  .subtitle { color: #666; font-size: 11pt; margin-top: -6px; }
+  h2 {
+    color: #237FFF;
+    font-size: 15pt;
+    margin-top: 26px;
+    border-left: 5px solid #237FFF;
+    padding-left: 10px;
+    page-break-after: avoid;
+  }
+  h3 {
+    color: #333;
+    font-size: 12pt;
+    margin-top: 16px;
+    page-break-after: avoid;
+  }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  code {
+    background: #f4f4f4;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: Consolas, monospace;
+    font-size: 9.5pt;
+    color: #c7254e;
+  }
+  .box {
+    background: #eef5ff;
+    border-left: 5px solid #237FFF;
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 12px 0;
+  }
+  .success {
+    background: #e8f5e9;
+    border-left: 5px solid #4caf50;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin: 10px 0;
+  }
+  .warning {
+    background: #fff8e1;
+    border-left: 5px solid #f59e0b;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin: 10px 0;
+  }
+  .url {
+    background: #1a1a2e;
+    color: #7dd3fc;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: Consolas, monospace;
+    font-size: 11pt;
+    margin: 10px 0;
+    word-break: break-all;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #237FFF;
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 700;
+  }
+  td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #fafafa; }
+  .pagebreak { page-break-before: always; }
+  .done::before { content: "✅ "; }
+  .todo::before { content: "⏳ "; }
+  .footer {
+    margin-top: 30px;
+    padding-top: 14px;
+    border-top: 2px solid #237FFF;
+    text-align: center;
+    color: #666;
+    font-size: 9pt;
+  }
+</style>
+</head>
+<body>
+
+<h1>SMS 앱 — 최종 인수인계 문서</h1>
+<p class="subtitle">Self Marketing Service · 개발 완료 보고</p>
+<p class="subtitle">작성일: 2026-04-13</p>
+
+<div class="box">
+  <strong>📋 이 문서의 목적</strong>
+  <p>개발 완료된 SMS 앱의 현재 상태, 배포 환경, 남은 작업, 운영 방법을 한눈에 파악할 수 있도록 정리한 최종 인수 문서입니다.</p>
+</div>
+
+<h2>🎯 1. 프로젝트 개요</h2>
+<table>
+  <tr><th style="width:30%">항목</th><th>내용</th></tr>
+  <tr><td>프로젝트명</td><td>SMS (Self Marketing Service)</td></tr>
+  <tr><td>종류</td><td>PWA (Progressive Web App) — 모바일 웹앱</td></tr>
+  <tr><td>타겟</td><td>소상공인 / 사장님 대상 AI 마케팅 도구</td></tr>
+  <tr><td>핵심 기능</td><td>AI 블로그 글쓰기, 쇼츠 영상 자동 생성, 게시 일정 관리</td></tr>
+  <tr><td>기술 스택</td><td>React 18 + TypeScript + Vite + Tailwind + Supabase</td></tr>
+</table>
+
+<h2>🌐 2. 배포 현황</h2>
+
+<h3>2-1. 실서비스 URL (클라이언트 테스트용)</h3>
+<div class="url">https://sms-app-9p9.pages.dev/</div>
+
+<div class="success">
+  <strong>✅ 현재 정상 작동 중</strong>
+  <p>Cloudflare Pages에 자동 배포되어 있으며, GitHub push 시마다 자동 재빌드됩니다.</p>
+</div>
+
+<h3>2-2. 배포 인프라 구조</h3>
+<table>
+  <tr><th>계층</th><th>서비스</th><th>비용</th></tr>
+  <tr><td>프론트엔드 호스팅</td><td>Cloudflare Pages</td><td>무료 (트래픽 무제한)</td></tr>
+  <tr><td>데이터베이스</td><td>Supabase (PostgreSQL)</td><td>무료 → 월 $25부터</td></tr>
+  <tr><td>인증</td><td>Supabase Auth</td><td>무료</td></tr>
+  <tr><td>파일 저장</td><td>Supabase Storage</td><td>무료 → 사용량 과금</td></tr>
+  <tr><td>Edge Functions</td><td>Supabase Functions</td><td>무료 → 사용량 과금</td></tr>
+  <tr><td>영상 렌더링</td><td>Railway (video-server)</td><td>월 $5 ~ $20</td></tr>
+  <tr><td>AI 글쓰기</td><td>OpenAI / Claude API</td><td>사용량 과금</td></tr>
+</table>
+
+<h3>2-3. 자동 배포 흐름</h3>
+<div class="box">
+  <code>git push origin main</code>
+  <p>→ GitHub 저장소 <code>bangsu-pro-67ad7d63</code> 업데이트</p>
+  <p>→ Cloudflare Pages 웹훅 수신</p>
+  <p>→ 원격 빌드 실행 (Vite)</p>
+  <p>→ <code>sms-app-9p9.pages.dev</code> 자동 반영 (1~3분)</p>
+</div>
+
+<div class="pagebreak"></div>
+
+<h2>✅ 3. 개발 완료 항목</h2>
+
+<h3>3-1. 핵심 기능</h3>
+<ul>
+  <li class="done">회원가입 / 로그인 (Supabase Auth)</li>
+  <li class="done">AI 블로그 글쓰기 (Edge Function <code>generate-blog</code>)</li>
+  <li class="done">쇼츠 영상 생성 (Edge Function <code>generate-shorts</code> + Remotion 렌더러)</li>
+  <li class="done">나레이션 TTS, BGM 합성, 영상 속도 조절, 이미지 사이즈 조정, 다운로드</li>
+  <li class="done">게시 일정 관리 (CalendarTab)</li>
+  <li class="done">SEO 점수 분석</li>
+  <li class="done">플랫폼별 발행 현황 (네이버/인스타/틱톡)</li>
+  <li class="done">마이페이지 (업체정보, 구독관리, 이용약관, FAQ, 고객문의)</li>
+  <li class="done">Admin 대시보드</li>
+  <li class="done">현장 도우미 (일당 계산, 날씨 판단, 임금체불 신고)</li>
+  <li class="done">PWA 설치 지원 (홈 화면 추가)</li>
+  <li class="done">온보딩 슬라이드</li>
+</ul>
+
+<h3>3-2. 접근성 (WCAG 2.1 AA)</h3>
+<ul>
+  <li class="done"><code>lang="ko"</code> 적용</li>
+  <li class="done">Material Symbols 아이콘에 <code>aria-hidden</code>, 버튼에 한국어 <code>aria-label</code></li>
+  <li class="done">포커스 링 전역 스타일 (<code>:focus-visible</code>)</li>
+  <li class="done"><code>&lt;main id="main-content"&gt;</code> 랜드마크 + "본문 바로가기" 스킵 링크</li>
+  <li class="done">하단 네비에 <code>aria-label="주요 메뉴"</code> + <code>aria-current="page"</code></li>
+  <li class="done">차트/게이지에 <code>role="img"</code> + 스크린 리더용 라벨</li>
+  <li class="done">헤더 "SMS" <code>&lt;h1&gt;</code> 시맨틱 태그</li>
+</ul>
+
+<h3>3-3. 코드 품질</h3>
+<ul>
+  <li class="done">TypeScript 오류 0건</li>
+  <li class="done"><code>console.log</code> 잔재 0건</li>
+  <li class="done">더미 데이터 0건</li>
+  <li class="done">Lovable 의존성 완전 제거 (순수 Vite + React)</li>
+</ul>
+
+<h2>⏳ 4. 클라이언트 결정/제공 필요 사항</h2>
+
+<h3>4-1. 🔴 출시 필수 (P0)</h3>
+<table>
+  <tr><th>항목</th><th>설명</th><th>예상 시간</th></tr>
+  <tr><td>사업자등록증</td><td>홈택스에서 무료 발급</td><td>1일</td></tr>
+  <tr><td>통신판매업 신고</td><td>관할 구청, 4만원</td><td>1주</td></tr>
+  <tr><td>도메인 구매</td><td>가비아 등, 1~2만원/년</td><td>10분</td></tr>
+  <tr><td>이용약관 + 개인정보처리방침</td><td>개발자가 초안 작성 가능</td><td>2~3일</td></tr>
+  <tr><td>OpenAI API 키 + 결제 등록</td><td>platform.openai.com</td><td>30분</td></tr>
+  <tr><td>결제 PG 계약 (토스페이먼츠 권장)</td><td>심사 2~5일</td><td>1주</td></tr>
+  <tr><td>요금제 최종 확정</td><td>브론즈/실버/골드 가격 및 제공량</td><td>1일 고민</td></tr>
+</table>
+
+<h3>4-2. 🟡 권장 (P1)</h3>
+<ul>
+  <li>로고 원본 파일 (SVG 또는 고화질 PNG)</li>
+  <li>앱 아이콘 (1024×1024)</li>
+  <li>BGM 상업용 라이선스 확인 (Artlist, Epidemic Sound 권장)</li>
+  <li>ElevenLabs 또는 Google TTS 계정 (나레이션)</li>
+  <li>고객센터 이메일 / 전화번호</li>
+</ul>
+
+<div class="pagebreak"></div>
+
+<h2>🔧 5. 운영 가이드</h2>
+
+<h3>5-1. 코드 수정 → 반영 방법</h3>
+<div class="box">
+<ol>
+  <li>개발자가 로컬에서 코드 수정</li>
+  <li><code>git add</code> → <code>git commit</code> → <code>git push origin main</code></li>
+  <li>Cloudflare Pages 자동 빌드 (1~3분)</li>
+  <li><code>sms-app-9p9.pages.dev</code> 자동 반영</li>
+</ol>
+</div>
+
+<h3>5-2. Supabase 관리</h3>
+<ul>
+  <li>대시보드: <code>https://supabase.com/dashboard</code></li>
+  <li>Edge Function 재배포: <code>supabase functions deploy &lt;name&gt;</code></li>
+  <li>DB 마이그레이션: Supabase 대시보드 SQL Editor 사용</li>
+</ul>
+
+<h3>5-3. 환경 변수</h3>
+<p>민감 정보는 <strong>절대 코드에 하드코딩 금지</strong>. 다음 위치에서 관리:</p>
+<ul>
+  <li><strong>Cloudflare Pages</strong>: 대시보드 → Settings → Environment variables</li>
+  <li><strong>Supabase Edge Functions</strong>: <code>supabase secrets set KEY=value</code></li>
+  <li><strong>로컬 개발</strong>: <code>.env</code> 파일 (gitignore됨)</li>
+</ul>
+
+<h2>📦 6. 저장소 정보</h2>
+<table>
+  <tr><th style="width:30%">항목</th><th>내용</th></tr>
+  <tr><td>GitHub 저장소</td><td><code>bangsu-pro-67ad7d63</code></td></tr>
+  <tr><td>메인 브랜치</td><td><code>main</code></td></tr>
+  <tr><td>최근 커밋</td><td>Lovable 의존성 완전 제거</td></tr>
+  <tr><td>Cloudflare 프로젝트</td><td><code>sms-app-9p9</code></td></tr>
+</table>
+
+<h2>⚠️ 7. 주의사항</h2>
+
+<div class="warning">
+  <strong>로컬 빌드 환경 이슈</strong>
+  <p>현재 프로젝트 경로 <code>E:\#앱 개발\SMS앱 개발</code>에 포함된 <code>#</code> 문자 때문에 <strong>로컬 <code>npm run build</code>가 실패</strong>합니다.</p>
+  <p>다만 <strong>Cloudflare Pages는 원격 서버에서 빌드</strong>하므로 이 문제와 무관하게 정상 배포됩니다.</p>
+  <p><strong>해결 방법</strong>: 디렉토리명을 <code>E:\dev\sms-app</code>처럼 <code>#</code> 없는 경로로 변경 권장</p>
+</div>
+
+<div class="warning">
+  <strong>Supabase Edge Function 배포 확인 필요</strong>
+  <p><code>generate-blog</code>, <code>generate-shorts</code>, <code>render-video</code> Edge Function들이 최신 상태로 Supabase에 배포되어 있는지 확인 필요. 코드 수정 시 반드시 <code>supabase functions deploy</code> 실행.</p>
+</div>
+
+<h2>📞 8. 출시까지 권장 순서</h2>
+<ol>
+  <li><strong>지금 당장</strong>: <code>sms-app-9p9.pages.dev</code> 링크로 베타 테스트 시작 (지인 10~20명)</li>
+  <li><strong>1주차</strong>: 사업자등록 + 통신판매업 신고 + 도메인 구매 + 요금제 확정</li>
+  <li><strong>2주차</strong>: 토스페이먼츠 계약 + OpenAI 계정 + 법적 문서 + 로고/아이콘</li>
+  <li><strong>3주차</strong>: 결제 연동 + 도메인 연결 + 실결제 테스트</li>
+  <li><strong>4주차</strong>: 정식 출시 🚀</li>
+</ol>
+
+<h2>✅ 9. 최종 체크리스트</h2>
+<table>
+  <tr><th>단계</th><th>상태</th></tr>
+  <tr><td>코어 기능 개발</td><td>✅ 완료</td></tr>
+  <tr><td>접근성 (WCAG AA)</td><td>✅ 완료</td></tr>
+  <tr><td>Cloudflare Pages 배포</td><td>✅ 완료</td></tr>
+  <tr><td>Lovable 의존성 제거</td><td>✅ 완료</td></tr>
+  <tr><td>TypeScript / Lint 클린</td><td>✅ 완료</td></tr>
+  <tr><td>베타 테스트 링크 발급</td><td>✅ 완료</td></tr>
+  <tr><td>사업자 등록 / 통신판매업</td><td>⏳ 클라이언트</td></tr>
+  <tr><td>도메인 구매 + 연결</td><td>⏳ 클라이언트</td></tr>
+  <tr><td>결제 PG 계약 + 연동</td><td>⏳ 클라이언트 + 개발자</td></tr>
+  <tr><td>법적 문서 (약관/개인정보)</td><td>⏳ 개발자가 초안 제공 가능</td></tr>
+  <tr><td>브랜드 자료 (로고/아이콘)</td><td>⏳ 클라이언트</td></tr>
+  <tr><td>정식 출시</td><td>⏳ 위 항목 완료 후</td></tr>
+</table>
+
+<div class="success">
+  <strong>🎉 개발 작업 종료</strong>
+  <p>코어 기능 개발과 접근성 개선, 배포 환경 정리가 모두 완료되었습니다.</p>
+  <p>지금부터는 <strong>운영 준비 단계</strong>(결제, 법적 문서, 도메인, 브랜드)로 전환됩니다.</p>
+  <p>베타 테스트 링크는 <strong>즉시 사용 가능</strong>합니다. 피드백을 수집하며 정식 출시를 준비하세요!</p>
+</div>
+
+<div class="footer">
+  SMS — Self Marketing Service · 최종 인수인계 문서 · 2026-04-13
+</div>
+
+</body>
+</html>

@@ -5,7 +5,7 @@ const path = require("path");
 const FPS = 30;
 const W = 1080;
 const H = 1920;
-const ENDING_FRAMES = 150;
+const ENDING_FRAMES = 60; // 2초 (기존 5초 → 2초로 단축)
 
 // Remotion 번들 경로 (Docker 빌드 시 사전 생성)
 const bundlePath = path.join(__dirname, "remotion-bundle");
@@ -77,8 +77,8 @@ async function renderVideo({
     codec: "h264",
     outputLocation: outputPath,
     inputProps,
-    // Railway Free (512MB) OOM 방지 — 저화질 + 메모리 최적화
-    concurrency: 1,
+    // Railway Hobby 대응 — 속도 최적화
+    concurrency: 2, // 병렬 프레임 렌더링
     jpegQuality: 70,
     imageFormat: "jpeg",
     scale: 0.5,

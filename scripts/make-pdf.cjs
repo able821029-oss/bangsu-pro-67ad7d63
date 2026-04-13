@@ -5,9 +5,11 @@ const fs = require('fs');
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  const html = fs.readFileSync(path.resolve(__dirname, '../docs/client-checklist.html'), 'utf8');
+  const src = process.argv[2] || 'client-checklist.html';
+  const dst = process.argv[3] || '클라이언트_출시준비_체크리스트.pdf';
+  const html = fs.readFileSync(path.resolve(__dirname, '../docs/' + src), 'utf8');
   await page.setContent(html, { waitUntil: 'networkidle' });
-  const out = path.resolve(__dirname, '../docs/클라이언트_출시준비_체크리스트.pdf');
+  const out = path.resolve(__dirname, '../docs/' + dst);
   await page.pdf({
     path: out,
     format: 'A4',
