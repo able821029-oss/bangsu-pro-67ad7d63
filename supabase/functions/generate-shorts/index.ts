@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encodeBase64 } from "https://deno.land/std@0.210.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,10 +35,7 @@ async function generateNarration(
       return null;
     }
     const audioBuffer = await res.arrayBuffer();
-    const bytes = new Uint8Array(audioBuffer);
-    let binary = "";
-    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
+    return encodeBase64(audioBuffer);
   } catch (e) {
     console.error("ElevenLabs TTS error:", e);
     return null;
