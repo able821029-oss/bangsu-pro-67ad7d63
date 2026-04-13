@@ -43,7 +43,17 @@ const authMiddleware = (req, res, next) => {
 
 // ── 헬스체크 ──
 app.get("/health", (_, res) => {
-  res.json({ ok: true, ts: Date.now(), version: "3.0-remotion" });
+  res.json({
+    ok: true,
+    ts: Date.now(),
+    version: "3.1-remotion",
+    envCheck: {
+      hasSupabaseUrl: !!process.env.SUPABASE_URL,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      serviceKeyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 20) || "missing",
+      serviceKeyLength: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
+    },
+  });
 });
 
 // ── 영상 렌더링 (인증 필수) ──
