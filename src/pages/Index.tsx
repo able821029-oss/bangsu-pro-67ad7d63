@@ -130,14 +130,21 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen bg-background flex flex-col"
+      style={{ minHeight: "100dvh" }}
+    >
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-[#4C8EFF] focus:text-white focus:px-4 focus:py-2 focus:rounded-lg"
       >
         본문 바로가기
       </a>
-      <main id="main-content">
+      <main
+        id="main-content"
+        className="flex-1 min-h-0 w-full"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         <ErrorBoundary
           key={activeTab}
           onReset={() => setActiveTab("home")}

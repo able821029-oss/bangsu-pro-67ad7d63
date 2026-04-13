@@ -10,17 +10,31 @@
 
 /* 모바일 브라우저(특히 KakaoTalk 인앱) 100vh 이슈 대응 —
    주소창/하단바가 100vh에 포함되어 콘텐츠가 밀리는 문제 해결 */
-html, body, #root {
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: hsl(var(--background));
   min-height: 100vh;
   min-height: 100dvh;
-  background-color: hsl(var(--background));
-}
-body {
+  /* 가로 스크롤 차단, 세로 스크롤은 유지 */
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* 모바일 터치 스크롤 부드럽게 */
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: none;
 }
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: hsl(var(--background));
+}
+/* Tailwind 유틸리티 오버라이드 — 100dvh 적용 */
 .min-h-screen { min-height: 100vh; min-height: 100dvh; }
 .h-screen { height: 100vh; height: 100dvh; }
+/* flex 컨테이너 안에서 자식이 부모 높이를 초과할 때 스크롤 되도록 */
+main { min-height: 0; }
 
 @layer base {
   :root {
