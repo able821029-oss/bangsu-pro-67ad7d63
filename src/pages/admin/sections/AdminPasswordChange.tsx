@@ -5,22 +5,31 @@ import { toast } from "sonner";
 
 const STORAGE_KEY = "sms_admin_password";
 const ID_KEY = "sms_admin_id";
-const DEFAULT_PASSWORD = "1234";
-const DEFAULT_ID = "admin";
-const RESET_FLAG = "sms_admin_pw_reset_v2";
+const RESET_FLAG = "sms_admin_pw_reset_v3";
 
-// 비밀번호 기본값 변경 마이그레이션 — 이전 localStorage 값 초기화
+const ENV_ADMIN_ID = (import.meta.env.VITE_ADMIN_ID as string | undefined) || "";
+const ENV_ADMIN_PW = (import.meta.env.VITE_ADMIN_PW as string | undefined) || "";
+
+// 이전 버전의 하드코딩 기본값(admin/1234) 정리 마이그레이션
 if (typeof window !== "undefined" && !localStorage.getItem(RESET_FLAG)) {
-  localStorage.removeItem(STORAGE_KEY);
+  if (localStorage.getItem(STORAGE_KEY) === "1234") localStorage.removeItem(STORAGE_KEY);
+  if (localStorage.getItem(ID_KEY) === "admin") localStorage.removeItem(ID_KEY);
   localStorage.setItem(RESET_FLAG, "1");
 }
 
+// 자격증명 미설정 시 어떤 입력도 통과 못 하게 하는 sentinel
+const UNSET = "__sms_admin_unset__";
+
 export function getAdminPassword(): string {
-  return localStorage.getItem(STORAGE_KEY) || DEFAULT_PASSWORD;
+  return localStorage.getItem(STORAGE_KEY) || ENV_ADMIN_PW || UNSET;
 }
 
 export function getAdminId(): string {
-  return localStorage.getItem(ID_KEY) || DEFAULT_ID;
+  return localStorage.getItem(ID_KEY) || ENV_ADMIN_ID || UNSET;
+}
+
+export function isAdminConfigured(): boolean {
+  return getAdminPassword() !== UNSET && getAdminId() !== UNSET;
 }
 
 export function setAdminId(id: string) {
