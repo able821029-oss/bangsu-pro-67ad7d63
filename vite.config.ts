@@ -2,7 +2,6 @@ import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
-import { componentTagger } from "lovable-tagger";
 
 // 빌드 시 sw.js에 타임스탬프 주입 → 매 배포마다 새 SW 감지
 function injectSwVersion(): Plugin {
@@ -34,9 +33,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    mode === "development" && componentTagger(),
     injectSwVersion(),
-  ].filter(Boolean) as Plugin[],
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
