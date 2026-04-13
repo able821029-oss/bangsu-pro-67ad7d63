@@ -32,9 +32,14 @@ export function SmsSceneComp({ scene, photoSrc }: { scene: SmsScene; photoSrc?: 
       <AbsoluteFill style={{ background: "linear-gradient(145deg, #0a1628 0%, #1a3a6a 100%)" }} />
 
       {hasPhoto && (
-        <AbsoluteFill style={{ transform: `scale(${zoom})` }}>
-          <Img src={photoSrc} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        </AbsoluteFill>
+        <>
+          <AbsoluteFill style={{ transform: `scale(${zoom * 1.1})`, filter: "blur(32px) brightness(0.6)" }}>
+            <Img src={photoSrc} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          </AbsoluteFill>
+          <AbsoluteFill style={{ transform: `scale(${zoom})` }}>
+            <Img src={photoSrc} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+          </AbsoluteFill>
+        </>
       )}
 
       <AbsoluteFill style={{

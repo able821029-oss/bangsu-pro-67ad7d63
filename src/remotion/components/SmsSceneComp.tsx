@@ -39,14 +39,22 @@ export function SmsSceneComp({ scene, photoSrc }: { scene: SmsScene; photoSrc?: 
         }}
       />
 
-      {/* Photo with Ken Burns */}
+      {/* Photo: blurred cover behind + contain on top (no cropping) */}
       {hasPhoto && (
-        <AbsoluteFill style={{ transform: `scale(${zoom})` }}>
-          <Img
-            src={photoSrc}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        </AbsoluteFill>
+        <>
+          <AbsoluteFill style={{ transform: `scale(${zoom * 1.1})`, filter: "blur(32px) brightness(0.6)" }}>
+            <Img
+              src={photoSrc}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          </AbsoluteFill>
+          <AbsoluteFill style={{ transform: `scale(${zoom})` }}>
+            <Img
+              src={photoSrc}
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+          </AbsoluteFill>
+        </>
       )}
 
       {/* Dark overlay for text readability */}
