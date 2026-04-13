@@ -97,7 +97,7 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
               <FileText className="w-3 h-3" /> 업체 소개
             </label>
             <textarea
-              className="w-full bg-[#161B2B] border border-white/5 rounded-xl px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40 resize-none"
+              className="w-full bg-[#161B2B] border border-white/5 rounded-xl px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40 resize-none"
               placeholder="예) 20년 경력의 방수 전문 업체입니다. 아파트, 상가, 주택 방수 시공."
               rows={3}
               value={settings.companyDescription}
@@ -139,7 +139,7 @@ function Field({ icon: Icon, label, placeholder, value, onChange }: { icon: Reac
         <Icon className="w-3 h-3" /> {label}
       </label>
       <input
-        className="w-full bg-[#161B2B] border border-white/5 rounded-xl px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
+        className="w-full bg-[#161B2B] border border-white/5 rounded-xl px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}

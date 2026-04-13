@@ -89,6 +89,19 @@
     margin: 12px 0;
     font-size: 10pt;
   }
+  .cost-total {
+    background: #fff5f5;
+    border: 2px solid #e53e3e;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 12pt;
+    font-weight: 600;
+  }
+  .cost-total strong { color: #e53e3e; font-size: 14pt; }
+  .price { text-align: right; white-space: nowrap; font-weight: 600; }
+  .price-total { color: #e53e3e; font-size: 12pt; }
+  .tier { color: #666; font-size: 9pt; font-weight: 400; }
   .page-break { page-break-before: always; }
 </style>
 </head>
@@ -104,6 +117,105 @@
   <strong>💡 본 문서의 목적</strong><br>
   클라이언트는 운영·마케팅·법적 문서에만 집중하고, 개발자는 기술 유지보수에 전념할 수 있도록 책임 범위를 명확히 합니다.
 </div>
+
+<h2>💰 월 유료 결제 항목 (클라이언트 부담)</h2>
+
+<div class="cost-total">
+  📌 <strong>월 고정 비용: 약 55,000원 ~ 180,000원</strong><br>
+  <span style="font-size: 10pt; font-weight: 400; color: #666;">
+    (사용자 50~200명 기준, 사용량 증가 시 비례)
+  </span>
+</div>
+
+<h3>🔴 필수 인프라 (서비스 중단 방지)</h3>
+<table>
+  <tr><th>서비스</th><th>용도</th><th style="width:18%">월 요금</th><th>결제 방식</th></tr>
+  <tr>
+    <td><strong>Railway Hobby</strong></td>
+    <td>영상 렌더링 서버 (Remotion + FFmpeg)</td>
+    <td class="price">$5<span class="tier"> (약 7,000원)</span></td>
+    <td>신용카드</td>
+  </tr>
+  <tr>
+    <td><strong>Supabase Pro</strong></td>
+    <td>DB + Edge Functions + Storage (10초→150초 타임아웃)</td>
+    <td class="price">$25<span class="tier"> (약 34,000원)</span></td>
+    <td>신용카드</td>
+  </tr>
+  <tr>
+    <td><strong>Cloudflare Pages</strong></td>
+    <td>웹 앱 호스팅 + CDN</td>
+    <td class="price">무료<span class="tier"> ($0)</span></td>
+    <td>-</td>
+  </tr>
+</table>
+
+<h3>🤖 AI API (사용량 기반)</h3>
+<table>
+  <tr><th>서비스</th><th>용도</th><th style="width:18%">월 요금</th><th>결제 방식</th></tr>
+  <tr>
+    <td><strong>Anthropic Claude</strong></td>
+    <td>AI 글쓰기 + 쇼츠 스크립트 (Haiku 모델)</td>
+    <td class="price">$20~80<span class="tier"> (약 28,000~110,000원)</span></td>
+    <td>신용카드 · 선결제</td>
+  </tr>
+  <tr>
+    <td><strong>ElevenLabs Creator</strong></td>
+    <td>TTS 나레이션 음성 (100,000자/월)</td>
+    <td class="price">$22<span class="tier"> (약 30,000원)</span></td>
+    <td>신용카드</td>
+  </tr>
+</table>
+
+<h3>💳 결제 시스템 (매출 발생 시 수수료)</h3>
+<table>
+  <tr><th>서비스</th><th>수수료</th><th>정산 주기</th></tr>
+  <tr>
+    <td><strong>카카오페이</strong></td>
+    <td>결제 금액의 약 2.9%</td>
+    <td>월 1~2회</td>
+  </tr>
+  <tr>
+    <td><strong>토스페이먼츠</strong></td>
+    <td>결제 금액의 약 2.9%</td>
+    <td>D+1 ~ D+2</td>
+  </tr>
+</table>
+
+<h3>🟢 선택 (확장 시)</h3>
+<table>
+  <tr><th>서비스</th><th>용도</th><th style="width:18%">월 요금</th></tr>
+  <tr>
+    <td>도메인</td><td>자체 도메인 연결 (.com/.kr)</td>
+    <td class="price">약 15,000원/년</td>
+  </tr>
+  <tr>
+    <td>카카오 비즈톡</td><td>알림톡 발송 (건당 9~15원)</td>
+    <td class="price">사용량 기반</td>
+  </tr>
+  <tr>
+    <td>Sentry</td><td>에러 모니터링</td>
+    <td class="price">무료~$26</td>
+  </tr>
+</table>
+
+<div class="cost-total">
+  📊 <strong>규모별 월 비용 예상</strong><br>
+  <span style="font-size: 10pt; font-weight: 400;">
+    • <strong>초기 (월 50명 미만)</strong>: 약 <span class="price-total">55,000원</span> (Railway $5 + Supabase $25 + Claude $20 + 환율)<br>
+    • <strong>성장기 (월 100~300명)</strong>: 약 <span class="price-total">100,000원</span><br>
+    • <strong>확장기 (월 500명+)</strong>: 약 <span class="price-total">180,000원 이상</span><br>
+    <span style="color:#666">* 환율 1$=1,350원 기준, 사용량 변동 가능</span>
+  </span>
+</div>
+
+<h3>💡 결제 수단 준비 사항</h3>
+<ul>
+  <li><strong>해외 결제 가능 신용카드 1장</strong> — Railway, Supabase, Anthropic, ElevenLabs 전부 해외 서비스</li>
+  <li><strong>사업자 카드 권장</strong> — 부가세 환급 + 회계 처리 용이</li>
+  <li><strong>법인카드 불가 시</strong> — 대표 개인 카드로 결제 후 경비 처리</li>
+  <li><strong>자동결제 실패 주의</strong> — 한도 초과·유효기간 만료 시 서비스 즉시 중단</li>
+</ul>
 
 <h2><span class="badge badge-req">필수</span> 운영 시작 전 반드시 수령</h2>
 

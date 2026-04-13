@@ -158,7 +158,65 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       result = { scenes: manualScenes };
     }
 
-    // ── Step 1: Claude로 장면 스크립트 생성 (AI 모드) ──
+    // ── Step 1: Gemini 2.0 Flash로 장면 스크립트 생성 (무료, 빠름) ──
+    // GEMINI_API_KEY 미설정 시 Claude 폴백
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!result && GEMINI_API_KEY) {
+      const parts: any[] = [];
+      const photoSlice = (photos || []).slice(0, 5);
+      for (const photo of photoSlice) {
+        const dataUrl = photo.dataUrl || photo;
+        const base64Match = dataUrl.match(/^data:image\/([^;]+);base64,(.+)$/);
+        if (base64Match) {
+          parts.push({
+            inline_data: {
+              mime_type: `image/${base64Match[1]}`,
+              data: base64Match[2],
+            },
+          });
+        }
+      }
+      parts.push({
+        text: `위치: ${location || "미입력"}, 건물: ${buildingType || "미입력"}, 일자: ${constructionDate || "오늘"}, 업체명: ${companyName || "SMS"}, 연락처: ${phoneNumber || ""}, 사진 ${photoSlice.length}장, 영상 스타일: ${videoStyle}. 사진을 분석하여 업종·공종을 자동 판단하고 JSON으로 응답.`,
+      });
+
+      try {
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents: [{ role: "user", parts }],
+              generationConfig: {
+                temperature: 0.8,
+                maxOutputTokens: 2048,
+                responseMimeType: "application/json",
+              },
+            }),
+          }
+        );
+
+        if (geminiRes.ok) {
+          const geminiData = await geminiRes.json();
+          const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          try {
+            result = JSON.parse(rawText);
+          } catch {
+            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) result = JSON.parse(jsonMatch[0]);
+          }
+          console.log("Gemini 2.0 Flash 스크립트 생성 성공");
+        } else {
+          console.error("Gemini API error:", geminiRes.status, await geminiRes.text());
+        }
+      } catch (e) {
+        console.error("Gemini API error:", e);
+      }
+    }
+
+    // ── Step 1-Fallback: Claude (Gemini 실패 또는 미설정 시) ──
     if (!result && ANTHROPIC_API_KEY) {
       const userContent: any[] = [];
       const photoSlice = (photos || []).slice(0, 5);

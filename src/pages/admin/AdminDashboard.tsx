@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Key, Users, Bot, LogOut, CreditCard, Lock,
+  Key, Users, Bot, LogOut, CreditCard, Lock, Home,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminApiKeys } from "./sections/AdminApiKeys";
@@ -36,9 +36,14 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     <div className="min-h-screen bg-background">
       <div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <h1 className="font-bold text-lg">관리자 대시보드</h1>
-        <Button variant="ghost" size="sm" onClick={onLogout}>
-          <LogOut className="w-4 h-4 mr-1" /> 로그아웃
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={() => { window.location.hash = ""; window.location.reload(); }}>
+            <Home className="w-4 h-4 mr-1" /> 홈으로
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onLogout}>
+            <LogOut className="w-4 h-4 mr-1" /> 로그아웃
+          </Button>
+        </div>
       </div>
 
       <div className="bg-card border-b border-border px-2 overflow-x-auto">

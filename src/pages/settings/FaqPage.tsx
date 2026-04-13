@@ -39,7 +39,7 @@ export function FaqPage({ onBack }: { onBack: () => void }) {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input placeholder="질문 검색..." value={search} onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 rounded-xl bg-card pl-10 pr-4 text-sm text-foreground placeholder-muted-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40" />
+            className="w-full h-10 rounded-xl bg-card pl-10 pr-4 text-sm text-foreground placeholder-muted-foreground border border-border focus-visible:outline-none focus:ring-1 focus:ring-primary/40" />
         </div>
       </div>
 

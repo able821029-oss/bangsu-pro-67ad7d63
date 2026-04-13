@@ -18,7 +18,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 safe-bottom">
+    <nav aria-label="주요 메뉴" className="fixed bottom-0 left-0 right-0 z-50 safe-bottom">
       <div
         className="h-[84px] bg-background/80 backdrop-blur-xl border-t border-white/10 rounded-t-[40px] shadow-[0_-12px_32px_rgba(0,0,0,0.4)] flex justify-around items-center px-4 pb-6"
       >
@@ -29,6 +29,8 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               <button
                 key={id}
                 onClick={() => onTabChange(id)}
+                aria-label={label}
+                aria-current={isActive ? "page" : undefined}
                 className="relative -mt-6 flex flex-col items-center"
               >
                 <div
@@ -45,6 +47,8 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             <button
               key={id}
               onClick={() => onTabChange(id)}
+              aria-label={label}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 rounded-full p-2 transition-colors duration-300",
                 isActive

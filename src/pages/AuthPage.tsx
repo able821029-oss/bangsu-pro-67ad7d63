@@ -117,13 +117,13 @@ export default function AuthPage() {
       <div className="w-full max-w-sm space-y-3">
         {mode === "signup" && (
           <input placeholder="이름" value={name} onChange={(e) => setName(e.target.value)}
-            className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
+            className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
         )}
         <input type="email" placeholder="이메일" value={email} onChange={(e) => setEmail(e.target.value)}
-          className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
+          className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
         <div className="relative">
           <input type={showPw ? "text" : "password"} placeholder="비밀번호" value={password} onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-11 rounded-xl bg-card px-4 pr-10 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
+            className="w-full h-11 rounded-xl bg-card px-4 pr-10 text-foreground placeholder-muted-foreground text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
           <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
             {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -155,12 +155,12 @@ export default function AuthPage() {
               <>
                 <p className="text-xs text-muted-foreground text-center">가입한 이메일과 새 비밀번호를 입력하세요</p>
                 <input type="email" placeholder="가입한 이메일" value={email} onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
+                  className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
                 <input type="password" placeholder="새 비밀번호 (6자 이상)" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
+                  className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
                 <input type="password" placeholder="새 비밀번호 확인" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleResetPassword()}
-                  className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
+                  className="w-full h-11 rounded-xl bg-card px-4 text-foreground placeholder-muted-foreground text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary/40 border border-border" />
                 <button onClick={handleResetPassword} disabled={loading}
                   className="w-full h-11 rounded-xl text-white font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
                   style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>

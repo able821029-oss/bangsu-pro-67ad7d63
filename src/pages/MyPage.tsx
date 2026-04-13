@@ -105,11 +105,18 @@ export function MyPage() {
         <h1 className="text-xl font-bold text-foreground">마이페이지</h1>
       </div>
 
-      {/* 프로필 카드 — glass-card */}
+      {/* 프로필 카드 — 클릭 시 업체정보 설정으로 이동 */}
       <div className="mx-5 mb-5">
-        <div className="relative overflow-hidden rounded-2xl p-6"
-          style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}>
+        <button
+          onClick={() => setPage("profile")}
+          className="w-full text-left relative overflow-hidden rounded-2xl p-6 transition-all hover:bg-white/[0.08] active:scale-[0.99]"
+          style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)" }}
+          aria-label="업체 정보 설정으로 이동"
+        >
           <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl" style={{ background: "rgba(173,198,255,0.1)" }} />
+          <div className="absolute top-4 right-4 text-muted-foreground/60">
+            <ChevronRight className="w-5 h-5" />
+          </div>
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full p-0.5" style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
               <div className="w-full h-full rounded-full bg-background flex items-center justify-center text-2xl font-bold text-white">
@@ -124,7 +131,7 @@ export function MyPage() {
           <div className="mt-4 inline-flex items-center px-3 py-1 bg-[#4C8EFF]/20 rounded-full" style={{ border: "1px solid rgba(76,142,255,0.3)" }}>
             <span className="text-xs font-bold text-primary">{subscription.plan} 플랜</span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* 사용량 */}

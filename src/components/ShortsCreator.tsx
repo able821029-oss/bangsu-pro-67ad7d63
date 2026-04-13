@@ -647,7 +647,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
                 onChange={e => setManualScript(e.target.value)}
                 placeholder={"장면별 나레이션을 줄바꿈으로 구분해주세요\n\n예시:\n현장 점검을 시작합니다\n방수 시공을 진행합니다\n깔끔하게 완료했습니다\n문의는 전화주세요"}
                 rows={6}
-                className="w-full bg-[#161B2B] border border-white/5 rounded-xl p-3 text-sm text-[#DEE1F7] placeholder-[#8B90A0] focus:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40 resize-none"
+                className="w-full bg-[#161B2B] border border-white/5 rounded-xl p-3 text-sm text-[#DEE1F7] placeholder-[#8B90A0] focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40 resize-none"
               />
               <p className="text-[10px] text-[#8B90A0]">
                 최대 2분 영상 · 줄바꿈 = 장면 구분 · {manualScript.split("\n").filter(Boolean).length}개 장면

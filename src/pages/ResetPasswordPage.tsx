@@ -97,7 +97,7 @@ export default function ResetPasswordPage() {
             placeholder="새 비밀번호 (6자 이상)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-11 rounded-xl bg-card pl-10 pr-10 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border"
+            className="w-full h-11 rounded-xl bg-card pl-10 pr-10 text-foreground placeholder-muted-foreground text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary/40 border border-border"
           />
           <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
             {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -112,7 +112,7 @@ export default function ResetPasswordPage() {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleReset()}
-            className="w-full h-11 rounded-xl bg-card pl-10 pr-4 text-foreground placeholder-muted-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/40 border border-border"
+            className="w-full h-11 rounded-xl bg-card pl-10 pr-4 text-foreground placeholder-muted-foreground text-sm focus-visible:outline-none focus:ring-1 focus:ring-primary/40 border border-border"
           />
         </div>
 

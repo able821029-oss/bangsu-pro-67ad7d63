@@ -76,7 +76,7 @@ export function ContactPage({ onBack }: { onBack: () => void }) {
         <div className="space-y-2">
           <label className="text-sm font-semibold text-foreground">내용</label>
           <textarea placeholder="문의 내용을 입력해주세요..." value={message} onChange={(e) => setMessage(e.target.value.slice(0, 500))}
-            className="w-full min-h-[200px] bg-card border border-border rounded-xl p-4 text-sm text-foreground placeholder-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary/40" />
+            className="w-full min-h-[200px] bg-card border border-border rounded-xl p-4 text-sm text-foreground placeholder-muted-foreground resize-none focus-visible:outline-none focus:ring-1 focus:ring-primary/40" />
           <p className="text-xs text-muted-foreground text-right">{message.length}/500자</p>
         </div>
         <button onClick={handleSend} disabled={loading || !message.trim()}
