@@ -112,11 +112,11 @@ export function HomeTab({
       {/* Stitch Header */}
       <header className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-[#237FFF] text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>architecture</span>
-          <span className="headline-font font-bold text-2xl tracking-tighter text-[#237FFF]">SMS</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-[#237FFF] text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>architecture</span>
+          <h1 className="text-lg font-bold text-[#237FFF]">SMS</h1>
         </div>
-        <button className="hover:opacity-80 transition-opacity">
-          <span className="material-symbols-outlined text-[#414754]">notifications</span>
+        <button aria-label="알림" className="hover:opacity-80 transition-opacity">
+          <span aria-hidden="true" className="material-symbols-outlined text-[#414754]">notifications</span>
         </button>
       </header>
 
@@ -124,13 +124,14 @@ export function HomeTab({
       {!settings.companyName && (
         <button
           onClick={() => onNavigate("mypage")}
+          aria-label="경고: 업체 정보를 먼저 입력해 주세요"
           className="w-full bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded-r-xl flex justify-between items-center"
         >
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-amber-500">warning</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-amber-500">warning</span>
             <p className="text-amber-200 font-bold text-sm">업체 정보를 먼저 입력해 주세요</p>
           </div>
-          <span className="material-symbols-outlined text-amber-500 text-sm">arrow_forward_ios</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-amber-500 text-sm">arrow_forward_ios</span>
         </button>
       )}
 
@@ -173,7 +174,7 @@ export function HomeTab({
         onClick={() => onNavigate("content")}
         className="w-full h-[52px] bg-brand-gradient rounded-full flex items-center justify-center gap-2 shadow-lg shadow-[#4C8EFF]/20 active:scale-95 transition-transform duration-200"
       >
-        <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>photo_camera</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>photo_camera</span>
         <span className="text-white font-bold text-lg">지금 바로 글 작성하기</span>
       </button>
 
@@ -202,7 +203,7 @@ export function HomeTab({
           <div className="flex justify-between items-start">
             <span className="text-muted-foreground text-xs">블로그 작성</span>
             <span className="text-[#4AE176] text-[10px] font-bold flex items-center">
-              <span className="material-symbols-outlined text-[12px]">arrow_drop_up</span>3
+              <span aria-hidden="true" className="material-symbols-outlined text-[12px]">arrow_drop_up</span>3
             </span>
           </div>
           <div className="headline-font font-bold text-2xl text-foreground">{completed}건</div>
@@ -211,7 +212,7 @@ export function HomeTab({
           <div className="flex justify-between items-start">
             <span className="text-muted-foreground text-xs">게시 완료</span>
             <span className="text-[#4AE176] text-[10px] font-bold flex items-center">
-              <span className="material-symbols-outlined text-[12px]">arrow_drop_up</span>2
+              <span aria-hidden="true" className="material-symbols-outlined text-[12px]">arrow_drop_up</span>2
             </span>
           </div>
           <div className="headline-font font-bold text-2xl text-foreground">{published}건</div>
