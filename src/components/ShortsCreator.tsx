@@ -37,17 +37,17 @@ const VOICES: VoiceOption[] = [
 ];
 
 const videoStyles: { id: VideoStyle; label: string; desc: string; icon: string }[] = [
-  { id: "시공일지형", label: "시공일지형", desc: "시공 전→중→후 순서", icon: "clipboard" },
-  { id: "홍보형", label: "홍보형", desc: "완료컷 강조 + 업체 정보", icon: "megaphone" },
+  { id: "시공일지형", label: "작업일지형", desc: "준비 → 작업 → 완성 순서", icon: "clipboard" },
+  { id: "홍보형", label: "홍보형", desc: "완성컷 강조 + 업체 정보", icon: "megaphone" },
   { id: "Before/After형", label: "Before/After형", desc: "전후 비교 중심", icon: "refresh" },
 ];
 
 const bgmOptions: { id: BgmType; label: string; emoji: string; desc: string }[] = [
-  { id: "upbeat",    label: "파워 현장",   emoji: "🔨", desc: "강한 비트 · 시공 파워" },
+  { id: "upbeat",    label: "에너지",     emoji: "⚡", desc: "강한 비트 · 다이나믹" },
   { id: "hiphop",   label: "트렌디",      emoji: "🔥", desc: "틱톡 트랩 · MZ 스타일" },
-  { id: "corporate", label: "전문 업체",   emoji: "🏗️", desc: "신뢰감 있는 프로 느낌" },
-  { id: "emotional", label: "완공 감동",   emoji: "✨", desc: "시공 완료 성취감" },
-  { id: "calm",      label: "깔끔 마감",   emoji: "🪟", desc: "깨끗하고 차분한 완성" },
+  { id: "corporate", label: "프로페셔널", emoji: "💼", desc: "신뢰감 · 전문 느낌" },
+  { id: "emotional", label: "감동",       emoji: "✨", desc: "성취감 · 완성 무드" },
+  { id: "calm",      label: "잔잔함",     emoji: "🌿", desc: "깨끗하고 차분한 톤" },
   { id: "none",      label: "없음",        emoji: "🔇", desc: "무음" },
 ];
 
@@ -55,7 +55,7 @@ const PLAN_LIMITS: Record<string, number> = {
   "무료": 1, "베이직": 5, "프로": 20, "비즈니스": 50, "무제한": 999,
 };
 
-const PREVIEW_TEXT = "안녕하세요. 방수 전문 시공업체입니다.";
+const PREVIEW_TEXT = "안녕하세요. 오늘도 정성껏 작업합니다.";
 
 function UsageMeter({ used, max, plan, onUpgrade }: { used: number; max: number; plan: string; onUpgrade: () => void }) {
   const ratio = max > 0 ? used / max : 1;
@@ -379,7 +379,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     preloadLogo(settings.logoUrl || "");
 
     setStep("generating");
-    setProgressText("📝 현장 사진 분석 중...");
+    setProgressText("📝 사진 분석 중...");
     setProgressPct(10);
 
     const narrationEnabled = selectedVoice !== null;
@@ -610,7 +610,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
               <textarea
                 value={manualScript}
                 onChange={e => setManualScript(e.target.value)}
-                placeholder={"장면별 나레이션을 줄바꿈으로 구분해주세요\n\n예시:\n현장 점검을 시작합니다\n방수 시공을 진행합니다\n깔끔하게 완료했습니다\n문의는 전화주세요"}
+                placeholder={"장면별 나레이션을 줄바꿈으로 구분해주세요\n\n예시:\n오늘 준비를 시작합니다\n정성껏 작업을 진행합니다\n만족스럽게 완성했습니다\n편하게 문의 주세요"}
                 rows={6}
                 className="w-full bg-[#161B2B] border border-white/5 rounded-xl p-3 text-sm text-[#DEE1F7] placeholder-[#8B90A0] focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40 resize-none"
               />
@@ -699,7 +699,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             const hasPhotos = photos.length >= 2;
             const canGenerate = hasPhotos && !quotaExceeded;
             const message = !hasPhotos
-              ? "현장 사진을 2장 이상 추가해 주세요"
+              ? "사진을 2장 이상 추가해 주세요"
               : null;
             return (
               <>

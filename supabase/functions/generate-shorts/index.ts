@@ -66,16 +66,36 @@ serve(async (req) => {
     const resolvedVoiceId = VOICE_MAP[requestedVoiceId || ""] || requestedVoiceId || ELEVENLABS_VOICE_ID;
 
     const styleGuide: Record<string, string> = {
-      "시공일지형": "시공 전 → 시공 중 → 시공 후 순서로 텍스트 중심 장면을 구성합니다.",
-      "홍보형": "완료된 시공을 강조하고, 업체 브랜딩과 연락처를 부각합니다.",
-      "Before/After형": "시공 전후 비교를 중심으로 극적인 변화를 텍스트로 보여줍니다.",
+      "시공일지형": "진행 과정 순서(준비/작업/완료)로 텍스트 중심 장면을 구성합니다.",
+      "홍보형": "완성된 결과물을 강조하고, 업체 브랜딩과 연락처를 부각합니다.",
+      "Before/After형": "작업 전후 비교를 중심으로 극적인 변화를 텍스트로 보여줍니다.",
+      "일지형": "작업 진행 과정 순서로 텍스트 중심 장면을 구성합니다.",
     };
 
     const animations = ["slide_up", "slide_left", "zoom_in", "fade_in"];
 
     const systemPrompt = `당신은 mirra.my 스타일의 쇼츠 영상 스크립트 작성 전문가입니다.
 텍스트 애니메이션 중심의 세련된 영상을 만듭니다.
-${styleGuide[videoStyle] || styleGuide["시공일지형"]}
+
+[매우 중요 — 업종 자동 판별]
+이 앱은 모든 업종의 현장/작업 사진을 쇼츠 영상으로 만듭니다. 특정 업종(방수/건축 등)에만 한정하지 마세요.
+사진을 먼저 면밀히 관찰하여 업종을 자동 판별한 뒤, 그 업종에 맞는 용어와 톤으로 스크립트를 작성하세요.
+
+예시 업종 (사진에 맞게 자동 판별):
+- 건축/시공 (방수, 도배, 미장, 타일, 리모델링, 인테리어, 조경 등)
+- 요식업 (음식 플레이팅, 매장 소개, 신메뉴 공개, 오픈 준비)
+- 미용/뷰티 (헤어 시술 전후, 네일, 피부관리, 메이크업)
+- 자동차 (세차, 정비, 튜닝, 복원, 광택)
+- 청소/방역 (입주청소, 사무실청소, 방역, 세척)
+- 반려동물 (미용, 훈련, 호텔링)
+- 의료/헬스 (물리치료, 필라테스, PT, 한의원)
+- 기타 모든 서비스업 및 제조·판매업
+
+업종을 잘못 판별하면 안 됩니다. 사진이 음식이면 "시공"이라 쓰지 말고, 사진이 헤어샵이면 "공사"라 쓰지 마세요.
+용어는 **해당 업종 사장님이 실제로 쓰는 말**을 사용하세요.
+업종을 확실히 알 수 없으면 일반적인 "작업", "결과", "서비스" 같은 중립적 용어를 사용하세요.
+
+${styleGuide[videoStyle] || styleGuide["일지형"]}
 
 [응답 형식 — 반드시 JSON으로]
 {
@@ -96,16 +116,16 @@ ${styleGuide[videoStyle] || styleGuide["시공일지형"]}
 }
 
 장면 구성 규칙:
-1. 인트로 장면: 지역명 + 공사종류 강조. badge에 지역명, title에 공사종류, bg_type: "gradient", photo: null
-2. 사진 장면 1~N: 현장 사진이 있으면 photo에 "photo_1", "photo_2" 등. bg_type: "photo". 사진 위에 텍스트 오버레이.
-3. 하이라이트 장면: 시공 완료 강조. bg_type: "gradient", accent_color를 밝게.
-4. 엔딩 장면: 업체명이 title, 전화번호가 subtitle. badge: "시공 문의". bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"]
+1. 인트로 장면: 업종에 맞는 후킹 메시지. badge에 지역명 또는 업종 카테고리, title에 핵심 메시지(업체가 제공하는 서비스/가치), bg_type: "gradient", photo: null
+2. 사진 장면 1~N: 업로드된 사진을 순서대로 보여줍니다. photo에 "photo_1", "photo_2" 등. bg_type: "photo". 사진 위에 업종에 맞는 짧은 설명 오버레이.
+3. 하이라이트 장면: 결과물/가치를 강조. bg_type: "gradient", accent_color를 밝게.
+4. 엔딩 장면: 업체명이 title, 전화번호가 subtitle. badge는 업종에 맞게 "예약 문의", "주문 문의", "상담 신청", "방문 예약" 등 중 하나. bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"]
 
 animation 종류: "slide_up", "slide_left", "zoom_in", "fade_in" — 장면마다 다르게 교차 사용.
 duration: 프레임 수 (30fps 기준). 최소 90(3초), 최대 150(5초). 보통 100~120.
 bg_colors: 항상 2색 배열. 다크 네이비 계열 (#001130, #0a1628, #1a3a6a, #0d2847 등)
 accent_color: "#237FFF" 또는 "#AB5EBE" 교차 사용.
-narration: ${narrationType === "없음" ? "빈 문자열로" : "20자 이내 짧고 임팩트 있는 한국어 나레이션"}
+narration: ${narrationType === "없음" ? "빈 문자열로" : "20자 이내 짧고 임팩트 있는 한국어 나레이션. 업종에 맞는 자연스러운 말투"}
 총 장면 수: 사진 수 + 2~3개 (인트로, 하이라이트, 엔딩)
 JSON만 응답. 마크다운 코드 블록 금지.`;
 
@@ -262,39 +282,47 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       }
     }
 
-    // ── Fallback mock ──
+    // ── Fallback mock (AI 미설정/실패 시 — 업종 중립) ──
     if (!result) {
       const photoCount = (photos || []).length;
       const mockScenes: any[] = [];
       mockScenes.push({
         duration: 100, bg_type: "gradient", bg_colors: ["#0a1628", "#1a3a6a"],
-        badge: location || "현장 시공", title: "시공 현장 리포트",
-        subtitle: "전문 시공 과정을 확인하세요", accent_color: "#237FFF",
-        animation: "slide_up", photo: null, narration: `${location || "현장"} 시공 과정을 소개합니다.`,
+        badge: location || "오늘의 현장", title: companyName || "작업 리포트",
+        subtitle: "정성을 담은 한 컷", accent_color: "#237FFF",
+        animation: "slide_up", photo: null,
+        narration: `${companyName || "우리 가게"}의 작업을 소개합니다.`,
       });
       for (let i = 0; i < photoCount; i++) {
         mockScenes.push({
           duration: 120, bg_type: "photo", bg_colors: ["#001130", "#0d2847"],
-          badge: `${i + 1}단계`,
-          title: i === 0 ? "시공 전 현장 점검" : i === photoCount - 1 ? "시공 완료" : `시공 진행 ${i + 1}단계`,
-          subtitle: i === 0 ? "현장 상태를 꼼꼼히 확인합니다" : i === photoCount - 1 ? "깔끔하게 마무리했습니다" : "전문 장비로 시공 진행",
+          badge: `${i + 1}`,
+          title: i === 0 ? "시작" : i === photoCount - 1 ? "완성" : "진행 중",
+          subtitle: i === 0 ? "꼼꼼한 준비" : i === photoCount - 1 ? "완벽한 결과" : "한 걸음씩 정성껏",
           accent_color: i % 2 === 0 ? "#237FFF" : "#AB5EBE",
           animation: animations[i % 4],
           photo: `photo_${i + 1}`,
-          narration: i === 0 ? "현장 상태를 점검합니다." : i === photoCount - 1 ? "완벽하게 완료되었습니다." : `${i + 1}단계 시공입니다.`,
+          narration:
+            i === 0
+              ? "준비부터 정성껏."
+              : i === photoCount - 1
+                ? "만족스러운 마무리."
+                : "작업을 이어갑니다.",
         });
       }
       mockScenes.push({
         duration: 100, bg_type: "gradient", bg_colors: ["#0d2847", "#1a3a6a"],
-        badge: "시공 완료", title: "완벽한 마감",
-        subtitle: "누수 걱정 없는 시공", accent_color: "#AB5EBE",
-        animation: "zoom_in", photo: null, narration: "완벽한 마감으로 해결했습니다.",
+        badge: "결과", title: "기대 이상의 마무리",
+        subtitle: "매 순간 최선을", accent_color: "#AB5EBE",
+        animation: "zoom_in", photo: null,
+        narration: "정성껏 완성했습니다.",
       });
       mockScenes.push({
         duration: 120, bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"],
-        badge: "시공 문의", title: companyName || "SMS",
-        subtitle: phoneNumber || "연락처", accent_color: "#237FFF",
-        animation: "fade_in", photo: null, narration: `${companyName || "SMS"}에 문의하세요.`,
+        badge: "문의 · 예약", title: companyName || "SMS",
+        subtitle: phoneNumber || "연락 주세요", accent_color: "#237FFF",
+        animation: "fade_in", photo: null,
+        narration: `${companyName || "우리 가게"}로 편하게 연락 주세요.`,
       });
       result = { scenes: mockScenes, isMock: true };
     }
