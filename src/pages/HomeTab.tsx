@@ -228,8 +228,9 @@ export function HomeTab({
       </div>
 
       {/* Weekly Bar Chart */}
-      <div className="chart-card p-4 space-y-3">
+      <div className="chart-card p-4 space-y-3" role="img" aria-label="최근 4주 발행 현황 차트">
         <p className="text-sm font-semibold text-foreground">최근 4주 발행 현황</p>
+        <div aria-hidden="true">
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={weeklyData}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -247,14 +248,15 @@ export function HomeTab({
             <Bar dataKey="count" fill="#237FFF" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </div>
 
       {/* SEO Donut + Platform Bars */}
       <div className="grid grid-cols-2 gap-3">
         {/* SEO 도넛 — 클릭 시 seo 탭 이동 */}
-        <div className="chart-card p-4 flex flex-col items-center">
+        <div className="chart-card p-4 flex flex-col items-center" role="img" aria-label={`블로그 SEO 점수 ${seoScore}점`}>
           <p className="text-xs font-semibold text-muted-foreground mb-2">블로그 SEO 점수</p>
-          <div className="relative">
+          <div className="relative" aria-hidden="true">
             <PieChart width={100} height={100}>
               <Pie
                 data={seoDonutData}
@@ -276,7 +278,7 @@ export function HomeTab({
           <p className="text-xs text-muted-foreground mt-1">블로그 SEO</p>
         </div>
 
-        <div className="chart-card p-4 space-y-3">
+        <div className="chart-card p-4 space-y-3" role="img" aria-label="플랫폼별 발행 현황">
           <p className="text-xs font-semibold text-muted-foreground">플랫폼별 발행</p>
           <PlatformBar
             label="네이버"
