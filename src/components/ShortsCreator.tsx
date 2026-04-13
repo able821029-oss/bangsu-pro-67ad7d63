@@ -429,27 +429,41 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
       console.warn(`[SMS] 나레이션: ${narrationAudios.filter(Boolean).length}/${narrationAudios.length}개 ElevenLabs 오디오, BGM: ${bgm}`);
 
-      // ── Supabase Edge Function → Railway 서버 렌더링 (CORS 해결, iOS 지원) ──
+      // ── Railway 서버 직접 호출 (Supabase 150s 제한 우회) ──
       setProgressText("🖥️ 서버에서 영상 렌더링 중...");
       setProgressPct(20);
 
-      const { data: renderData, error: renderErr } = await supabase.functions.invoke("render-video", {
-        body: {
-          scenes,
-          photos: compressedPhotos,
-          narrationAudios,
-          companyName: settings.companyName,
-          phoneNumber: settings.phoneNumber,
-          bgmType: bgm,
-        },
-      });
+      const RAILWAY_URL =
+        (import.meta.env.VITE_VIDEO_SERVER_URL as string | undefined) ||
+        "https://bangsu-pro-67ad7d63-production-6e2e.up.railway.app";
 
-      const serverRenderOk = !renderErr && !renderData?.error && !!renderData?.videoUrl;
-      if (serverRenderOk) {
+      let renderData: { videoUrl?: string; error?: string; detail?: string } | null = null;
+      let renderErrMsg: string | null = null;
+      try {
+        const r = await fetch(`${RAILWAY_URL}/render-video`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scenes,
+            photos: compressedPhotos,
+            narrationAudios,
+            companyName: settings.companyName,
+            phoneNumber: settings.phoneNumber,
+            bgmType: bgm,
+          }),
+        });
+        renderData = await r.json().catch(() => null);
+        if (!r.ok) renderErrMsg = renderData?.error || `HTTP ${r.status}`;
+      } catch (e: any) {
+        renderErrMsg = e?.message || "네트워크 오류";
+      }
+
+      const serverRenderOk = !renderErrMsg && !renderData?.error && !!renderData?.videoUrl;
+      if (serverRenderOk && renderData?.videoUrl) {
         // 서버 렌더링 성공 → MP4에 나레이션/BGM이 이미 합쳐져 있음 (이중 재생 방지)
         setVideoUrl(renderData.videoUrl);
       } else {
-        console.warn("[SMS] 서버 렌더링 실패:", renderData?.error || renderErr?.message);
+        console.warn("[SMS] 서버 렌더링 실패:", renderData?.error || renderErrMsg);
       }
 
       // 나레이션 + BGM 재생 예약 (서버 렌더 실패 시 클라이언트 폴백 재생)
