@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus, Music, VolumeX, Mic, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,13 +7,27 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/bgmSynth";
 import { compressPhotos } from "@/lib/imageCompress";
-
-import { Player } from "@remotion/player";
-import { SmsComposition, calculateTotalFrames } from "@/remotion/SmsComposition";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { mirraToRemotionScene, type SmsScene, type SmsVideoProps } from "@/remotion/types";
+
+// Remotion Player is heavy and uses browser APIs that can fail in embedded
+// WebViews (KakaoTalk inapp). Lazy-load so opening the shorts tab never crashes
+// on module evaluation.
+const ShortsPlayer = lazy(() => import("@/components/ShortsPlayer"));
 
 type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
 type ShortsStep = "config" | "generating" | "done" | "error" | "ios_guide";
+
+/** KakaoTalk/라인/페이스북 등 카카오·SNS 인앱 브라우저 감지 */
+function isInAppBrowser(): { isInApp: boolean; name: string } {
+  if (typeof navigator === "undefined") return { isInApp: false, name: "" };
+  const ua = navigator.userAgent || "";
+  if (/KAKAOTALK/i.test(ua)) return { isInApp: true, name: "카카오톡" };
+  if (/\bLine\//i.test(ua)) return { isInApp: true, name: "라인" };
+  if (/FBAN|FBAV|Instagram/i.test(ua)) return { isInApp: true, name: "페이스북/인스타" };
+  if (/NAVER\(inapp/i.test(ua)) return { isInApp: true, name: "네이버" };
+  return { isInApp: false, name: "" };
+}
 
 interface VoiceOption {
   id: string;
@@ -557,11 +571,40 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
   // ─── Config ───
   if (step === "config") {
     return (
-      <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
+      <div
+        className="bg-background px-4 pt-6 pb-32 space-y-5 max-w-lg mx-auto"
+        style={{
+          minHeight: "100dvh",
+          paddingBottom: "calc(8rem + env(safe-area-inset-bottom, 0px))",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold flex items-center gap-2"><Film className="w-5 h-5 text-primary" /> 쇼츠 영상 만들기</h1>
-          <button onClick={onClose}><X className="w-6 h-6 text-muted-foreground" /></button>
+          <button onClick={onClose} aria-label="닫기"><X className="w-6 h-6 text-muted-foreground" /></button>
         </div>
+
+        {/* 인앱 브라우저 경고 — KakaoTalk/Line/FB 인앱에서는 영상 기능 제한적 */}
+        {(() => {
+          const { isInApp, name } = isInAppBrowser();
+          if (!isInApp) return null;
+          return (
+            <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                {name} 내부 브라우저 안내
+              </p>
+              <p className="text-xs text-amber-200 leading-relaxed">
+                현재 <b>{name}</b> 안에서 앱을 열고 계십니다. 내부 브라우저는 일부 영상/오디오
+                기능이 제한되어 쇼츠 제작이 정상 동작하지 않을 수 있습니다.
+              </p>
+              <p className="text-xs text-amber-200">
+                우측 상단 <b>⋮</b> 또는 <b>공유</b> 아이콘을 눌러{" "}
+                <b>Chrome · Safari 브라우저로 열기</b>를 선택해 주세요.
+              </p>
+            </div>
+          );
+        })()}
 
         {/* Photo upload area */}
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
@@ -862,24 +905,24 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
 
         {remotionScenes.length > 0 ? (
           <div className="w-full max-w-xs rounded-xl border border-border overflow-hidden">
-            <Player
-              component={SmsComposition}
-              inputProps={{
-                scenes: remotionScenes,
-                photos: photos.slice(0, 6).map(p => p.dataUrl),
-                companyName: settings.companyName || "SMS",
-                phoneNumber: settings.phoneNumber || "",
-                logoUrl: settings.logoUrl || undefined,
-                bgmType: bgm,
-              }}
-              durationInFrames={calculateTotalFrames(remotionScenes)}
-              compositionWidth={1080}
-              compositionHeight={1920}
-              fps={30}
-              style={{ width: "100%", aspectRatio: "9/16" }}
-              controls
-              autoPlay
-            />
+            <ErrorBoundary fallbackTitle="미리보기를 표시할 수 없습니다">
+              <Suspense
+                fallback={
+                  <div className="aspect-[9/16] flex items-center justify-center bg-muted">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                }
+              >
+                <ShortsPlayer
+                  scenes={remotionScenes}
+                  photos={photos.slice(0, 6).map(p => p.dataUrl)}
+                  companyName={settings.companyName || "SMS"}
+                  phoneNumber={settings.phoneNumber || ""}
+                  logoUrl={settings.logoUrl || undefined}
+                  bgmType={bgm}
+                />
+              </Suspense>
+            </ErrorBoundary>
           </div>
         ) : videoUrl ? (
           <video src={videoUrl} controls autoPlay playsInline

@@ -89,6 +89,8 @@ export function HomeTab({
   const medal = tier > 0 ? medalInfo[tier] : null;
   const nextTier = getNextTier(subscription.consecutiveMonths);
   const [showBadgeSheet, setShowBadgeSheet] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifications: { id: string; title: string; time: string }[] = [];
 
   const currentTierLabel = tier >= 6 ? "골드" : tier >= 3 ? "실버" : tier >= 1 ? "브론즈" : "";
 
@@ -115,9 +117,55 @@ export function HomeTab({
           <span aria-hidden="true" className="material-symbols-outlined text-[#237FFF] text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>architecture</span>
           <h1 className="text-lg font-bold text-[#237FFF]">SMS</h1>
         </div>
-        <button aria-label="알림" className="hover:opacity-80 transition-opacity">
-          <span aria-hidden="true" className="material-symbols-outlined text-[#414754]">notifications</span>
-        </button>
+        <div className="relative">
+          <button
+            aria-label="알림"
+            onClick={() => setShowNotifications((v) => !v)}
+            className="hover:opacity-80 transition-opacity"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-[#414754]">notifications</span>
+            {notifications.length > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[10px] text-white font-bold flex items-center justify-center">
+                {notifications.length}
+              </span>
+            )}
+          </button>
+          {showNotifications && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowNotifications(false)}
+                aria-hidden="true"
+              />
+              <div className="absolute right-0 top-full mt-2 w-72 bg-card border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-foreground">알림</h3>
+                  {notifications.length > 0 && (
+                    <span className="text-xs text-muted-foreground">{notifications.length}개</span>
+                  )}
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-10 flex flex-col items-center justify-center gap-2">
+                    <span aria-hidden="true" className="material-symbols-outlined text-[#414754] text-4xl">
+                      notifications_off
+                    </span>
+                    <p className="text-sm text-muted-foreground font-[Inter]">아직 알림이 없습니다</p>
+                    <p className="text-xs text-muted-foreground/70 font-[Inter]">새 소식이 도착하면 여기에 표시됩니다</p>
+                  </div>
+                ) : (
+                  <ul className="max-h-80 overflow-y-auto divide-y divide-white/5">
+                    {notifications.map((n) => (
+                      <li key={n.id} className="px-4 py-3 hover:bg-white/5">
+                        <p className="text-sm text-foreground font-medium">{n.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Stitch Amber Warning Banner */}

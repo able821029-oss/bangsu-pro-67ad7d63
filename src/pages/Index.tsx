@@ -6,6 +6,7 @@ import { AdminFab } from "@/components/AdminFab";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { HomeTab } from "@/pages/HomeTab";
 import { BlogPost } from "@/stores/appStore";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // 초기 로딩엔 HomeTab만 필요 — 나머지 탭/페이지는 lazy
 const AuthPage = lazy(() => import("@/pages/AuthPage"));
@@ -17,8 +18,12 @@ const PostDetailPage = lazy(() => import("@/pages/PostDetailPage").then(m => ({ 
 const ReviewsPage = lazy(() => import("@/pages/ReviewsPage").then(m => ({ default: m.ReviewsPage })));
 
 const LoadingFallback = () => (
-  <div className="min-h-screen bg-background flex items-center justify-center">
-    <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+  <div
+    className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 px-4"
+    style={{ minHeight: "100dvh" }}
+  >
+    <div className="animate-spin w-10 h-10 border-2 border-primary border-t-transparent rounded-full" />
+    <p className="text-sm text-muted-foreground">불러오는 중…</p>
   </div>
 );
 
@@ -133,9 +138,14 @@ function AppContent() {
         본문 바로가기
       </a>
       <main id="main-content">
-        <Suspense fallback={<LoadingFallback />}>
-          {renderTab()}
-        </Suspense>
+        <ErrorBoundary
+          key={activeTab}
+          onReset={() => setActiveTab("home")}
+        >
+          <Suspense fallback={<LoadingFallback />}>
+            {renderTab()}
+          </Suspense>
+        </ErrorBoundary>
       </main>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       <InstallBanner />

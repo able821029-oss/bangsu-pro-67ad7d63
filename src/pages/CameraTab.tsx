@@ -492,7 +492,7 @@ export function CameraTab({
             <label className="text-xs text-muted-foreground flex items-center gap-1 font-[Inter]">
               <MapPin className="w-3 h-3" /> 시공 위치
             </label>
-            {gpsTimedOut && !location && <p className="text-xs text-yellow-500 font-[Inter]">위치 감지 실패 — 직접 입력해 주세요</p>}
+            {gpsTimedOut && !location && <p className="text-xs text-muted-foreground font-[Inter]">📍 위치를 직접 입력하거나, 아래 자동 버튼을 다시 눌러주세요</p>}
             <div className="flex gap-2">
               <input
                 className="flex-1 bg-card border border-white/10 rounded-xl px-3 h-14 text-sm outline-none text-foreground placeholder:text-muted-foreground font-[Inter]"

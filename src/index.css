@@ -8,6 +8,20 @@
 :focus-visible { outline: 2px solid #4C8EFF; outline-offset: 2px; border-radius: 4px; }
 :focus:not(:focus-visible) { outline: none; }
 
+/* 모바일 브라우저(특히 KakaoTalk 인앱) 100vh 이슈 대응 —
+   주소창/하단바가 100vh에 포함되어 콘텐츠가 밀리는 문제 해결 */
+html, body, #root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: hsl(var(--background));
+}
+body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
+}
+.min-h-screen { min-height: 100vh; min-height: 100dvh; }
+.h-screen { height: 100vh; height: 100dvh; }
+
 @layer base {
   :root {
     /* ── Stitch Deep Nocturnal Palette ── */
