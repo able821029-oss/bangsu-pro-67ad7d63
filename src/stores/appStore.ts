@@ -50,10 +50,36 @@ export interface Inquiry {
   createdAt: string;
 }
 
+export type BusinessCategory =
+  | "건축_시공"
+  | "요식업"
+  | "미용_뷰티"
+  | "자동차"
+  | "청소_방역"
+  | "반려동물"
+  | "의료_헬스"
+  | "교육"
+  | "제조_판매"
+  | "기타";
+
+export const BUSINESS_CATEGORY_LABELS: Record<BusinessCategory, string> = {
+  "건축_시공": "🔨 건축·시공 (방수/도배/타일/리모델링 등)",
+  "요식업": "🍲 요식업 (식당/카페/베이커리 등)",
+  "미용_뷰티": "💇 미용·뷰티 (미용실/네일/피부관리)",
+  "자동차": "🚗 자동차 (세차/정비/튜닝)",
+  "청소_방역": "🧹 청소·방역 (입주청소/방역)",
+  "반려동물": "🐾 반려동물 (미용/훈련/호텔링)",
+  "의료_헬스": "🏥 의료·헬스 (PT/필라테스/한의원)",
+  "교육": "📚 교육 (학원/공방/레슨)",
+  "제조_판매": "📦 제조·판매 (공방/소품/가구)",
+  "기타": "💼 기타",
+};
+
 interface Settings {
   companyName: string;
   phoneNumber: string;
   serviceArea: string;
+  businessCategory: BusinessCategory | "";
   logoUrl: string;
   facePhotoUrl: string;
   companyDescription: string;
@@ -120,6 +146,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     companyName: "",
     phoneNumber: "",
     serviceArea: "",
+    businessCategory: "" as BusinessCategory | "",
     logoUrl: "",
     facePhotoUrl: "",
     companyDescription: "",

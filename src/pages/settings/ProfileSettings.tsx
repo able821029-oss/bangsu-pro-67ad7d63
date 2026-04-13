@@ -1,6 +1,6 @@
 import { useRef } from "react";
-import { ArrowLeft, Building2, Phone, MapPin, Upload, Camera, User, FileText, CheckCircle2, XCircle } from "lucide-react";
-import { useAppStore } from "@/stores/appStore";
+import { ArrowLeft, Building2, Phone, MapPin, Upload, Camera, User, FileText, CheckCircle2, XCircle, Briefcase } from "lucide-react";
+import { useAppStore, BUSINESS_CATEGORY_LABELS, type BusinessCategory } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 
 export function ProfileSettings({ onBack }: { onBack: () => void }) {
@@ -89,16 +89,32 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
         {/* 업체 정보 */}
         <div className="glass-card p-5 space-y-4">
           <p className="text-sm font-semibold text-foreground">업체 정보</p>
-          <Field icon={Building2} label="업체명" placeholder="예) 대한방수" value={settings.companyName} onChange={(v) => updateSettings({ companyName: v })} />
+          <Field icon={Building2} label="업체명" placeholder="예) 우리가게" value={settings.companyName} onChange={(v) => updateSettings({ companyName: v })} />
           <Field icon={Phone} label="대표 전화번호" placeholder="예) 010-1234-5678" value={settings.phoneNumber} onChange={(v) => updateSettings({ phoneNumber: v })} />
-          <Field icon={MapPin} label="주요 시공 지역" placeholder="예) 서울 강남, 서초, 송파" value={settings.serviceArea} onChange={(v) => updateSettings({ serviceArea: v })} />
+          <Field icon={MapPin} label="주요 활동 지역" placeholder="예) 서울 강남, 서초, 송파" value={settings.serviceArea} onChange={(v) => updateSettings({ serviceArea: v })} />
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground flex items-center gap-1">
+              <Briefcase className="w-3 h-3" /> 업종 <span className="text-[#EF4444]">*</span>
+            </label>
+            <select
+              className="w-full bg-[#161B2B] border border-white/5 rounded-xl px-3 py-3 text-sm text-foreground focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
+              value={settings.businessCategory || ""}
+              onChange={(e) => updateSettings({ businessCategory: e.target.value as BusinessCategory })}
+            >
+              <option value="">업종을 선택해 주세요</option>
+              {(Object.entries(BUSINESS_CATEGORY_LABELS) as [BusinessCategory, string][]).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-muted-foreground">AI가 업종에 맞는 용어로 글과 영상을 만들어드립니다</p>
+          </div>
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground flex items-center gap-1">
               <FileText className="w-3 h-3" /> 업체 소개
             </label>
             <textarea
               className="w-full bg-[#161B2B] border border-white/5 rounded-xl px-3 py-3 text-sm text-foreground placeholder-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40 resize-none"
-              placeholder="예) 20년 경력의 방수 전문 업체입니다. 아파트, 상가, 주택 방수 시공."
+              placeholder="예) 오랜 경력의 전문 업체입니다. 정성껏 작업해 드립니다."
               rows={3}
               value={settings.companyDescription}
               onChange={(e) => updateSettings({ companyDescription: e.target.value })}

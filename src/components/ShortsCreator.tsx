@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus, Music, VolumeX, Mic, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAppStore } from "@/stores/appStore";
+import { useAppStore, BUSINESS_CATEGORY_LABELS, type BusinessCategory } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/bgmSynth";
@@ -145,6 +145,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
   const [selectedVoice, setSelectedVoice] = useState<string | null>("male_calm");
   const [scriptMode, setScriptMode] = useState<"ai" | "manual">("ai");
   const [manualScript, setManualScript] = useState("");
+  const [workTopic, setWorkTopic] = useState(""); // 오늘의 작업 한 줄 (AI 힌트)
   const [step, setStep] = useState<ShortsStep>("config");
   const [remotionScenes, setRemotionScenes] = useState<SmsScene[]>([]);
   const [progressText, setProgressText] = useState("");
@@ -351,6 +352,26 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       return;
     }
 
+    // 필수 입력 검증 — AI 자동 모드일 때만
+    if (scriptMode === "ai") {
+      if (!settings.businessCategory) {
+        toast({
+          title: "업종을 먼저 선택해 주세요",
+          description: "마이페이지 > 프로필 설정에서 업종을 등록하면 AI가 더 정확한 스크립트를 만듭니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!workTopic.trim()) {
+        toast({
+          title: "오늘의 작업을 한 줄 입력해 주세요",
+          description: "예) 욕실 방수 시공 / 신메뉴 파스타 / 커트+염색",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     if (!isRecordingSupported()) {
       toast({ title: "이 기기에서는 영상 생성을 지원하지 않습니다", description: "최신 Chrome 또는 Safari 브라우저를 사용해 주세요.", variant: "destructive" });
       return;
@@ -398,11 +419,13 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
           scriptMode,
           manualScript: scriptMode === "manual" ? manualScript : undefined,
           maxDurationSec: 120, // 2분 제한
-          location: "",
+          location: settings.serviceArea || "",
           buildingType: "",
           constructionDate: new Date().toISOString().slice(0, 10),
           companyName: settings.companyName,
           phoneNumber: settings.phoneNumber,
+          businessCategory: settings.businessCategory || "", // 업종 프로필
+          workTopic: workTopic.trim(),                        // 오늘의 작업 한 줄
         },
       });
 
@@ -620,7 +643,64 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             </div>
           )}
           {scriptMode === "ai" && (
-            <p className="text-xs text-[#8B90A0]">사진을 분석하여 AI가 자동으로 나레이션 스크립트를 생성합니다 (최대 2분)</p>
+            <div className="space-y-3">
+              <p className="text-xs text-[#8B90A0]">
+                사진 + 업종 + 오늘의 작업 힌트를 조합하여 AI가 자연스러운 스크립트를 생성합니다.
+              </p>
+
+              {/* 업종 상태 표시 */}
+              <div
+                className="rounded-xl px-3 py-2.5 text-xs border"
+                style={{
+                  background: settings.businessCategory
+                    ? "rgba(35,127,255,0.08)"
+                    : "rgba(239,68,68,0.08)",
+                  borderColor: settings.businessCategory
+                    ? "rgba(35,127,255,0.35)"
+                    : "rgba(239,68,68,0.35)",
+                }}
+              >
+                {settings.businessCategory ? (
+                  <p className="text-foreground">
+                    <span className="text-muted-foreground">업종:</span>{" "}
+                    <span className="font-semibold">
+                      {BUSINESS_CATEGORY_LABELS[settings.businessCategory as BusinessCategory]}
+                    </span>
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => {
+                      sessionStorage.setItem("sms-open-settings-page", "profile");
+                      onNavigate?.("mypage");
+                    }}
+                    className="w-full text-left text-[#EF4444]"
+                  >
+                    ⚠️ 업종이 등록되지 않았습니다. <u>마이페이지 &gt; 프로필 설정</u>에서 먼저 선택해 주세요.
+                  </button>
+                )}
+              </div>
+
+              {/* 오늘의 작업 한 줄 (필수) */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground flex items-center gap-1">
+                  오늘의 작업 <span className="text-[#EF4444]">*</span>
+                  <span className="text-[10px] font-normal text-muted-foreground ml-auto">
+                    {workTopic.length}/30
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={workTopic}
+                  maxLength={30}
+                  onChange={(e) => setWorkTopic(e.target.value)}
+                  placeholder="예) 욕실 방수 시공 / 신메뉴 파스타 / 커트+염색"
+                  className="w-full bg-[#161B2B] border border-white/5 rounded-xl px-3 py-3 text-sm text-[#DEE1F7] placeholder-[#8B90A0] focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  짧고 구체적으로 써주세요. AI가 이 문구를 힌트로 스크립트를 생성합니다.
+                </p>
+              </div>
+            </div>
           )}
         </div>
 

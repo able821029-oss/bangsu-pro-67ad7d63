@@ -62,8 +62,38 @@ serve(async (req) => {
     const ELEVENLABS_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "nPczCjzI2devNBz1zQrb";
 
     const body = await req.json();
-    const { photos, videoStyle, narrationType, location, buildingType, constructionDate, companyName, phoneNumber, voiceId: requestedVoiceId, scriptMode, manualScript, maxDurationSec } = body;
+    const {
+      photos,
+      videoStyle,
+      narrationType,
+      location,
+      buildingType,
+      constructionDate,
+      companyName,
+      phoneNumber,
+      voiceId: requestedVoiceId,
+      scriptMode,
+      manualScript,
+      maxDurationSec,
+      businessCategory,
+      workTopic,
+    } = body;
     const resolvedVoiceId = VOICE_MAP[requestedVoiceId || ""] || requestedVoiceId || ELEVENLABS_VOICE_ID;
+
+    // 업종 한글 매핑
+    const categoryLabels: Record<string, string> = {
+      "건축_시공": "건축/시공 (방수, 도배, 타일, 미장, 리모델링, 인테리어 등)",
+      "요식업": "요식업 (식당, 카페, 베이커리, 주점 등)",
+      "미용_뷰티": "미용/뷰티 (헤어, 네일, 피부관리, 메이크업)",
+      "자동차": "자동차 (세차, 정비, 튜닝, 광택 복원)",
+      "청소_방역": "청소/방역 (입주청소, 사무실청소, 방역)",
+      "반려동물": "반려동물 (미용, 훈련, 호텔링)",
+      "의료_헬스": "의료/헬스 (PT, 필라테스, 물리치료, 한의원)",
+      "교육": "교육 (학원, 공방, 개인 레슨)",
+      "제조_판매": "제조/판매 (공방, 수공예, 가구, 소품)",
+      "기타": "기타 서비스업",
+    };
+    const businessLabel = businessCategory ? categoryLabels[businessCategory] || businessCategory : "";
 
     const styleGuide: Record<string, string> = {
       "시공일지형": "진행 과정 순서(준비/작업/완료)로 텍스트 중심 장면을 구성합니다.",
@@ -194,8 +224,21 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
           });
         }
       }
+      const hintBlock = [
+        businessLabel ? `업종 (프로필 지정): ${businessLabel}` : "업종: 사진으로 자동 판별",
+        workTopic ? `오늘의 작업 (사장님이 직접 입력): "${workTopic}"` : "",
+        `업체명: ${companyName || ""}`,
+        `연락처: ${phoneNumber || ""}`,
+        `활동 지역: ${location || "미입력"}`,
+        `일자: ${constructionDate || "오늘"}`,
+        `영상 스타일: ${videoStyle}`,
+        `사진 수: ${photoSlice.length}장`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
       parts.push({
-        text: `위치: ${location || "미입력"}, 건물: ${buildingType || "미입력"}, 일자: ${constructionDate || "오늘"}, 업체명: ${companyName || "SMS"}, 연락처: ${phoneNumber || ""}, 사진 ${photoSlice.length}장, 영상 스타일: ${videoStyle}. 사진을 분석하여 업종·공종을 자동 판단하고 JSON으로 응답.`,
+        text: `[스크립트 생성 힌트]\n${hintBlock}\n\n위 업종과 "오늘의 작업" 문구를 반드시 스크립트에 반영하세요. 사진과 힌트가 모순되면 힌트를 우선합니다. JSON으로만 응답.`,
       });
 
       try {
@@ -248,9 +291,22 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
           });
         }
       }
+      const hintBlockClaude = [
+        businessLabel ? `업종 (프로필 지정): ${businessLabel}` : "업종: 사진으로 자동 판별",
+        workTopic ? `오늘의 작업 (사장님이 직접 입력): "${workTopic}"` : "",
+        `업체명: ${companyName || ""}`,
+        `연락처: ${phoneNumber || ""}`,
+        `활동 지역: ${location || "미입력"}`,
+        `일자: ${constructionDate || "오늘"}`,
+        `영상 스타일: ${videoStyle}`,
+        `사진 수: ${photoSlice.length}장`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
       userContent.push({
         type: "text",
-        text: `위치: ${location || "미입력"}, 건물: ${buildingType || "미입력"}, 일자: ${constructionDate || "오늘"}, 업체명: ${companyName || "SMS"}, 연락처: ${phoneNumber || ""}, 사진 ${photoSlice.length}장, 영상 스타일: ${videoStyle}. 사진을 분석하여 업종·공종을 자동 판단하고 JSON으로 응답.`,
+        text: `[스크립트 생성 힌트]\n${hintBlockClaude}\n\n위 업종과 "오늘의 작업" 문구를 반드시 스크립트에 반영하세요. 사진과 힌트가 모순되면 힌트를 우선합니다. JSON으로만 응답.`,
       });
 
       try {
@@ -282,16 +338,21 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       }
     }
 
-    // ── Fallback mock (AI 미설정/실패 시 — 업종 중립) ──
+    // ── Fallback mock (AI 미설정/실패 시 — 업종 중립 + 힌트 반영) ──
     if (!result) {
       const photoCount = (photos || []).length;
+      const topic = (workTopic || "").trim();
       const mockScenes: any[] = [];
       mockScenes.push({
         duration: 100, bg_type: "gradient", bg_colors: ["#0a1628", "#1a3a6a"],
-        badge: location || "오늘의 현장", title: companyName || "작업 리포트",
-        subtitle: "정성을 담은 한 컷", accent_color: "#237FFF",
+        badge: location || "오늘의 현장",
+        title: topic || companyName || "작업 리포트",
+        subtitle: businessLabel || "정성을 담은 한 컷",
+        accent_color: "#237FFF",
         animation: "slide_up", photo: null,
-        narration: `${companyName || "우리 가게"}의 작업을 소개합니다.`,
+        narration: topic
+          ? `오늘은 ${topic}입니다.`
+          : `${companyName || "우리 가게"}의 작업을 소개합니다.`,
       });
       for (let i = 0; i < photoCount; i++) {
         mockScenes.push({
