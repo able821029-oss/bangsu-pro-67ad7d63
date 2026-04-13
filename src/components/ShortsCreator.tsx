@@ -526,7 +526,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         setErrorMsg((err.message || "다시 시도해 주세요").slice(0, 200));
       }
     }
-  }, [photos, videoStyle, selectedVoice, settings, toast]);
+  }, [photos, videoStyle, selectedVoice, settings, toast, workTopic, scriptMode, manualScript, bgm, videoUrl]);
 
   const handleDownload = () => {
     if (videoUrl) {
