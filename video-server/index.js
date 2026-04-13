@@ -22,10 +22,11 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "200mb" }));
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// env var trim (줄바꿈·공백 제거)
+const SUPABASE_URL = (process.env.SUPABASE_URL || "").trim();
+const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // ── API 시크릿 인증 미들웨어 (Edge Function → Railway 서버간 통신) ──
 const API_SECRET = process.env.VIDEO_API_SECRET || "";
