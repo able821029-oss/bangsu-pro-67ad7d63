@@ -5,11 +5,12 @@ import { OnboardingSlides } from "@/components/OnboardingSlides";
 import { AdminFab } from "@/components/AdminFab";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { HomeTab } from "@/pages/HomeTab";
-import { BlogPost } from "@/stores/appStore";
+import { BlogPost, useAppStore } from "@/stores/appStore";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // 초기 로딩엔 HomeTab만 필요 — 나머지 탭/페이지는 lazy
-const AuthPage = lazy(() => import("@/pages/AuthPage"));
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const NaverCallbackPage = lazy(() => import("@/pages/NaverCallbackPage"));
 const CalendarTab = lazy(() => import("@/pages/CalendarTab").then(m => ({ default: m.CalendarTab })));
 const ContentTab = lazy(() => import("@/pages/ContentTab").then(m => ({ default: m.ContentTab })));
 const ShortsTab = lazy(() => import("@/pages/ShortsTab").then(m => ({ default: m.ShortsTab })));
@@ -70,11 +71,20 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const settings = useAppStore((s) => s.settings);
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [viewingPost, setViewingPost] = useState<BlogPost | null>(null);
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("sms_onboarded"));
   const [showReviews, setShowReviews] = useState(false);
+
+  // 현재 경로 감지 (간단한 path 기반 라우팅)
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
+  useEffect(() => {
+    const handler = () => setCurrentPath(window.location.pathname);
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, []);
 
   const handleViewPost = (post: BlogPost) => setViewingPost(post);
   const handleBackFromPost = () => setViewingPost(null);
@@ -85,12 +95,30 @@ function AppContent() {
     setShowOnboarding(false);
   }, []);
 
+  // 업체 정보 미입력 상태에서 mypage로 강제 이동 (온보딩 리다이렉트)
+  useEffect(() => {
+    if (user && !settings.companyName && activeTab !== "mypage") {
+      // 최초 로그인 후 업체정보 입력 유도
+      sessionStorage.setItem("sms-open-settings-page", "profile");
+    }
+  }, [user, settings.companyName, activeTab]);
+
+  // ── 경로별 조건부 렌더링 ──
+  // /auth/naver/callback — 네이버 OAuth 콜백 처리
+  if (currentPath.startsWith("/auth/naver/callback")) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <NaverCallbackPage />
+      </Suspense>
+    );
+  }
+
   if (showSplash) return <SplashScreen onDone={handleSplashDone} />;
   if (showOnboarding) return <OnboardingSlides onComplete={handleOnboardingComplete} />;
   if (loading) return <LoadingFallback />;
   if (!user) return (
     <>
-      <Suspense fallback={<LoadingFallback />}><AuthPage /></Suspense>
+      <Suspense fallback={<LoadingFallback />}><LoginPage /></Suspense>
       <AdminFab />
     </>
   );

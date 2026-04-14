@@ -17,6 +17,7 @@ import { ReviewsPage } from "@/pages/ReviewsPage";
 import { FieldToolsPage } from "@/pages/FieldToolsPage";
 import { FaqPage } from "@/pages/settings/FaqPage";
 import { ContactPage } from "@/pages/settings/ContactPage";
+import { DeleteAccountModal } from "@/components/DeleteAccountModal";
 
 type Page = "main" | "pricing" | "profile" | "terms" | "usersettings" | "reviews" | "fieldtools" | "faq" | "contact";
 
@@ -31,6 +32,7 @@ export function MyPage() {
     if (pending) { sessionStorage.removeItem("sms-open-settings-page"); return pending; }
     return "main";
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -221,6 +223,21 @@ export function MyPage() {
           <LogOut className="w-4 h-4" /> 로그아웃
         </button>
       </div>
+
+      {/* 회원 탈퇴 — 빨간색 텍스트 버튼 */}
+      <div className="mx-5 pt-2">
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full py-3 text-xs font-medium text-red-500/80 hover:text-red-500 transition-colors"
+        >
+          회원 탈퇴
+        </button>
+      </div>
+
+      {/* 회원 탈퇴 확인 모달 */}
+      {showDeleteModal && (
+        <DeleteAccountModal onClose={() => setShowDeleteModal(false)} />
+      )}
     </div>
   );
 }
