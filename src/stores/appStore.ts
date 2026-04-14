@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export type WorkType = "옥상방수" | "외벽방수" | "지하방수" | "균열보수" | "욕실방수" | "기타";
 export type PostStyle = "시공일지형" | "업체홍보형" | "상담유도형" | "후기강조형";
@@ -134,7 +135,9 @@ interface AppState {
   clearSession: () => void;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   photos: [],
   selectedWorkType: null,
   selectedStyle: "시공일지형",
@@ -251,4 +254,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({ subscription: { ...s.subscription, videoUsed: (s.subscription.videoUsed ?? 0) + 1 } }));
     return true;
   },
-}));
+    }),
+    {
+      name: "sms-app-store", // localStorage 키
+      version: 1,
+      storage: createJSONStorage(() => localStorage),
+      // 영속화할 필드만 선택 — 일회성 UI 상태는 제외
+      partialize: (state) => ({
+        settings: state.settings,
+        posts: state.posts,
+        subscription: state.subscription,
+        coupons: state.coupons,
+        inquiries: state.inquiries,
+        referralCode: state.referralCode,
+        referralCount: state.referralCount,
+        selectedPersona: state.selectedPersona,
+        selectedStyle: state.selectedStyle,
+        selectedPlatforms: state.selectedPlatforms,
+      }),
+    }
+  )
+);
