@@ -101,10 +101,17 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          business_category: string | null
+          company_description: string | null
+          company_name: string | null
           created_at: string
+          face_photo_url: string | null
           google_refresh_token: string | null
           id: string
+          logo_url: string | null
           name: string | null
+          phone_number: string | null
+          service_area: string | null
           terms_agreed: boolean | null
           terms_agreed_at: string | null
           updated_at: string
@@ -112,10 +119,17 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          business_category?: string | null
+          company_description?: string | null
+          company_name?: string | null
           created_at?: string
+          face_photo_url?: string | null
           google_refresh_token?: string | null
           id?: string
+          logo_url?: string | null
           name?: string | null
+          phone_number?: string | null
+          service_area?: string | null
           terms_agreed?: boolean | null
           terms_agreed_at?: string | null
           updated_at?: string
@@ -123,10 +137,17 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          business_category?: string | null
+          company_description?: string | null
+          company_name?: string | null
           created_at?: string
+          face_photo_url?: string | null
           google_refresh_token?: string | null
           id?: string
+          logo_url?: string | null
           name?: string | null
+          phone_number?: string | null
+          service_area?: string | null
           terms_agreed?: boolean | null
           terms_agreed_at?: string | null
           updated_at?: string

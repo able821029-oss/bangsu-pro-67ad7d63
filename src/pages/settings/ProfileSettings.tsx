@@ -1,13 +1,79 @@
-import { useRef } from "react";
-import { ArrowLeft, Building2, Phone, MapPin, Upload, Camera, User, FileText, CheckCircle2, XCircle, Briefcase } from "lucide-react";
+import { useRef, useEffect, useState } from "react";
+import { ArrowLeft, Building2, Phone, MapPin, Upload, Camera, User, FileText, CheckCircle2, XCircle, Briefcase, Check, Loader2 } from "lucide-react";
 import { useAppStore, BUSINESS_CATEGORY_LABELS, type BusinessCategory } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export function ProfileSettings({ onBack }: { onBack: () => void }) {
   const { settings, updateSettings } = useAppStore();
+  const { user } = useAuth();
   const { toast } = useToast();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const faceInputRef = useRef<HTMLInputElement>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const saveTimerRef = useRef<number | null>(null);
+  const firstRunRef = useRef(true);
+
+  // ── DB 자동 저장 (debounce 600ms) ──
+  useEffect(() => {
+    // 최초 마운트 시에는 DB에서 방금 로드된 값이라 저장 불필요
+    if (firstRunRef.current) {
+      firstRunRef.current = false;
+      return;
+    }
+    if (!user) return;
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    setSaveStatus("saving");
+    saveTimerRef.current = window.setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            company_name: settings.companyName,
+            phone_number: settings.phoneNumber,
+            service_area: settings.serviceArea,
+            business_category: settings.businessCategory || "",
+            company_description: settings.companyDescription,
+            logo_url: settings.logoUrl,
+            face_photo_url: settings.facePhotoUrl,
+          })
+          .eq("user_id", user.id);
+
+        if (error) {
+          console.warn("[Profile] save error:", error.message);
+          setSaveStatus("error");
+          toast({ title: "저장 실패", description: error.message, variant: "destructive" });
+        } else {
+          setSaveStatus("saved");
+          window.setTimeout(() => setSaveStatus("idle"), 1500);
+        }
+      } catch (e) {
+        console.warn("[Profile] save exception:", e);
+        setSaveStatus("error");
+      }
+    }, 600);
+
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    };
+  }, [
+    settings.companyName,
+    settings.phoneNumber,
+    settings.serviceArea,
+    settings.businessCategory,
+    settings.companyDescription,
+    settings.logoUrl,
+    settings.facePhotoUrl,
+    user,
+    toast,
+  ]);
 
   const handleImageUpload = (field: "logoUrl" | "facePhotoUrl") => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,6 +104,21 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
           <ArrowLeft className="w-5 h-5 text-[#C1C6D7]" />
         </button>
         <h1 className="text-xl font-bold text-foreground headline-font">프로필 설정</h1>
+        <div className="ml-auto text-xs" aria-live="polite">
+          {saveStatus === "saving" && (
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" /> 저장 중…
+            </span>
+          )}
+          {saveStatus === "saved" && (
+            <span className="flex items-center gap-1 text-emerald-400">
+              <Check className="w-3 h-3" /> 저장됨
+            </span>
+          )}
+          {saveStatus === "error" && (
+            <span className="text-red-400">저장 실패</span>
+          )}
+        </div>
       </div>
 
       <div className="px-5 space-y-5">
