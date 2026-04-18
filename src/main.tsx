@@ -1,6 +1,10 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initSentry } from "@/lib/sentry";
+
+// Sentry — DSN/환경이 맞을 때만 실제 초기화되는 no-op 래퍼
+void initSentry();
 
 // 저장된 테마 즉시 적용 (FOUC 방지)
 const savedTheme = localStorage.getItem("sms_theme") || "dark";

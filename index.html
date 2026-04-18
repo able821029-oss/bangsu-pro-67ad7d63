@@ -3,30 +3,96 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>SMS — Self Marketing Service</title>
+
+    <!-- ─────────────────── SEO ─────────────────── -->
+    <title>SMS — 사장님을 위한 자동 블로그 마케팅</title>
+    <meta
+      name="description"
+      content="현장 사진만 찍으면 AI가 블로그 글·쇼츠 영상까지 자동으로 만들어 드립니다. 소상공인 자영업자를 위한 셀프 마케팅 서비스 SMS."
+    />
+    <meta name="author" content="SMS — Self Marketing Service" />
+    <meta
+      name="keywords"
+      content="AI 블로그, 자동 블로그, 자영업 마케팅, 소상공인 마케팅, 셀프마케팅, 블로그 자동생성, 쇼츠 자동생성, 네이버 블로그"
+    />
+    <link rel="canonical" href="https://sms.app/" />
+
+    <!-- Favicon / App icons -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#001130" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- ──────────────── PWA / Theme ──────────────── -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1A2B4A" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="description" content="SMS — 소상공인을 위한 AI 마케팅 앱">
-    <meta name="author" content="SMS" />
+    <meta name="apple-mobile-web-app-title" content="SMS" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    
-    
+    <!-- ──────────── Open Graph (Kakao / Facebook) ──────────── -->
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0a935a72-8e6b-4349-b2e6-e11da13d895b/id-preview-29c1ce42--7f6943f7-ab36-4279-89c0-3c404c8556a5.lovable.app-1775107380380.png">
+    <meta property="og:site_name" content="SMS" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:title" content="SMS — 사장님을 위한 자동 블로그 마케팅" />
+    <meta
+      property="og:description"
+      content="현장 사진만 찍으면 AI가 블로그 글·쇼츠 영상까지 자동으로 만들어 드립니다."
+    />
+    <meta property="og:url" content="https://sms.app/" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SMS — 사장님을 위한 자동 블로그 마케팅" />
 
+    <!-- ──────────────── Twitter Card ──────────────── -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0a935a72-8e6b-4349-b2e6-e11da13d895b/id-preview-29c1ce42--7f6943f7-ab36-4279-89c0-3c404c8556a5.lovable.app-1775107380380.png">
-    <meta property="og:title" content="SMS — Self Marketing Service">
-  <meta name="twitter:title" content="SMS — Self Marketing Service">
-  <meta property="og:description" content="소상공인을 위한 AI 블로그·쇼츠 자동 생성 서비스">
-  <meta name="twitter:description" content="소상공인을 위한 AI 블로그·쇼츠 자동 생성 서비스">
-</head>
+    <meta name="twitter:title" content="SMS — 사장님을 위한 자동 블로그 마케팅" />
+    <meta
+      name="twitter:description"
+      content="현장 사진만 찍으면 AI가 블로그 글·쇼츠 영상까지 자동으로 만들어 드립니다."
+    />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <!-- ──────────────── GA4 ──────────────── -->
+    <!-- VITE_GA_ID를 .env에 설정한 뒤 아래 스크립트가 자동으로 동작.
+         실제 ID 주입은 빌드 시 Vite가 import.meta.env로 처리하므로,
+         여기서는 data-속성을 통해 런타임 부트스트랩을 한다. -->
+    <script>
+      (function () {
+        var GA_ID = "%VITE_GA_ID%";
+        if (!GA_ID || GA_ID.indexOf("%VITE_") === 0) return;
+        var host = window.location.hostname;
+        if (host === "localhost" || host === "127.0.0.1") return;
+        var s = document.createElement("script");
+        s.async = true;
+        s.src = "https://www.googletagmanager.com/gtag/js?id=" + GA_ID;
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () { window.dataLayer.push(arguments); };
+        window.gtag("js", new Date());
+        window.gtag("config", GA_ID, { send_page_view: true });
+      })();
+    </script>
+
+    <!-- ──────────── Microsoft Clarity ──────────── -->
+    <script>
+      (function () {
+        var CLARITY_ID = "%VITE_CLARITY_ID%";
+        if (!CLARITY_ID || CLARITY_ID.indexOf("%VITE_") === 0) return;
+        var host = window.location.hostname;
+        if (host === "localhost" || host === "127.0.0.1") return;
+        (function (c, l, a, r, i, t, y) {
+          c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments); };
+          t = l.createElement(r); t.async = 1;
+          t.src = "https://www.clarity.ms/tag/" + i;
+          y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+        })(window, document, "clarity", "script", CLARITY_ID);
+      })();
+    </script>
+
+    <!-- ──────────── Kakao JavaScript SDK ──────────── -->
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>
+  </head>
 
   <body>
     <div id="root"></div>

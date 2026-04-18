@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
-import { ArrowLeft, Building2, Phone, MapPin, Upload, Camera, User, FileText, CheckCircle2, XCircle, Briefcase, Check, Loader2 } from "lucide-react";
-import { useAppStore, BUSINESS_CATEGORY_LABELS, type BusinessCategory } from "@/stores/appStore";
+import { ArrowLeft, Building2, Phone, MapPin, Upload, Camera, User, FileText, CheckCircle2, XCircle, Check, Loader2 } from "lucide-react";
+import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
@@ -39,7 +39,6 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
             company_name: settings.companyName,
             phone_number: settings.phoneNumber,
             service_area: settings.serviceArea,
-            business_category: settings.businessCategory || "",
             company_description: settings.companyDescription,
             logo_url: settings.logoUrl,
             face_photo_url: settings.facePhotoUrl,
@@ -67,7 +66,6 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
     settings.companyName,
     settings.phoneNumber,
     settings.serviceArea,
-    settings.businessCategory,
     settings.companyDescription,
     settings.logoUrl,
     settings.facePhotoUrl,
@@ -173,22 +171,6 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
           <Field icon={Building2} label="업체명" placeholder="예) 우리가게" value={settings.companyName} onChange={(v) => updateSettings({ companyName: v })} />
           <Field icon={Phone} label="대표 전화번호" placeholder="예) 010-1234-5678" value={settings.phoneNumber} onChange={(v) => updateSettings({ phoneNumber: v })} />
           <Field icon={MapPin} label="주요 활동 지역" placeholder="예) 서울 강남, 서초, 송파" value={settings.serviceArea} onChange={(v) => updateSettings({ serviceArea: v })} />
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground flex items-center gap-1">
-              <Briefcase className="w-3 h-3" /> 업종 <span className="text-[#EF4444]">*</span>
-            </label>
-            <select
-              className="w-full bg-[#161B2B] border border-white/5 rounded-xl px-3 py-3 text-sm text-foreground focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
-              value={settings.businessCategory || ""}
-              onChange={(e) => updateSettings({ businessCategory: e.target.value as BusinessCategory })}
-            >
-              <option value="">업종을 선택해 주세요</option>
-              {(Object.entries(BUSINESS_CATEGORY_LABELS) as [BusinessCategory, string][]).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-muted-foreground">AI가 업종에 맞는 용어로 글과 영상을 만들어드립니다</p>
-          </div>
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground flex items-center gap-1">
               <FileText className="w-3 h-3" /> 업체 소개

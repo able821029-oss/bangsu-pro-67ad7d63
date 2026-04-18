@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react"
 import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus, Music, VolumeX, Mic, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAppStore, BUSINESS_CATEGORY_LABELS, type BusinessCategory } from "@/stores/appStore";
+import { useAppStore } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/bgmSynth";
@@ -368,18 +368,10 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
 
     // 필수 입력 검증 — AI 자동 모드일 때만
     if (scriptMode === "ai") {
-      if (!settings.businessCategory) {
-        toast({
-          title: "업종을 먼저 선택해 주세요",
-          description: "마이페이지 > 프로필 설정에서 업종을 등록하면 AI가 더 정확한 스크립트를 만듭니다.",
-          variant: "destructive",
-        });
-        return;
-      }
       if (!workTopic.trim()) {
         toast({
           title: "오늘의 작업을 한 줄 입력해 주세요",
-          description: "예) 욕실 방수 시공 / 신메뉴 파스타 / 커트+염색",
+          description: "예) 욕실 방수 시공 / 외벽 균열 보수 / 옥상 방수",
           variant: "destructive",
         });
         return;
@@ -438,7 +430,6 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
           constructionDate: new Date().toISOString().slice(0, 10),
           companyName: settings.companyName,
           phoneNumber: settings.phoneNumber,
-          businessCategory: settings.businessCategory || "", // 업종 프로필
           workTopic: workTopic.trim(),                        // 오늘의 작업 한 줄
         },
       });
@@ -688,40 +679,8 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
           {scriptMode === "ai" && (
             <div className="space-y-3">
               <p className="text-xs text-[#8B90A0]">
-                사진 + 업종 + 오늘의 작업 힌트를 조합하여 AI가 자연스러운 스크립트를 생성합니다.
+                사진과 오늘의 작업 힌트를 조합하여 AI가 시공 현장에 맞는 나레이션을 생성합니다.
               </p>
-
-              {/* 업종 상태 표시 */}
-              <div
-                className="rounded-xl px-3 py-2.5 text-xs border"
-                style={{
-                  background: settings.businessCategory
-                    ? "rgba(35,127,255,0.08)"
-                    : "rgba(239,68,68,0.08)",
-                  borderColor: settings.businessCategory
-                    ? "rgba(35,127,255,0.35)"
-                    : "rgba(239,68,68,0.35)",
-                }}
-              >
-                {settings.businessCategory ? (
-                  <p className="text-foreground">
-                    <span className="text-muted-foreground">업종:</span>{" "}
-                    <span className="font-semibold">
-                      {BUSINESS_CATEGORY_LABELS[settings.businessCategory as BusinessCategory]}
-                    </span>
-                  </p>
-                ) : (
-                  <button
-                    onClick={() => {
-                      sessionStorage.setItem("sms-open-settings-page", "profile");
-                      onNavigate?.("mypage");
-                    }}
-                    className="w-full text-left text-[#EF4444]"
-                  >
-                    ⚠️ 업종이 등록되지 않았습니다. <u>마이페이지 &gt; 프로필 설정</u>에서 먼저 선택해 주세요.
-                  </button>
-                )}
-              </div>
 
               {/* 오늘의 작업 한 줄 (필수) */}
               <div className="space-y-1.5">

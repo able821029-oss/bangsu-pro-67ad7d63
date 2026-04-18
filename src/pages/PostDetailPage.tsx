@@ -238,7 +238,8 @@ export function PostDetailPage({
     }
     let text = title + "\n\n";
     blocks.forEach((block, idx) => {
-      if (block.type === "text") text += block.content + "\n\n";
+      if (block.type === "subtitle") text += `【${block.content}】\n\n`;
+      else if (block.type === "text") text += block.content + "\n\n";
       else text += `[사진${idx + 1} 여기에 첨부]\n\n`;
     });
     return (
@@ -444,42 +445,87 @@ export function PostDetailPage({
         </div>
       )}
 
+      {/* 현장 정보 요약 (지역 / 시공면적 / 공법 / 기타) */}
+      {(post.location || post.siteInfo?.area || post.siteInfo?.method || post.siteInfo?.etc) && (
+        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-2">
+          <p className="text-sm font-semibold">현장 정보</p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {post.location && (
+              <div>
+                <p className="text-muted-foreground">지역</p>
+                <p className="text-foreground font-medium">{post.location}</p>
+              </div>
+            )}
+            {post.siteInfo?.area && (
+              <div>
+                <p className="text-muted-foreground">시공면적</p>
+                <p className="text-foreground font-medium">{post.siteInfo.area}</p>
+              </div>
+            )}
+            {post.siteInfo?.method && (
+              <div>
+                <p className="text-muted-foreground">공법</p>
+                <p className="text-foreground font-medium">{post.siteInfo.method}</p>
+              </div>
+            )}
+            {post.siteInfo?.etc && (
+              <div>
+                <p className="text-muted-foreground">기타</p>
+                <p className="text-foreground font-medium">{post.siteInfo.etc}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 본문 */}
       <div className="space-y-3">
         <p className="text-sm font-semibold">본문</p>
-        {blocks.map((block, idx) =>
-          block.type === "text" ? (
-            <div key={idx} className="bg-card rounded-[--radius] border border-border p-4 relative group">
-              {editingBlockIdx === idx ? (
-                <div className="space-y-2">
-                  <textarea
-                    className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[120px] text-foreground resize-none"
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveEdit}>
-                      저장
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingBlockIdx(null)}>
-                      취소
-                    </Button>
+        {blocks.map((block, idx) => {
+          if (block.type === "subtitle") {
+            return (
+              <div key={idx} className="pt-2 pb-1">
+                <h3 className="text-base font-bold text-primary border-l-4 border-primary pl-3">
+                  {block.content}
+                </h3>
+              </div>
+            );
+          }
+          if (block.type === "text") {
+            return (
+              <div key={idx} className="bg-card rounded-[--radius] border border-border p-4 relative group">
+                {editingBlockIdx === idx ? (
+                  <div className="space-y-2">
+                    <textarea
+                      className="w-full bg-secondary rounded-lg p-3 text-sm outline-none min-h-[120px] text-foreground resize-none"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleSaveEdit}>
+                        저장
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingBlockIdx(null)}>
+                        취소
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setEditingBlockIdx(idx);
-                    setEditText(block.content);
-                  }}
-                  className="w-full text-left"
-                >
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{block.content}</p>
-                  <Edit3 className="w-4 h-4 text-muted-foreground absolute top-2 right-2 opacity-60" />
-                </button>
-              )}
-            </div>
-          ) : (
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingBlockIdx(idx);
+                      setEditText(block.content);
+                    }}
+                    className="w-full text-left"
+                  >
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{block.content}</p>
+                    <Edit3 className="w-4 h-4 text-muted-foreground absolute top-2 right-2 opacity-60" />
+                  </button>
+                )}
+              </div>
+            );
+          }
+          return (
             <div
               key={idx}
               className="bg-primary/10 border-2 border-dashed border-primary/30 rounded-[--radius] p-4 flex items-center gap-3"
@@ -490,8 +536,8 @@ export function PostDetailPage({
                 <p className="text-xs text-muted-foreground mt-0.5">{block.caption}</p>
               </div>
             </div>
-          ),
-        )}
+          );
+        })}
         {blocks.length === 0 && (
           <div className="text-center py-8 space-y-3 bg-card rounded-[--radius] border border-border">
             <p className="text-sm text-muted-foreground">아직 본문이 생성되지 않았습니다</p>

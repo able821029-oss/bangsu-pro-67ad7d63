@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Eye, EyeOff, Mail } from "lucide-react";
+import { trackEvent, identifyUser } from "@/lib/analytics";
 
 export default function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
@@ -32,6 +33,8 @@ export default function AuthPage() {
         if (error) throw error;
         if (data.session) {
           toast.success("가입 완료! 자동 로그인됩니다.");
+          trackEvent("sign_up", { method: "email" });
+          if (data.user?.id) identifyUser(data.user.id);
         } else if (data.user && data.user.identities?.length === 0) {
           toast.error("이미 가입된 이메일입니다. 로그인해주세요.");
           setMode("login");
@@ -40,6 +43,8 @@ export default function AuthPage() {
           const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
           if (loginErr) throw loginErr;
           toast.success("가입 완료! 로그인되었습니다.");
+          trackEvent("sign_up", { method: "email" });
+          if (data.user?.id) identifyUser(data.user.id);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });

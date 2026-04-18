@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
-import { useAppStore, type BusinessCategory } from "@/stores/appStore";
+import { useAppStore } from "@/stores/appStore";
 
 interface AuthContextType {
   user: User | null;
@@ -25,7 +25,7 @@ async function loadProfileIntoStore(userId: string) {
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "company_name, phone_number, service_area, business_category, company_description, logo_url, face_photo_url"
+        "company_name, phone_number, service_area, company_description, logo_url, face_photo_url"
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -42,13 +42,12 @@ async function loadProfileIntoStore(userId: string) {
     if (data.company_name) patch.companyName = data.company_name;
     if (data.phone_number) patch.phoneNumber = data.phone_number;
     if (data.service_area) patch.serviceArea = data.service_area;
-    if (data.business_category) patch.businessCategory = data.business_category;
     if (data.company_description) patch.companyDescription = data.company_description;
     if (data.logo_url) patch.logoUrl = data.logo_url;
     if (data.face_photo_url) patch.facePhotoUrl = data.face_photo_url;
 
     if (Object.keys(patch).length > 0) {
-      updateSettings(patch as Partial<{ businessCategory: BusinessCategory }>);
+      updateSettings(patch);
     }
   } catch (e) {
     console.warn("[Auth] loadProfileIntoStore error:", e);

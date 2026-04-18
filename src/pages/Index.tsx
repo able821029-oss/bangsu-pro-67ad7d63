@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { HomeTab } from "@/pages/HomeTab";
 import { BlogPost, useAppStore } from "@/stores/appStore";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { trackEvent } from "@/lib/analytics";
 
 // 초기 로딩엔 HomeTab만 필요 — 나머지 탭/페이지는 lazy
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -93,6 +94,7 @@ function AppContent() {
   const handleOnboardingComplete = useCallback(() => {
     localStorage.setItem("sms_onboarded", "true");
     setShowOnboarding(false);
+    trackEvent("onboarding_completed");
   }, []);
 
   // 업체 정보 미입력 상태에서 mypage로 강제 이동 (온보딩 리다이렉트)

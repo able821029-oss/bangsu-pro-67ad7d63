@@ -92,6 +92,9 @@ serve(async (req) => {
       constructionDate,
       companyName,
       phoneNumber,
+      siteArea,
+      siteMethod,
+      siteEtc,
     } = body;
 
     // admin_config에서 커스텀 프롬프트 로드 (없으면 기본값 사용)
@@ -117,15 +120,15 @@ serve(async (req) => {
     const platformText = customPlatforms[platform] || customPlatforms["naver"];
 
     const systemPrompt = `당신은 네이버 블로그 상위노출 전문가입니다.
-현장직 사장님의 시공 현장 사진과 정보를 바탕으로
-네이버 C-Rank + D.I.A+ 알고리즘에 최적화된 블로그 글을 작성합니다.
+시공 업체 사장님의 현장 사진과 현장 정보를 바탕으로
+네이버 C-Rank + D.I.A+ 알고리즘에 최적화된 시공 블로그 글을 작성합니다.
 
 ${personaText}
 
-[업종 자동 판단 — 필수]
-첨부된 사진을 분석하여 업종을 자동 판단하라.
-(방수·토목·인테리어·간판·조경·철거·도장·타일·전기·설비 등)
-사진에서 공사 유형도 구체적으로 판단하여 제목과 본문에 삽입하라.
+[시공 공사 유형 판단 — 필수]
+첨부된 사진을 분석하여 시공 공사 유형을 구체적으로 판단하라.
+(옥상방수·외벽방수·지하방수·균열보수·욕실방수·도장·타일·인테리어·누수보수 등)
+제목과 본문에 판단한 공사 유형을 자연스럽게 삽입하라.
 
 ${seoRules}
 
@@ -136,11 +139,17 @@ ${platformText}
   "title": "SEO 최적화 제목 (25자 이내, 키워드 앞배치)",
   "detectedWorkType": "AI가 판단한 공사 유형",
   "blocks": [
-    {"type": "text", "content": "본문 텍스트"},
-    {"type": "photo", "content": "photo-1", "caption": "사진 설명"},
-    {"type": "text", "content": "본문 텍스트"},
-    {"type": "photo", "content": "photo-2", "caption": "사진 설명"},
-    {"type": "text", "content": "마무리 텍스트"}
+    {"type": "subtitle", "content": "현장 소개"},
+    {"type": "text", "content": "도입부 본문 200자"},
+    {"type": "photo", "content": "photo-1", "caption": "현장 전경"},
+    {"type": "subtitle", "content": "시공 전 상태"},
+    {"type": "text", "content": "문제점 300자"},
+    {"type": "photo", "content": "photo-2", "caption": "시공 전 사진"},
+    {"type": "subtitle", "content": "시공 과정"},
+    {"type": "text", "content": "단계별 공정 500자"},
+    {"type": "photo", "content": "photo-3", "caption": "시공 과정"},
+    {"type": "subtitle", "content": "시공 완료"},
+    {"type": "text", "content": "마감 상태 및 품질 보증"}
   ],
   "hashtags": ["해시태그1", "해시태그2"],
   "seoScore": {
@@ -153,11 +162,14 @@ ${platformText}
   }
 }
 
-규칙:
-- blocks 배열에서 text와 photo를 교차 배치
-- photo 블록의 content는 "photo-1", "photo-2" 등 순번
-- photo 블록 수는 제공된 사진 수에 맞춤
-- 업체명과 전화번호를 본문 마지막에 자연스럽게 삽입
+블록 구성 규칙 (시공 블로그 전용 포맷):
+- 반드시 [subtitle → text → photo] 순서의 섹션을 반복 배치
+- subtitle 블록은 섹션 제목 (예: "현장 소개", "시공 전 상태", "시공 과정", "시공 완료", "마무리")
+- text 블록은 해당 섹션의 본문 (한 섹션당 200~500자)
+- photo 블록의 content는 "photo-1", "photo-2" 등 순번. caption은 시공 단계 설명
+- photo 블록 수는 제공된 사진 수에 맞춤 (사진이 부족하면 섹션에서 생략 가능)
+- 현장 정보(위치·시공면적·공법·기타)는 "현장 소개" 섹션 본문에 자연스럽게 녹여 넣어라
+- 업체명과 전화번호는 마지막 text 블록에 자연스럽게 포함
 - seoScore에 SEO 자가 점검 결과 포함
 - JSON만 응답. 다른 텍스트 없이.`;
 
@@ -182,32 +194,48 @@ ${platformText}
 
     userContent.push({
       type: "text",
-      text: `다음 정보로 ${platform === "naver" ? "네이버 블로그" : platform === "instagram" ? "인스타그램" : "틱톡"} 글을 작성해주세요.
+      text: `다음 시공 현장 정보로 ${platform === "naver" ? "네이버 블로그" : platform === "instagram" ? "인스타그램" : "틱톡"} 글을 작성해주세요.
 
-- 시공 위치: ${location || "미입력"}
-- 건물 유형: ${buildingType || "미입력"}
+[현장 정보]
+- 지역: ${location || "미입력"}
+- 시공 면적: ${siteArea || "미입력"}
+- 공법: ${siteMethod || "미입력"}
+- 기타 특이사항: ${siteEtc || "없음"}
 - 시공 일자: ${constructionDate || "오늘"}
 - 업체명: ${companyName || "SMS"}
 - 연락처: ${phoneNumber || ""}
 - 첨부 사진: ${photoSlice.length}장
 
-사진을 분석하여 업종과 공사 유형을 자동 판단한 뒤 글을 작성해주세요.
+사진을 분석하여 시공 공사 유형을 판단한 뒤, 시공 블로그 포맷(제목 → 소제목+본문+사진 섹션 반복)으로 글을 작성해주세요.
 네이버 SEO 필수 규칙을 모두 준수하고, seoScore를 포함해주세요.
+blocks는 반드시 subtitle → text → photo 순서의 섹션으로 구성해주세요.
 JSON 형식으로만 응답해주세요.`,
     });
 
-    // API 키 없으면 바로 mock 응답
+    // API 키 없으면 바로 mock 응답 (시공 포맷 B)
     if (!ANTHROPIC_API_KEY) {
       const detectedType = workType || "시공";
-      const mockContent = `안녕하세요, ${companyName || "SMS"}입니다.\n\n${constructionDate || "오늘"} ${location || "현장"}에서 ${buildingType || "건물"} ${detectedType} 시공을 진행했습니다.\n\n■ 현장 소개\n${location || "현장"} ${buildingType || "건물"}에서 ${detectedType} 의뢰를 받았습니다. 기존 상태를 면밀히 조사한 결과, 전문적인 시공이 필요한 상황이었습니다.\n\n■ 시공 전 상태\n기존 시공 부분이 노후화되어 보수가 필요한 상태였습니다. 꼼꼼한 진단을 통해 최적의 시공 방법을 결정했습니다.\n\n■ 시공 과정\n${detectedType} 작업을 단계별로 꼼꼼하게 진행했습니다. 고품질 자재를 사용하여 내구성을 높였습니다.\n\n■ 시공 완료\n깔끔하게 마무리하였습니다. 시공 후 품질 검수까지 완료했습니다.\n\n■ 문의\n${companyName || "SMS"} ${phoneNumber || "전화문의"}`;
-      const photoBlocks = photoSlice.flatMap((_: any, i: number) => [
-        { type: "photo" as const, content: "photo-" + (i + 1), caption: detectedType + " 시공 현장 사진 " + (i + 1) },
-        { type: "text" as const, content: i === photoSlice.length - 1 ? companyName + " 시공 완료. 문의: " + (phoneNumber || "") : detectedType + " 시공 " + (i + 1) + "단계 진행" },
-      ]);
+      const area = siteArea || "미상";
+      const method = siteMethod || "전문 공법";
+      const etc = siteEtc || "";
+      const mockBlocks: any[] = [
+        { type: "subtitle", content: "현장 소개" },
+        { type: "text", content: `${constructionDate || "오늘"} ${location || "현장"}에서 진행한 ${detectedType} 시공입니다. 시공 면적은 ${area}이며, ${method}으로 시공했습니다.${etc ? ` 특이사항: ${etc}.` : ""}` },
+      ];
+      photoSlice.forEach((_: any, i: number) => {
+        const sections = ["시공 전 상태", "시공 과정", "시공 완료", "마무리"];
+        const sectionTitle = sections[i] || `추가 사진 ${i + 1}`;
+        mockBlocks.push(
+          { type: "photo", content: `photo-${i + 1}`, caption: `${sectionTitle} — ${detectedType}` },
+          { type: "subtitle", content: sectionTitle },
+          { type: "text", content: `${sectionTitle} 단계에서 ${detectedType} 작업을 꼼꼼하게 진행했습니다.` },
+        );
+      });
+      mockBlocks.push({ type: "text", content: `${companyName || "SMS"} 시공 완료. 문의: ${phoneNumber || "전화문의"}` });
       return new Response(JSON.stringify({
-        title: (location || "현장") + " " + detectedType + " 시공 완료",
+        title: `${location || "현장"} ${detectedType} 시공 완료`,
         detectedWorkType: detectedType,
-        blocks: [{ type: "text", content: mockContent }, ...photoBlocks],
+        blocks: mockBlocks,
         hashtags: [detectedType, "시공업체추천", (location || "") + "시공", "시공후기", companyName || "SMS", "시공완료", detectedType + "업체", detectedType + "전문", "시공현장", "건물시공", "누수해결", detectedType + "추천", "방수업체추천", "시공사례", "블로그마케팅"],
         seoScore: { titleLength: 15, contentLength: 800, keywordCount: 5, hashtagCount: 15, hasStructure: true, overall: 72 },
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -233,22 +261,28 @@ JSON 형식으로만 응답해주세요.`,
       console.error("Claude API error:", anthropicResponse.status, errText);
 
       const detectedType = workType || "시공";
-      const mockContent = `안녕하세요, ${companyName || "SMS"}입니다.\n\n${constructionDate || "오늘"} ${location || "현장"}에서 ${buildingType || "건물"} ${detectedType} 시공을 진행했습니다.\n\n■ 현장 소개\n${location || "현장"} ${buildingType || "건물"}에서 ${detectedType} 의뢰를 받았습니다.\n\n■ 시공 전 상태\n기존 방수층이 노후화되어 누수가 발생한 상태였습니다.\n\n■ 시공 과정\n${detectedType} 작업을 단계별로 꼼꼼하게 진행했습니다.\n\n■ 시공 완료\n깔끔하게 마무리하였습니다.\n\n■ 문의\n${companyName || "SMS"} ${phoneNumber || "전화문의"}`;
-
-      const photoBlocks = photoSlice.flatMap((_: any, i: number) => [
-        { type: "photo" as const, content: `photo-${i + 1}`, caption: `${detectedType} 시공 현장 사진 ${i + 1}` },
-        { type: "text" as const, content: i === photoSlice.length - 1
-          ? `${companyName || "SMS"}에서 ${location || "현장"} ${detectedType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}`
-          : `${detectedType} 시공 ${i + 1}단계를 진행했습니다.` },
-      ]);
+      const area = siteArea || "미상";
+      const method = siteMethod || "전문 공법";
+      const etc = siteEtc || "";
+      const fallbackBlocks: any[] = [
+        { type: "subtitle", content: "현장 소개" },
+        { type: "text", content: `${constructionDate || "오늘"} ${location || "현장"}에서 진행한 ${detectedType} 시공입니다. 시공 면적은 ${area}이며, ${method}으로 시공했습니다.${etc ? ` 특이사항: ${etc}.` : ""}` },
+      ];
+      photoSlice.forEach((_: any, i: number) => {
+        const sections = ["시공 전 상태", "시공 과정", "시공 완료", "마무리"];
+        const sectionTitle = sections[i] || `추가 사진 ${i + 1}`;
+        fallbackBlocks.push(
+          { type: "photo", content: `photo-${i + 1}`, caption: `${sectionTitle} — ${detectedType}` },
+          { type: "subtitle", content: sectionTitle },
+          { type: "text", content: `${sectionTitle} 단계에서 ${detectedType} 작업을 꼼꼼하게 진행했습니다.` },
+        );
+      });
+      fallbackBlocks.push({ type: "text", content: `${companyName || "SMS"}에서 ${location || "현장"} ${detectedType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}` });
 
       const mockResponse = {
         title: `${location || "현장"} ${detectedType} 시공 완료`,
         detectedWorkType: detectedType,
-        blocks: [
-          { type: "text", content: mockContent },
-          ...photoBlocks,
-        ],
+        blocks: fallbackBlocks,
         hashtags: platform === "instagram"
           ? ["시공후기", detectedType, "인테리어", "집수리", "리모델링", "시공완료", ...(location ? [location.replace(/\s/g, ""), location + "시공"] : []), "SMS", "건물시공"]
           : platform === "tiktok"

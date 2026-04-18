@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Upload, Camera, HelpCircle, X, CheckCircle2, PenLine } from "lucide-react";
+import { Upload, Camera, HelpCircle, X, CheckCircle2, PenLine, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore, BlogPost, Platform, PostStatus } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
+import { shareToKakao, isKakaoAvailable } from "@/lib/kakao";
+import { trackEvent } from "@/lib/analytics";
 
 const platformLabels: Record<Platform, string> = {
   naver: "네이버 블로그",
@@ -48,6 +50,35 @@ export function PublishTab({
     });
     text += post.hashtags.map((t) => `#${t}`).join(" ");
     return text;
+  };
+
+  const handleKakaoShare = (post: BlogPost) => {
+    if (!isKakaoAvailable()) {
+      toast({
+        title: "카카오 공유를 사용할 수 없습니다",
+        description: "VITE_KAKAO_JAVASCRIPT_KEY 환경변수를 설정해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const firstTextBlock = post.blocks.find((b) => b.type === "text");
+    const description =
+      (firstTextBlock?.content || "").slice(0, 120) || "현장 사진으로 작성된 블로그 글입니다.";
+    const imageUrl = post.photos[0]?.dataUrl?.startsWith("http")
+      ? post.photos[0].dataUrl
+      : `${window.location.origin}/og-image.png`;
+
+    const ok = shareToKakao({
+      title: post.title || "새 블로그 글",
+      description,
+      imageUrl,
+      url: window.location.href,
+    });
+    if (ok) {
+      trackEvent("share_kakao_clicked", { post_id: post.id });
+    } else {
+      toast({ title: "카카오 공유에 실패했습니다", variant: "destructive" });
+    }
   };
 
   const handleUpload = async (post: BlogPost, platform: Platform) => {
@@ -154,6 +185,18 @@ export function PublishTab({
                     {platformLabels[p]}
                   </Button>
                 ))}
+                <Button
+                  size="sm"
+                  className="text-xs gap-1.5 bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleKakaoShare(post);
+                  }}
+                  aria-label="카카오톡으로 공유"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  카카오톡 공유
+                </Button>
               </div>
             </div>
           ))}

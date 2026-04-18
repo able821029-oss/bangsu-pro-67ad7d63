@@ -18,6 +18,12 @@ import { FieldToolsPage } from "@/pages/FieldToolsPage";
 import { FaqPage } from "@/pages/settings/FaqPage";
 import { ContactPage } from "@/pages/settings/ContactPage";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
+import { trackEvent } from "@/lib/analytics";
+
+const openPricing = (from: string, setPage: (p: "pricing") => void) => {
+  trackEvent("upgrade_cta_clicked", { from });
+  setPage("pricing");
+};
 
 type Page = "main" | "pricing" | "profile" | "terms" | "usersettings" | "reviews" | "fieldtools" | "faq" | "contact";
 
@@ -67,7 +73,7 @@ export function MyPage() {
     },
     {
       icon: Crown, label: "요금제 변경", desc: subscription.plan,
-      onClick: () => setPage("pricing"),
+      onClick: () => openPricing("mypage_menu", setPage),
       accent: planColor,
     },
     {
@@ -169,7 +175,7 @@ export function MyPage() {
             </div>
           </div>
           {/* 업그레이드 CTA */}
-          <button onClick={() => setPage("pricing")}
+          <button onClick={() => openPricing("mypage_cta", setPage)}
             className="w-full h-[52px] rounded-full flex items-center justify-center gap-2 text-white font-bold text-lg shadow-xl active:scale-[0.98] transition-transform mt-4"
             style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
             플랜 업그레이드

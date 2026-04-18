@@ -58,6 +58,9 @@ export function CameraTab({
   const [wizardStep, setWizardStep] = useState<WizardStep>(1);
   const [location, setLocation] = useState("");
   const [constructionDate, setConstructionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [siteArea, setSiteArea] = useState("");      // 시공면적
+  const [siteMethod, setSiteMethod] = useState("");  // 공법
+  const [siteEtc, setSiteEtc] = useState("");        // 기타
   const [isLocating, setIsLocating] = useState(false);
   const [gpsTimedOut, setGpsTimedOut] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
@@ -78,7 +81,7 @@ export function CameraTab({
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [photos, wizardStep, location, constructionDate, selectedPlatforms, selectedPersona]);
+  }, [photos, wizardStep, location, constructionDate, siteArea, siteMethod, siteEtc, selectedPlatforms, selectedPersona]);
 
   // ── 임시저장 함수 ──
   const saveDraft = () => {
@@ -87,6 +90,9 @@ export function CameraTab({
       photos: photos.map(p => ({ id: p.id, dataUrl: p.dataUrl })),
       location,
       constructionDate,
+      siteArea,
+      siteMethod,
+      siteEtc,
       platforms: [...selectedPlatforms],
       persona: selectedPersona,
       wizardStep,
@@ -115,6 +121,9 @@ export function CameraTab({
       draft.photos?.forEach((p: any) => addPhoto(p));
       if (draft.location) setLocation(draft.location);
       if (draft.constructionDate) setConstructionDate(draft.constructionDate);
+      if (draft.siteArea) setSiteArea(draft.siteArea);
+      if (draft.siteMethod) setSiteMethod(draft.siteMethod);
+      if (draft.siteEtc) setSiteEtc(draft.siteEtc);
       if (draft.persona) setSelectedPersona(draft.persona);
       if (draft.wizardStep === 2) setWizardStep(2);
       toast({ title: "임시저장된 글을 불러왔습니다" });
@@ -225,6 +234,9 @@ export function CameraTab({
           constructionDate,
           companyName: settings.companyName,
           phoneNumber: settings.phoneNumber,
+          siteArea,
+          siteMethod,
+          siteEtc,
         },
       });
 
@@ -283,6 +295,8 @@ export function CameraTab({
         createdAt: new Date().toISOString().slice(0, 10),
         platforms: [...selectedPlatforms],
         persona: selectedPersona,
+        location,
+        siteInfo: { area: siteArea, method: siteMethod, etc: siteEtc },
       };
 
       addPost(newPost);
@@ -530,6 +544,37 @@ export function CameraTab({
                 {constructionDate ? new Date(constructionDate).toLocaleDateString("ko-KR", { year:"numeric", month:"long", day:"numeric" }) : ""}
               </p>
             </div>
+          </div>
+
+          {/* 시공 정보 — 시공면적 / 공법 / 기타 */}
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground font-[Inter]">시공 면적</label>
+              <input
+                className="w-full bg-card border border-white/10 rounded-xl px-3 h-12 text-sm outline-none text-foreground placeholder:text-muted-foreground font-[Inter]"
+                placeholder="예) 120㎡"
+                value={siteArea}
+                onChange={(e) => setSiteArea(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground font-[Inter]">공법</label>
+              <input
+                className="w-full bg-card border border-white/10 rounded-xl px-3 h-12 text-sm outline-none text-foreground placeholder:text-muted-foreground font-[Inter]"
+                placeholder="예) 우레탄 도막방수"
+                value={siteMethod}
+                onChange={(e) => setSiteMethod(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground font-[Inter]">기타 (특이사항)</label>
+            <input
+              className="w-full bg-card border border-white/10 rounded-xl px-3 h-12 text-sm outline-none text-foreground placeholder:text-muted-foreground font-[Inter]"
+              placeholder="예) 누수 보수 병행, 옥상 난간 포함"
+              value={siteEtc}
+              onChange={(e) => setSiteEtc(e.target.value)}
+            />
           </div>
         </div>
 
