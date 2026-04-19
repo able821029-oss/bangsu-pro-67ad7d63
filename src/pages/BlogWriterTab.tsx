@@ -108,6 +108,7 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
   const setActiveDraft = useAppStore((s) => s.setActiveDraft);
   const updateDraft = useAppStore((s) => s.updateDraft);
   const addSection = useAppStore((s) => s.addSection);
+  const addPhotosAsSections = useAppStore((s) => s.addPhotosAsSections);
   const updateSection = useAppStore((s) => s.updateSection);
   const removeSection = useAppStore((s) => s.removeSection);
   const resetDraft = useAppStore((s) => s.resetDraft);
@@ -341,6 +342,7 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
           draftIdx={activeIdx}
           sections={draft.sections}
           onAddSection={() => addSection(activeIdx)}
+          onAddPhotosAsSections={(photos) => addPhotosAsSections(activeIdx, photos)}
           onUpdateSection={(id, patch) => updateSection(activeIdx, id, patch)}
           onRemoveSection={(id) => removeSection(activeIdx, id)}
           onBack={() => setStep(1)}
@@ -616,10 +618,13 @@ function FormField({
 }
 
 // ── Step 2: 섹션 (소제목 + 사진 + 글) 동적 추가 ──
+const MAX_BULK_PHOTOS = 6;
+
 function Step2Sections({
   draftIdx: _draftIdx,
   sections,
   onAddSection,
+  onAddPhotosAsSections,
   onUpdateSection,
   onRemoveSection,
   onBack,
@@ -630,6 +635,7 @@ function Step2Sections({
   draftIdx: number;
   sections: ReturnType<typeof useAppStore.getState>["drafts"][number]["sections"];
   onAddSection: () => void;
+  onAddPhotosAsSections: (photos: { id: string; dataUrl: string }[]) => number;
   onUpdateSection: (
     id: string,
     patch: Partial<ReturnType<typeof useAppStore.getState>["drafts"][number]["sections"][number]>,
@@ -640,8 +646,85 @@ function Step2Sections({
   canSave: boolean;
   saving: boolean;
 }) {
+  const bulkFileRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+
+    if (files.length > MAX_BULK_PHOTOS) {
+      toast({
+        title: `한 번에 최대 ${MAX_BULK_PHOTOS}장까지 업로드할 수 있어요`,
+        description: `처음 ${MAX_BULK_PHOTOS}장만 추가됩니다.`,
+      });
+    }
+    const picked = files.slice(0, MAX_BULK_PHOTOS);
+
+    setBulkLoading(true);
+    try {
+      const compressed = await Promise.all(
+        picked.map(
+          (file) =>
+            new Promise<string | null>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = async (ev) => {
+                const raw = (ev.target?.result as string) || "";
+                if (!raw) return resolve(null);
+                try {
+                  resolve(await compressImage(raw, 800, 0.7));
+                } catch {
+                  resolve(raw);
+                }
+              };
+              reader.onerror = () => resolve(null);
+              reader.readAsDataURL(file);
+            }),
+        ),
+      );
+
+      const photos = compressed
+        .filter((d): d is string => !!d)
+        .map((dataUrl) => ({ id: crypto.randomUUID(), dataUrl }));
+
+      if (photos.length === 0) {
+        toast({ title: "사진을 읽지 못했어요", variant: "destructive" });
+        return;
+      }
+
+      const placed = onAddPhotosAsSections(photos);
+      toast({ title: `사진 ${placed}장이 섹션으로 추가되었어요 ✨` });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
+      {/* 사진 일괄 업로드 (최대 6장) */}
+      <button
+        onClick={() => bulkFileRef.current?.click()}
+        disabled={bulkLoading}
+        className="w-full flex items-center justify-center gap-2 btn-power disabled:opacity-60"
+      >
+        {bulkLoading ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <ImagePlus className="w-5 h-5" />
+        )}
+        {bulkLoading ? "사진 압축 중…" : `갤러리에서 사진 여러장 추가 (최대 ${MAX_BULK_PHOTOS}장)`}
+      </button>
+      <input
+        ref={bulkFileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleBulkUpload}
+      />
+
       {sections.length === 0 && (
         <div className="glass-card p-6 text-center space-y-2">
           <div className="icon-chip icon-chip-lg mx-auto">
@@ -649,7 +732,8 @@ function Step2Sections({
           </div>
           <p className="text-sm font-semibold text-foreground">아직 작성된 글이 없어요</p>
           <p className="text-xs text-muted-foreground">
-            <strong>+ 글쓰기 추가</strong> 버튼으로 소제목, 사진, 글을 자유롭게 배치해 주세요
+            위 버튼으로 <strong>사진 여러장 한번에 추가</strong>하거나,{" "}
+            <strong>+ 글쓰기 추가</strong>로 수동 작성해 주세요
           </p>
         </div>
       )}

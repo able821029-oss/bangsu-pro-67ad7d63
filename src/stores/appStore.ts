@@ -169,6 +169,16 @@ interface AppState {
   setActiveDraft: (idx: number) => void;
   updateDraft: (idx: number, patch: Partial<BlogDraft>) => void;
   addSection: (draftIdx: number) => void;
+  /**
+   * 여러 장의 사진을 한 번에 섹션에 추가 (갤러리 다중 선택용).
+   * - 빈 사진 섹션이 있으면 먼저 채움
+   * - 남은 사진은 새 섹션으로 추가
+   * - 반환값은 추가/채운 실제 건수
+   */
+  addPhotosAsSections: (
+    draftIdx: number,
+    photos: { id: string; dataUrl: string }[],
+  ) => number;
   updateSection: (draftIdx: number, sectionId: string, patch: Partial<DraftSection>) => void;
   removeSection: (draftIdx: number, sectionId: string) => void;
   resetDraft: (idx: number) => void;
@@ -344,6 +354,38 @@ export const useAppStore = create<AppState>()(
         i === draftIdx ? { ...d, sections: [...d.sections, createEmptySection()] } : d,
       ),
     })),
+  addPhotosAsSections: (draftIdx, photos) => {
+    let placed = 0;
+    set((state) => {
+      const drafts = state.drafts.map((d, i) => {
+        if (i !== draftIdx) return d;
+        const queue = [...photos];
+        // 1) 빈 사진 슬롯이 있는 기존 섹션부터 채움
+        const updatedSections = d.sections.map((s) => {
+          if (!s.photo && queue.length > 0) {
+            const next = queue.shift()!;
+            placed += 1;
+            return { ...s, photo: next };
+          }
+          return s;
+        });
+        // 2) 남은 사진은 새 섹션으로 생성
+        while (queue.length > 0) {
+          const next = queue.shift()!;
+          updatedSections.push({
+            id: crypto.randomUUID(),
+            subtitle: "",
+            photo: next,
+            text: "",
+          });
+          placed += 1;
+        }
+        return { ...d, sections: updatedSections };
+      });
+      return { drafts };
+    });
+    return placed;
+  },
   updateSection: (draftIdx, sectionId, patch) =>
     set((state) => ({
       drafts: state.drafts.map((d, i) =>
