@@ -141,7 +141,7 @@ function AppContent() {
       case "content":  return <ContentTab onNavigate={nav} onViewPost={handleViewPost} />;
       case "publish":  return <ContentTab onNavigate={nav} onViewPost={handleViewPost} initialSubTab="publish" />;
       case "shorts":   return <ShortsTab onNavigate={nav} />;
-      case "camera":   return <ContentTab onNavigate={nav} onViewPost={handleViewPost} initialSubTab="write" />;
+      case "camera":   return <ContentTab onNavigate={nav} onViewPost={handleViewPost} initialSubTab="ai" />;
       case "mypage":   return <MyPage />;
       default:         return <HomeTab onNavigate={nav} onViewPost={handleViewPost} />;
     }

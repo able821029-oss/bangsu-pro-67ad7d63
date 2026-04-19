@@ -216,13 +216,26 @@ export function HomeTab({
         </div>
       </section>
 
-      {/* Power CTA — 강화된 글로우 */}
+      {/* Power CTA — AI 글쓰기 바로가기 (강화된 글로우) */}
+      <button
+        onClick={() => onNavigate("camera")}
+        className="btn-power w-full text-base relative overflow-hidden"
+        aria-label="AI 글쓰기 바로 시작"
+      >
+        <Sparkles className="w-5 h-5" strokeWidth={2.2} />
+        <span>AI로 블로그 글 자동 생성</span>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/25 ml-1">
+          추천
+        </span>
+      </button>
+
+      {/* 직접 글쓰기 보조 링크 */}
       <button
         onClick={() => onNavigate("content")}
-        className="btn-power w-full text-base"
+        className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
-        <Camera className="w-5 h-5" strokeWidth={2.2} />
-        <span>지금 바로 글 작성하기</span>
+        <Camera className="w-3.5 h-3.5" />
+        사진만 찍고 직접 글쓰기
       </button>
 
       {/* 현장 도우미 바로가기 */}
