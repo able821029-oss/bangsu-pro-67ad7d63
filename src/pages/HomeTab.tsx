@@ -9,23 +9,9 @@ import {
   Upload,
   Film,
   Flame,
-  Gauge,
-  Sparkles,
   Hammer,
   FileText,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconChip } from "@/components/IconChip";
@@ -111,7 +97,6 @@ export function HomeTab({
   const progressColor = usagePercent >= 100 ? "#EF4444" : usagePercent >= 80 ? "#F97316" : "#237FFF";
 
   const seoScore = 74;
-  const seoDonutData = [{ value: seoScore }, { value: 100 - seoScore }];
 
   const naverCount = posts.filter(
     (p) => p.platforms.includes("naver") && (p.status === "완료" || p.status === "게시완료"),
@@ -300,78 +285,17 @@ export function HomeTab({
         </button>
       </div>
 
-      {/* Weekly Bar Chart */}
-      <div className="chart-card p-4 space-y-3" role="img" aria-label="최근 4주 발행 현황 차트">
-        <p className="text-sm font-semibold text-foreground">최근 4주 발행 현황</p>
-        <div aria-hidden="true">
-        <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={weeklyData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis dataKey="week" tick={{ fontSize: 11, fill: "hsl(215 16% 47%)" }} />
-            <YAxis tick={{ fontSize: 11, fill: "hsl(215 16% 47%)" }} />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 8,
-                fontSize: 12,
-                color: "hsl(var(--foreground))",
-              }}
-            />
-            <Bar dataKey="count" fill="#237FFF" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-        </div>
-      </div>
+      {/* Weekly Bar Chart — 심플 커스텀 바 차트 */}
+      <WeeklyBarCard weeklyData={weeklyData} />
 
-      {/* SEO Donut + Platform Bars */}
+      {/* SEO + Platform Bars — 심플 레이아웃 */}
       <div className="grid grid-cols-2 gap-3">
-        {/* SEO 도넛 — 클릭 시 seo 탭 이동 */}
-        <div className="chart-card p-4 flex flex-col items-center" role="img" aria-label={`블로그 SEO 점수 ${seoScore}점`}>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">블로그 SEO 점수</p>
-          <div className="relative" aria-hidden="true">
-            <PieChart width={100} height={100}>
-              <Pie
-                data={seoDonutData}
-                innerRadius={35}
-                outerRadius={48}
-                startAngle={90}
-                endAngle={-270}
-                dataKey="value"
-                stroke="none"
-              >
-                <Cell fill="#237FFF" />
-                <Cell fill="rgba(35,127,255,0.08)" />
-              </Pie>
-            </PieChart>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-lg font-bold text-foreground">{seoScore}점</span>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">블로그 SEO</p>
-        </div>
-
-        <div className="chart-card p-4 space-y-3" role="img" aria-label="플랫폼별 발행 현황">
-          <p className="text-xs font-semibold text-muted-foreground">플랫폼별 발행</p>
-          <PlatformBar
-            label="네이버"
-            count={naverCount}
-            max={Math.max(naverCount, instaCount, tiktokCount, 1)}
-            color="#03C75A"
-          />
-          <PlatformBar
-            label="인스타"
-            count={instaCount}
-            max={Math.max(naverCount, instaCount, tiktokCount, 1)}
-            color="#E1306C"
-          />
-          <PlatformBar
-            label="틱톡"
-            count={tiktokCount}
-            max={Math.max(naverCount, instaCount, tiktokCount, 1)}
-            color="#888888"
-          />
-        </div>
+        <SeoDonutCard score={seoScore} />
+        <PlatformBarCard
+          naver={naverCount}
+          insta={instaCount}
+          tiktok={tiktokCount}
+        />
       </div>
 
       {/* Recent Posts */}
@@ -462,17 +386,151 @@ export function HomeTab({
   );
 }
 
-function PlatformBar({ label, count, max, color }: { label: string; count: number; max: number; color: string }) {
-  const width = max > 0 ? (count / max) * 100 : 0;
+// ── 심플 주간 바 차트 — 순수 HTML/CSS로 구현 (recharts 불필요) ──
+function WeeklyBarCard({ weeklyData }: { weeklyData: Array<{ week: string; count: number }> }) {
+  const total = weeklyData.reduce((sum, w) => sum + w.count, 0);
+  const max = Math.max(...weeklyData.map((w) => w.count), 1);
+
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <span className="text-xs font-semibold text-foreground">{count}건</span>
+    <section className="glass-card p-5" aria-label="최근 4주 발행 현황">
+      <div className="flex items-baseline justify-between mb-4">
+        <h3 className="text-sm font-bold text-foreground">최근 4주 발행</h3>
+        <div className="flex items-baseline gap-1">
+          <span className="stat-number text-xl">{total}</span>
+          <span className="stat-unit text-xs">건</span>
+        </div>
       </div>
-      <div className="w-full bg-white/[0.04] rounded-full h-2">
-        <div className="rounded-full h-2 transition-all" style={{ width: `${width}%`, backgroundColor: color }} />
+
+      {total === 0 ? (
+        <div className="h-[140px] flex flex-col items-center justify-center gap-1 text-center">
+          <p className="text-xs text-muted-foreground">아직 발행 데이터가 없어요</p>
+          <p className="text-[11px] text-muted-foreground/60">첫 글을 작성해보세요</p>
+        </div>
+      ) : (
+        <div className="flex items-end justify-between gap-4 h-[120px]" aria-hidden="true">
+          {weeklyData.map((w) => {
+            const pct = Math.max(4, (w.count / max) * 100);
+            return (
+              <div key={w.week} className="flex-1 flex flex-col items-center gap-2 min-w-0">
+                <div className="relative flex-1 w-full flex items-end">
+                  <div
+                    className="w-full rounded-t-lg transition-all duration-500"
+                    style={{
+                      height: `${pct}%`,
+                      background: w.count > 0
+                        ? "linear-gradient(180deg, #4C8EFF 0%, #237FFF 100%)"
+                        : "rgba(76,142,255,0.08)",
+                      boxShadow: w.count > 0 ? "0 0 12px rgba(35,127,255,0.35)" : undefined,
+                    }}
+                  />
+                  {w.count > 0 && (
+                    <span
+                      className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-primary"
+                    >
+                      {w.count}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground">{w.week}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ── SEO 점수 도넛 — 심플 SVG ──
+function SeoDonutCard({ score }: { score: number }) {
+  const r = 32;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, score));
+  const dash = (clamped / 100) * c;
+
+  return (
+    <section className="glass-card p-4 flex flex-col items-center justify-center gap-2" aria-label={`블로그 SEO 점수 ${score}점`}>
+      <p className="text-[11px] font-medium text-muted-foreground">블로그 SEO 점수</p>
+      <div className="relative" aria-hidden="true">
+        <svg width="96" height="96" viewBox="0 0 96 96">
+          <defs>
+            <linearGradient id="seoGrad" x1="0" y1="0" x2="96" y2="96">
+              <stop offset="0%" stopColor="#4C8EFF" />
+              <stop offset="100%" stopColor="#AB5EBE" />
+            </linearGradient>
+          </defs>
+          {/* 배경 원 */}
+          <circle cx="48" cy="48" r={r} stroke="rgba(76,142,255,0.12)" strokeWidth="8" fill="none" />
+          {/* 진행률 */}
+          <circle
+            cx="48"
+            cy="48"
+            r={r}
+            stroke="url(#seoGrad)"
+            strokeWidth="8"
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={`${dash} ${c}`}
+            transform="rotate(-90 48 48)"
+            style={{ filter: "drop-shadow(0 0 6px rgba(76,142,255,0.45))" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="stat-number text-2xl">
+            {score}
+            <span className="stat-unit text-xs ml-0.5">점</span>
+          </span>
+        </div>
       </div>
-    </div>
+    </section>
+  );
+}
+
+// ── 플랫폼 발행 바 ──
+const PLATFORM_META = {
+  naver: { label: "네이버", color: "#03C75A" },
+  instagram: { label: "인스타", color: "#E1306C" },
+  tiktok: { label: "틱톡", color: "#FFFFFF" },
+} as const;
+
+function PlatformBarCard({ naver, insta, tiktok }: { naver: number; insta: number; tiktok: number }) {
+  const total = naver + insta + tiktok;
+  const max = Math.max(naver, insta, tiktok, 1);
+  const rows: Array<{ key: keyof typeof PLATFORM_META; count: number }> = [
+    { key: "naver", count: naver },
+    { key: "instagram", count: insta },
+    { key: "tiktok", count: tiktok },
+  ];
+
+  return (
+    <section className="glass-card p-4 space-y-3" aria-label="플랫폼별 발행 현황">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[11px] font-medium text-muted-foreground">플랫폼별 발행</p>
+        <span className="text-[10px] text-muted-foreground">총 {total}건</span>
+      </div>
+      <div className="space-y-2.5" aria-hidden="true">
+        {rows.map(({ key, count }) => {
+          const pct = max > 0 ? (count / max) * 100 : 0;
+          return (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-foreground/80">{PLATFORM_META[key].label}</span>
+                <span className="text-[11px] font-semibold text-foreground">{count}건</span>
+              </div>
+              <div className="w-full bg-white/[0.04] rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: PLATFORM_META[key].color,
+                    boxShadow: count > 0 ? `0 0 8px ${PLATFORM_META[key].color}66` : undefined,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
