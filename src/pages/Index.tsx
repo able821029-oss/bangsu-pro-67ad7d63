@@ -162,11 +162,7 @@ function AppContent() {
       <main
         id="main-content"
         className="flex-1 w-full"
-        style={{
-          WebkitOverflowScrolling: "touch",
-          touchAction: "pan-y",
-          overscrollBehaviorY: "contain",
-        }}
+        style={{ WebkitOverflowScrolling: "touch" }}
       >
         <ErrorBoundary
           key={activeTab}
