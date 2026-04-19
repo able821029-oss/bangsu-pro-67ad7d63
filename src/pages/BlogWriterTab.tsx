@@ -478,9 +478,9 @@ function Step2Sections({
           <div className="icon-chip icon-chip-lg mx-auto">
             <Sparkles color="#AB5EBE" size={22} />
           </div>
-          <p className="text-sm font-semibold text-foreground">아직 섹션이 없어요</p>
+          <p className="text-sm font-semibold text-foreground">아직 작성된 글이 없어요</p>
           <p className="text-xs text-muted-foreground">
-            <strong>+ 섹션 추가</strong> 버튼으로 소제목, 사진, 글을 자유롭게 배치해 주세요
+            <strong>+ 글쓰기 추가</strong> 버튼으로 소제목, 사진, 글을 자유롭게 배치해 주세요
           </p>
         </div>
       )}
@@ -499,7 +499,7 @@ function Step2Sections({
         onClick={onAddSection}
         className="w-full flex items-center justify-center gap-2 glass-card py-4 font-semibold text-primary border border-dashed border-primary/40 hover:bg-primary/5 transition-colors"
       >
-        <Plus className="w-4 h-4" /> 섹션 추가
+        <Plus className="w-4 h-4" /> 글쓰기 추가
       </button>
 
       <div className="flex gap-2 pt-2">
