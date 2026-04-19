@@ -28,10 +28,14 @@ jobs:
 
       - name: Build
         env:
-          VITE_SUPABASE_URL: https://stnpepxiysfoblfeqvpu.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0bnBlcHhpeXNmb2JsZmVxdnB1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NTQwMTAsImV4cCI6MjA5MTIzMDAxMH0.ipYiFOAbS1XQ1hpTa_kghsdUFDWv8P-OhzIPtSQW1qA
-          VITE_SUPABASE_PROJECT_ID: stnpepxiysfoblfeqvpu
-          VITE_VIDEO_SERVER_URL: https://bangsu-pro-67ad7d63-production-6e2e.up.railway.app
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+          VITE_VIDEO_SERVER_URL: ${{ secrets.VITE_VIDEO_SERVER_URL }}
+          VITE_GA_ID: ${{ secrets.VITE_GA_ID }}
+          VITE_CLARITY_ID: ${{ secrets.VITE_CLARITY_ID }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_KAKAO_JAVASCRIPT_KEY: ${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY }}
         run: npm run build
 
       - name: Deploy to Cloudflare Pages
