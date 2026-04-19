@@ -44,8 +44,9 @@ export default function ResetPasswordPage() {
       if (error) throw error;
       setDone(true);
       toast.success("비밀번호가 변경되었습니다!");
-    } catch (e: any) {
-      toast.error(e.message || "비밀번호 변경 실패");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "비밀번호 변경 실패";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

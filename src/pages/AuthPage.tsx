@@ -52,8 +52,8 @@ export default function AuthPage() {
         if (error) throw error;
         toast.success("로그인 성공!");
       }
-    } catch (e: any) {
-      const msg = e.message || "인증 오류";
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "인증 오류";
       if (msg.includes("Invalid login")) {
         toast.error("이메일 또는 비밀번호가 올바르지 않습니다");
       } else if (msg.includes("already registered") || msg.includes("already exists")) {
@@ -84,8 +84,9 @@ export default function AuthPage() {
       if (data?.error) { toast.error(data.error); return; }
       setResetDone(true);
       toast.success("비밀번호가 변경되었습니다!");
-    } catch (e: any) {
-      toast.error(e.message || "비밀번호 변경 실패");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "비밀번호 변경 실패";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

@@ -639,7 +639,7 @@ export function PostDetailPage({
               </div>
               {seoResult.checklist && (
                 <div className="space-y-1.5">
-                  {seoResult.checklist.map((item: any, i: number) => (
+                  {seoResult.checklist.map((item: { passed: boolean; label: string; current: string | number; recommend: string | number }, i: number) => (
                     <div key={i} className="flex items-start gap-2 text-xs">
                       {item.passed ? (
                         <Check className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
@@ -656,7 +656,7 @@ export function PostDetailPage({
               )}
               {seoResult.items && (
                 <div className="grid grid-cols-2 gap-2">
-                  {seoResult.items.slice(0, 4).map((item: any, i: number) => (
+                  {seoResult.items.slice(0, 4).map((item: { name: string; score: number }, i: number) => (
                     <div key={i} className="bg-secondary/50 rounded-lg px-2 py-1.5 text-xs">
                       <span className="text-muted-foreground">{item.name}</span>
                       <span className={`ml-1 font-bold ${seoScoreColor(item.score)}`}>{item.score}</span>

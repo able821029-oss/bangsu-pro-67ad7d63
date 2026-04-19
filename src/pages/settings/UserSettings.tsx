@@ -20,7 +20,13 @@ export function UserSettings({ onBack }: { onBack: () => void }) {
     toast({ title: "설정이 저장되었습니다" });
   };
 
-  const SwitchRow = ({ label, desc, value, onToggle, icon: Icon }: any) => (
+  const SwitchRow = ({ label, desc, value, onToggle, icon: Icon }: {
+    label: string;
+    desc?: string;
+    value: boolean;
+    onToggle: () => void;
+    icon: React.ElementType;
+  }) => (
     <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
