@@ -41,4 +41,30 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // 공통 의존성을 별도 청크로 분리 → 메인 번들 축소 + 브라우저 캐시 재활용
+        manualChunks: {
+          "react-core": ["react", "react-dom", "react-router-dom"],
+          "supabase": ["@supabase/supabase-js"],
+          "charts": ["recharts"],
+          "radix-ui": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-checkbox",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-progress",
+          ],
+          "date-utils": ["date-fns"],
+          "query": ["@tanstack/react-query"],
+        },
+      },
+    },
+  },
 }));

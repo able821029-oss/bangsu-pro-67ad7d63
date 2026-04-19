@@ -15,26 +15,22 @@ export function ContactPage({ onBack }: { onBack: () => void }) {
 
   const handleSend = async () => {
     if (!message.trim()) { toast.error("내용을 입력해주세요"); return; }
+    if (!user) { toast.error("로그인 후 이용해주세요"); return; }
     setLoading(true);
     try {
-      const { error } = await supabase.from("admin_config").upsert({
-        key: `inquiry_${Date.now()}`,
-        value: {
-          user_id: user?.id,
-          email: user?.email,
-          category,
-          message: message.trim(),
-          created_at: new Date().toISOString(),
-          status: "pending",
-        },
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "key" });
-
+      const { error } = await supabase.from("contact_messages").insert({
+        user_id: user.id,
+        email: user.email ?? null,
+        category,
+        message: message.trim(),
+        status: "pending",
+      });
       if (error) throw error;
       setSent(true);
       toast.success("문의가 접수되었습니다");
-    } catch (e: any) {
-      toast.error("전송 실패: " + (e.message || "다시 시도해주세요"));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "다시 시도해주세요";
+      toast.error("전송 실패: " + msg);
     } finally {
       setLoading(false);
     }

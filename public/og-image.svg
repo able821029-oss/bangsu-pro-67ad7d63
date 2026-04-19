@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0B1120"/>
+      <stop offset="50%" stop-color="#0E1322"/>
+      <stop offset="100%" stop-color="#150822"/>
+    </linearGradient>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#237FFF"/>
+      <stop offset="100%" stop-color="#AB5EBE"/>
+    </linearGradient>
+    <radialGradient id="glowL" cx="280" cy="315" r="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#237FFF" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#237FFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowR" cx="980" cy="315" r="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#AB5EBE" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#AB5EBE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+  <rect width="1200" height="630" fill="url(#glowL)"/>
+  <rect width="1200" height="630" fill="url(#glowR)"/>
+
+  <!-- 상단 장식 점 -->
+  <g opacity="0.4">
+    <circle cx="120" cy="120" r="3" fill="#4C8EFF"/>
+    <circle cx="1080" cy="100" r="2" fill="#AB5EBE"/>
+    <circle cx="950" cy="520" r="2.5" fill="#4C8EFF"/>
+    <circle cx="200" cy="540" r="2" fill="#AB5EBE"/>
+  </g>
+
+  <!-- 로고 박스 -->
+  <g transform="translate(100 195)">
+    <rect width="240" height="240" rx="56" fill="url(#brandGrad)"/>
+    <rect x="12" y="12" width="216" height="216" rx="46" fill="#0E1322"/>
+    <text x="120" y="170" text-anchor="middle" font-family="Manrope, 'Arial Black', sans-serif" font-weight="900" font-size="170" fill="url(#brandGrad)">S</text>
+  </g>
+
+  <!-- 타이포 -->
+  <g transform="translate(430 215)">
+    <text font-family="Manrope, 'Noto Sans KR', sans-serif" font-weight="900" font-size="96" fill="#DEE1F7">
+      <tspan x="0" y="0">SMS</tspan>
+    </text>
+    <text font-family="'Noto Sans KR', sans-serif" font-weight="700" font-size="40" fill="#DEE1F7">
+      <tspan x="0" y="66">사장님을 위한</tspan>
+      <tspan x="0" y="116">자동 블로그 마케팅</tspan>
+    </text>
+    <text font-family="Inter, 'Noto Sans KR', sans-serif" font-weight="500" font-size="22" fill="rgba(180,185,210,0.7)" letter-spacing="3">
+      <tspan x="0" y="180">SELF MARKETING SERVICE</tspan>
+    </text>
+  </g>
+
+  <!-- 하단 강조 라인 -->
+  <rect x="0" y="625" width="1200" height="5" fill="url(#brandGrad)"/>
+</svg>
