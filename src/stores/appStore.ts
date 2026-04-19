@@ -64,6 +64,10 @@ export interface BlogDraft {
 
 export const MAX_DRAFTS = 4;
 
+export function createEmptySection(): DraftSection {
+  return { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
+}
+
 export function createEmptyDraft(): BlogDraft {
   return {
     id: crypto.randomUUID(),
@@ -72,13 +76,10 @@ export function createEmptyDraft(): BlogDraft {
     siteArea: "",
     siteMethod: "",
     siteEtc: "",
-    sections: [],
+    // 시작부터 섹션 1개 기본 노출
+    sections: [createEmptySection()],
     createdAt: new Date().toISOString(),
   };
-}
-
-export function createEmptySection(): DraftSection {
-  return { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
 }
 
 export interface Coupon {

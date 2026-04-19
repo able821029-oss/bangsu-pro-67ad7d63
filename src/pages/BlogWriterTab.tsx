@@ -18,6 +18,28 @@ import { cn } from "@/lib/utils";
 
 type WizardStep = 1 | 2;
 
+// 한국 17개 시·도 + 전국
+const REGIONS = [
+  "전국",
+  "서울",
+  "부산",
+  "대구",
+  "인천",
+  "광주",
+  "대전",
+  "울산",
+  "세종",
+  "경기",
+  "강원",
+  "충북",
+  "충남",
+  "전북",
+  "전남",
+  "경북",
+  "경남",
+  "제주",
+] as const;
+
 interface Props {
   onNavigate: (tab: TabId) => void;
   onViewPost: (post: BlogPost) => void;
@@ -306,11 +328,7 @@ function Step1Form({
         value={draft.title}
         onChange={(v) => onChange({ title: v })}
       />
-      <FormField
-        icon={MapPin}
-        iconColor="cyan"
-        label="지역"
-        placeholder="예) 서울 강남구 역삼동"
+      <RegionSelect
         value={draft.location}
         onChange={(v) => onChange({ location: v })}
       />
@@ -346,6 +364,44 @@ function Step1Form({
       <button onClick={onNext} className="btn-power w-full mt-2">
         다음 <ArrowRight className="w-5 h-5" />
       </button>
+    </div>
+  );
+}
+
+function RegionSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <IconChip icon={MapPin} color="cyan" size="sm" />
+        지역
+      </label>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-12 rounded-xl bg-background/60 border border-white/10 px-4 pr-10 text-sm text-foreground appearance-none focus-visible:outline-none focus:ring-1 focus:ring-primary/40"
+          aria-label="지역 선택"
+        >
+          <option value="">지역을 선택해주세요</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xs"
+        >
+          ▾
+        </span>
+      </div>
     </div>
   );
 }
