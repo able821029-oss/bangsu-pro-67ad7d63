@@ -54,10 +54,12 @@ export interface DraftSection {
 export interface BlogDraft {
   id: string;
   title: string;
-  location: string;
-  siteArea: string;    // 시공면적
-  siteMethod: string;  // 공법
-  siteEtc: string;     // 기타
+  location: string;        // 시/도 (예: 서울)
+  locationSigu: string;    // 시·군·구 (예: 강남구)
+  locationDong: string;    // 동/읍/면 (예: 역삼동)
+  siteArea: string;        // 시공면적
+  siteMethod: string;      // 공법
+  siteEtc: string;         // 기타
   sections: DraftSection[];
   createdAt: string;
 }
@@ -73,10 +75,11 @@ export function createEmptyDraft(): BlogDraft {
     id: crypto.randomUUID(),
     title: "",
     location: "",
+    locationSigu: "",
+    locationDong: "",
     siteArea: "",
     siteMethod: "",
     siteEtc: "",
-    // 시작부터 섹션 1개 기본 노출
     sections: [createEmptySection()],
     createdAt: new Date().toISOString(),
   };
