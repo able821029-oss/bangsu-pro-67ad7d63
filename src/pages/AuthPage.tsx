@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Eye, EyeOff, Mail } from "lucide-react";
 import { trackEvent, identifyUser } from "@/lib/analytics";
+import { SmsLogo } from "@/components/SmsLogo";
 
 export default function AuthPage() {
   const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
@@ -109,14 +110,11 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      {/* Logo */}
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-3"
-          style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)" }}>
-          <span className="text-3xl font-black text-white">S</span>
-        </div>
+      {/* Logo — SmsLogo 공용 */}
+      <div className="mb-8 flex flex-col items-center gap-2">
+        <SmsLogo size={72} glow />
         <h1 className="text-2xl font-black" style={{ background: "linear-gradient(90deg,#237FFF,#AB5EBE)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>SMS</h1>
-        <p className="text-xs text-muted-foreground mt-1 tracking-widest">셀프마케팅서비스</p>
+        <p className="text-xs text-muted-foreground tracking-widest">셀프마케팅서비스</p>
       </div>
 
       <div className="w-full max-w-sm space-y-3">

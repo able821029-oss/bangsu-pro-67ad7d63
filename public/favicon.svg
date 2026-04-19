@@ -1,11 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="16" fill="#001130"/>
   <defs>
-    <linearGradient id="sg" x1="14" y1="10" x2="50" y2="54" gradientUnits="userSpaceOnUse">
+    <linearGradient id="borderGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#237FFF"/>
+      <stop offset="100%" stop-color="#AB5EBE"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="16" y1="12" x2="50" y2="54" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#237FFF"/>
       <stop offset="52%" stop-color="#6C5CE7"/>
       <stop offset="100%" stop-color="#AB5EBE"/>
     </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <text x="8" y="52" font-family="Arial Black, Helvetica Neue, sans-serif" font-weight="900" font-size="52" fill="url(#sg)">S</text>
+  <!-- outer gradient border + dark inner -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#borderGrad)"/>
+  <rect x="5" y="5" width="54" height="54" rx="13" fill="#0E1322"/>
+  <!-- S wordmark -->
+  <text x="32" y="46" text-anchor="middle" font-family="Manrope, Arial Black, sans-serif" font-weight="900" font-size="40" fill="url(#textGrad)" filter="url(#glow)">S</text>
 </svg>

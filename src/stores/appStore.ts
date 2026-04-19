@@ -43,6 +43,44 @@ export interface ContentBlock {
   caption?: string;
 }
 
+// ── 새 글쓰기 위저드 — 최대 4개 동시 작성 ──
+export interface DraftSection {
+  id: string;
+  subtitle: string;
+  photo: PhotoItem | null;
+  text: string;
+}
+
+export interface BlogDraft {
+  id: string;
+  title: string;
+  location: string;
+  siteArea: string;    // 시공면적
+  siteMethod: string;  // 공법
+  siteEtc: string;     // 기타
+  sections: DraftSection[];
+  createdAt: string;
+}
+
+export const MAX_DRAFTS = 4;
+
+export function createEmptyDraft(): BlogDraft {
+  return {
+    id: crypto.randomUUID(),
+    title: "",
+    location: "",
+    siteArea: "",
+    siteMethod: "",
+    siteEtc: "",
+    sections: [],
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export function createEmptySection(): DraftSection {
+  return { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
+}
+
 export interface Coupon {
   id: string;
   code: string;
@@ -100,6 +138,10 @@ interface AppState {
   referralCount: number;
   useVideo: () => boolean;  // 영상 1개 사용
 
+  // 글쓰기 위저드 (최대 4개 동시 작성)
+  drafts: BlogDraft[];
+  activeDraftIdx: number;
+
   addPhoto: (photo: PhotoItem) => void;
   removePhoto: (id: string) => void;
   setWorkType: (type: WorkType) => void;
@@ -116,6 +158,16 @@ interface AppState {
   updateSubscription: (sub: Partial<Subscription>) => void;
   upgradePlan: (planName: string) => void;
   clearSession: () => void;
+
+  // Draft 액션
+  addDraft: () => void;
+  removeDraft: (idx: number) => void;
+  setActiveDraft: (idx: number) => void;
+  updateDraft: (idx: number, patch: Partial<BlogDraft>) => void;
+  addSection: (draftIdx: number) => void;
+  updateSection: (draftIdx: number, sectionId: string, patch: Partial<DraftSection>) => void;
+  removeSection: (draftIdx: number, sectionId: string) => void;
+  resetDraft: (idx: number) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -154,6 +206,8 @@ export const useAppStore = create<AppState>()(
   inquiries: [],
   referralCode: "BANGSU-A1B2C3",
   referralCount: 3,
+  drafts: [createEmptyDraft()],
+  activeDraftIdx: 0,
 
   addPhoto: (photo) =>
     set((state) => ({
@@ -253,6 +307,57 @@ export const useAppStore = create<AppState>()(
     set((s) => ({ subscription: { ...s.subscription, videoUsed: (s.subscription.videoUsed ?? 0) + 1 } }));
     return true;
   },
+
+  // ── Draft 액션 ──
+  addDraft: () =>
+    set((state) => {
+      if (state.drafts.length >= MAX_DRAFTS) return {};
+      const next = [...state.drafts, createEmptyDraft()];
+      return { drafts: next, activeDraftIdx: next.length - 1 };
+    }),
+  removeDraft: (idx) =>
+    set((state) => {
+      if (state.drafts.length <= 1) {
+        // 최소 1개는 유지 — 마지막 1개 삭제 시도는 초기화로 처리
+        return { drafts: [createEmptyDraft()], activeDraftIdx: 0 };
+      }
+      const next = state.drafts.filter((_, i) => i !== idx);
+      const newActive = Math.min(state.activeDraftIdx, next.length - 1);
+      return { drafts: next, activeDraftIdx: newActive };
+    }),
+  setActiveDraft: (idx) =>
+    set((state) => {
+      if (idx < 0 || idx >= state.drafts.length) return {};
+      return { activeDraftIdx: idx };
+    }),
+  updateDraft: (idx, patch) =>
+    set((state) => ({
+      drafts: state.drafts.map((d, i) => (i === idx ? { ...d, ...patch } : d)),
+    })),
+  addSection: (draftIdx) =>
+    set((state) => ({
+      drafts: state.drafts.map((d, i) =>
+        i === draftIdx ? { ...d, sections: [...d.sections, createEmptySection()] } : d,
+      ),
+    })),
+  updateSection: (draftIdx, sectionId, patch) =>
+    set((state) => ({
+      drafts: state.drafts.map((d, i) =>
+        i === draftIdx
+          ? { ...d, sections: d.sections.map((s) => (s.id === sectionId ? { ...s, ...patch } : s)) }
+          : d,
+      ),
+    })),
+  removeSection: (draftIdx, sectionId) =>
+    set((state) => ({
+      drafts: state.drafts.map((d, i) =>
+        i === draftIdx ? { ...d, sections: d.sections.filter((s) => s.id !== sectionId) } : d,
+      ),
+    })),
+  resetDraft: (idx) =>
+    set((state) => ({
+      drafts: state.drafts.map((d, i) => (i === idx ? createEmptyDraft() : d)),
+    })),
     }),
     {
       name: "sms-app-store", // localStorage 키
@@ -270,6 +375,8 @@ export const useAppStore = create<AppState>()(
         selectedPersona: state.selectedPersona,
         selectedStyle: state.selectedStyle,
         selectedPlatforms: state.selectedPlatforms,
+        drafts: state.drafts,
+        activeDraftIdx: state.activeDraftIdx,
       }),
     }
   )

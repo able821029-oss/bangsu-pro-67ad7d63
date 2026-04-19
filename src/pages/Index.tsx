@@ -4,6 +4,7 @@ import { InstallBanner } from "@/components/InstallBanner";
 import { OnboardingSlides } from "@/components/OnboardingSlides";
 import { AdminFab } from "@/components/AdminFab";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
+import { SmsLogo } from "@/components/SmsLogo";
 import { HomeTab } from "@/pages/HomeTab";
 import { BlogPost, useAppStore } from "@/stores/appStore";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -19,13 +20,25 @@ const MyPage = lazy(() => import("@/pages/MyPage").then(m => ({ default: m.MyPag
 const PostDetailPage = lazy(() => import("@/pages/PostDetailPage").then(m => ({ default: m.PostDetailPage })));
 const ReviewsPage = lazy(() => import("@/pages/ReviewsPage").then(m => ({ default: m.ReviewsPage })));
 
-const LoadingFallback = () => (
+// 전체화면 로더 — 최초 진입/인증 게이트용
+const FullLoadingFallback = () => (
   <div
     className="min-h-screen bg-background flex flex-col items-center justify-center gap-3 px-4"
     style={{ minHeight: "100dvh" }}
   >
     <div className="animate-spin w-10 h-10 border-2 border-primary border-t-transparent rounded-full" />
     <p className="text-sm text-muted-foreground">불러오는 중…</p>
+  </div>
+);
+
+// 탭 전환 로더 — 하단 바는 유지되도록 컨텐츠 영역만 차지
+const TabLoadingFallback = () => (
+  <div
+    className="flex items-center justify-center gap-2 text-muted-foreground"
+    style={{ minHeight: "calc(100dvh - 120px)" }}
+  >
+    <div className="animate-spin w-5 h-5 border-2 border-primary border-t-transparent rounded-full" />
+    <span className="text-xs">불러오는 중…</span>
   </div>
 );
 
@@ -52,20 +65,12 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         @keyframes fadeUp { from{transform:translateY(14px);opacity:0} to{transform:translateY(0);opacity:1} }
         @keyframes glowPulse { 0%,100%{opacity:.35;transform:scale(1)} 50%{opacity:.55;transform:scale(1.08)} }
         .splash-logo { animation: logoIn 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.1s both }
-        .splash-text { animation: fadeUp 0.45s ease-out 0.55s both }
-        .splash-sub  { animation: fadeUp 0.45s ease-out 0.72s both }
         .splash-glow { animation: glowPulse 2s ease-in-out infinite }
       `}</style>
       <div className="splash-glow" style={{ position:"absolute", width:260, height:260, borderRadius:"50%", background:"radial-gradient(circle,rgba(35,127,255,.18) 0%,rgba(171,94,190,.10) 50%,transparent 70%)", pointerEvents:"none" }} />
-      <div className="splash-logo" style={{ marginBottom:20, position:"relative", zIndex:1 }}>
-        <svg width="100" height="100" viewBox="0 0 64 64" fill="none">
-          <defs><linearGradient id="splashSg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#237FFF"/><stop offset="100%" stopColor="#AB5EBE"/></linearGradient></defs>
-          <rect width="64" height="64" rx="18" fill="url(#splashSg)"/>
-          <text x="8" y="52" fontFamily="Arial Black, Helvetica Neue, sans-serif" fontWeight="900" fontSize="52" fill="#FFFFFF">S</text>
-        </svg>
+      <div className="splash-logo" style={{ position:"relative", zIndex:1 }}>
+        <SmsLogo size={100} glow withWordmark />
       </div>
-      <p className="splash-text" style={{ fontWeight:900, fontSize:38, letterSpacing:"-0.5px", lineHeight:1, background:"linear-gradient(90deg,#237FFF,#AB5EBE)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", position:"relative", zIndex:1 }}>SMS</p>
-      <p className="splash-sub" style={{ marginTop:8, fontSize:11, fontWeight:600, letterSpacing:"4px", textTransform:"uppercase", color:"rgba(180,185,210,.65)", position:"relative", zIndex:1 }}>셀프마케팅서비스</p>
     </div>
   );
 }
@@ -105,11 +110,29 @@ function AppContent() {
     }
   }, [user, settings.companyName, activeTab]);
 
+  // 로그인 직후 탭 청크 프리로드 — 네트워크 idle 타이밍에 백그라운드로 로드
+  useEffect(() => {
+    if (!user) return;
+    const preload = () => {
+      import("@/pages/CalendarTab");
+      import("@/pages/ContentTab");
+      import("@/pages/ShortsTab");
+      import("@/pages/MyPage");
+    };
+    type WinIdle = Window & { requestIdleCallback?: (cb: () => void) => number };
+    const w = window as WinIdle;
+    if (w.requestIdleCallback) {
+      w.requestIdleCallback(preload);
+    } else {
+      setTimeout(preload, 1500);
+    }
+  }, [user]);
+
   // ── 경로별 조건부 렌더링 ──
   // /auth/naver/callback — 네이버 OAuth 콜백 처리
   if (currentPath.startsWith("/auth/naver/callback")) {
     return (
-      <Suspense fallback={<LoadingFallback />}>
+      <Suspense fallback={<FullLoadingFallback />}>
         <NaverCallbackPage />
       </Suspense>
     );
@@ -117,10 +140,10 @@ function AppContent() {
 
   if (showSplash) return <SplashScreen onDone={handleSplashDone} />;
   if (showOnboarding) return <OnboardingSlides onComplete={handleOnboardingComplete} />;
-  if (loading) return <LoadingFallback />;
+  if (loading) return <FullLoadingFallback />;
   if (!user) return (
     <>
-      <Suspense fallback={<LoadingFallback />}><LoginPage /></Suspense>
+      <Suspense fallback={<FullLoadingFallback />}><LoginPage /></Suspense>
       <AdminFab />
     </>
   );
@@ -128,7 +151,7 @@ function AppContent() {
   if (showReviews) {
     return (
       <>
-        <Suspense fallback={<LoadingFallback />}><ReviewsPage onBack={() => setShowReviews(false)} /></Suspense>
+        <Suspense fallback={<FullLoadingFallback />}><ReviewsPage onBack={() => setShowReviews(false)} /></Suspense>
         <AdminFab />
       </>
     );
@@ -137,7 +160,7 @@ function AppContent() {
   if (viewingPost) {
     return (
       <div className="min-h-screen bg-background">
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<FullLoadingFallback />}>
           <PostDetailPage post={viewingPost} onBack={handleBackFromPost} onNavigate={(t) => setActiveTab(t as TabId)} />
         </Suspense>
         <AdminFab />
@@ -179,7 +202,7 @@ function AppContent() {
           key={activeTab}
           onReset={() => setActiveTab("home")}
         >
-          <Suspense fallback={<LoadingFallback />}>
+          <Suspense fallback={<TabLoadingFallback />}>
             {renderTab()}
           </Suspense>
         </ErrorBoundary>

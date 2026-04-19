@@ -5,6 +5,7 @@ import { Phone, ShieldCheck, Loader2, Mail, ArrowLeft, FlaskConical } from "luci
 import AuthPage from "@/pages/AuthPage";
 import { trackEvent, identifyUser } from "@/lib/analytics";
 import { enableDevMode, isDevModeAllowed } from "@/lib/devAuth";
+import { SmsLogo } from "@/components/SmsLogo";
 
 /**
  * SMS 로그인 페이지 — 전화번호 + SMS OTP 인증
@@ -157,31 +158,14 @@ export function LoginPage() {
       className="min-h-screen bg-background flex flex-col items-center justify-between px-6 py-10"
       style={{ minHeight: "100dvh" }}
     >
-      {/* 상단 로고/타이틀 */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm">
-        <div
-          className="w-20 h-20 rounded-3xl p-1 mb-6"
-          style={{
-            background: "linear-gradient(135deg, #237FFF, #AB5EBE)",
-            boxShadow: "0 0 32px rgba(35,127,255,0.35)",
-          }}
-        >
-          <div className="w-full h-full rounded-[1.25rem] bg-background flex items-center justify-center">
-            <span
-              className="headline-font font-black text-3xl text-glow"
-              style={{
-                background: "linear-gradient(135deg, #237FFF, #AB5EBE)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              S
-            </span>
-          </div>
+      {/* 상단 로고/타이틀 — SmsLogo 공용 컴포넌트 */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm gap-1">
+        <div className="mb-4">
+          <SmsLogo size={88} glow />
         </div>
-        <h1 className="text-2xl font-bold text-foreground mb-2">SMS</h1>
-        <p className="text-sm text-muted-foreground mb-1">Self Marketing Service</p>
-        <p className="text-xs text-muted-foreground/70 text-center">
+        <h1 className="text-2xl font-bold text-foreground">SMS</h1>
+        <p className="text-sm text-muted-foreground">Self Marketing Service</p>
+        <p className="text-xs text-muted-foreground/70 text-center mt-1">
           소상공인을 위한 AI 마케팅 앱
         </p>
       </div>
