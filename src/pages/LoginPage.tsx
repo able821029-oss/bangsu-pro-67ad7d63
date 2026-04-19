@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Phone, ShieldCheck, Loader2, Mail, ArrowLeft } from "lucide-react";
+import { Phone, ShieldCheck, Loader2, Mail, ArrowLeft, FlaskConical } from "lucide-react";
 import AuthPage from "@/pages/AuthPage";
 import { trackEvent, identifyUser } from "@/lib/analytics";
+import { enableDevMode, isDevModeAllowed } from "@/lib/devAuth";
 
 /**
  * SMS 로그인 페이지 — 전화번호 + SMS OTP 인증
@@ -125,6 +126,13 @@ export function LoginPage() {
     setStep("phone");
     setToken("");
     setResendIn(0);
+  };
+
+  const handleDevTestMode = () => {
+    enableDevMode();
+    toast.success("테스트 모드 진입", { description: "실제 계정 없이 앱을 둘러봅니다" });
+    // AuthProvider가 isDevModeActive를 읽도록 리로드
+    setTimeout(() => window.location.reload(), 300);
   };
 
   if (showEmail) {
@@ -282,6 +290,18 @@ export function LoginPage() {
           <Mail className="w-3.5 h-3.5" />
           이메일로 가입 / 로그인
         </button>
+
+        {/* 🧪 개발 테스트 모드 — localhost 전용 */}
+        {isDevModeAllowed() && (
+          <button
+            onClick={handleDevTestMode}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-xl border border-dashed border-amber-500/40 text-amber-400 hover:bg-amber-500/10 transition-colors"
+            aria-label="개발 테스트 모드로 입장"
+          >
+            <FlaskConical className="w-3.5 h-3.5" />
+            개발 테스트 모드로 입장 (Supabase 불필요)
+          </button>
+        )}
 
         {/* 약관 고지 */}
         <p className="text-[10px] text-muted-foreground/60 text-center leading-relaxed">
