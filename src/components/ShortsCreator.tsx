@@ -285,12 +285,50 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
   }, [autoStart]);
 
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // 브라우저 내장 TTS(무료, 즉시) — 미리듣기 전용. 최종 영상은 ElevenLabs 사용.
+  const playWithWebSpeech = useCallback((voice: VoiceOption): boolean => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
+    try {
+      // 기존 재생 중이면 즉시 중단
+      window.speechSynthesis.cancel();
+
+      const utter = new SpeechSynthesisUtterance(PREVIEW_TEXT);
+      utter.lang = voice.lang || "ko-KR";
+      utter.pitch = voice.pitch ?? 1;
+      utter.rate = voice.rate ?? 1;
+
+      // 사용 가능한 한국어 음성 중 성별 힌트에 맞는 것 선택
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        const koVoices = voices.filter((v) => v.lang?.startsWith("ko"));
+        const pool = koVoices.length > 0 ? koVoices : voices;
+        const byHint = pool.find((v) =>
+          voice.voiceNameHint?.some((h) => v.name?.toLowerCase().includes(h.toLowerCase())),
+        );
+        utter.voice = byHint ?? pool[0];
+      }
+
+      utter.onend = () => { setPlayingVoice(null); speechUtteranceRef.current = null; };
+      utter.onerror = () => { setPlayingVoice(null); speechUtteranceRef.current = null; };
+      speechUtteranceRef.current = utter;
+      window.speechSynthesis.speak(utter);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   const handlePreviewVoice = useCallback(async (voice: VoiceOption) => {
     // 현재 재생 중이면 정지
     if (previewAudioRef.current) {
       previewAudioRef.current.pause();
       previewAudioRef.current = null;
+    }
+    if (speechUtteranceRef.current && typeof window !== "undefined") {
+      window.speechSynthesis?.cancel();
+      speechUtteranceRef.current = null;
     }
 
     if (playingVoice === voice.id) {
@@ -300,7 +338,10 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
 
     setPlayingVoice(voice.id);
 
-    // ElevenLabs TTS via Edge Function 프록시 (API 키 보호)
+    // 1) 브라우저 내장 Web Speech API 우선 — 무료, 즉시, 인터넷 불필요
+    if (playWithWebSpeech(voice)) return;
+
+    // 2) 폴백: ElevenLabs (유료/쿼터 초과 시 실패 가능)
     try {
       const { data, error } = await supabase.functions.invoke("tts-preview", {
         body: { voiceId: voice.id, text: PREVIEW_TEXT },
@@ -319,17 +360,16 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         return;
       }
     } catch (err) {
-      console.error("[TTS] ElevenLabs 호출 실패:", err);
+      console.warn("[TTS] ElevenLabs 폴백 실패:", err);
     }
 
-    // ElevenLabs 실패 — 에러 토스트만, 기계음 폴백 없음
     setPlayingVoice(null);
     toast({
-      title: "음성 미리듣기 실패",
-      description: "잠시 후 다시 시도해 주세요.",
+      title: "음성 미리듣기를 사용할 수 없어요",
+      description: "최신 크롬/사파리를 사용해 주세요.",
       variant: "destructive",
     });
-  }, [playingVoice, toast]);
+  }, [playingVoice, toast, playWithWebSpeech]);
 
   const handleBgmPreview = (id: BgmType) => {
     // 이미 재생 중이면 정지
