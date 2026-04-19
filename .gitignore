@@ -43,3 +43,8 @@ bun.lockb
 
 # Lovable 잔재
 .lovable/
+
+# Test artifacts
+dev-*.png
+verify-*.cjs
+test-*.cjs
