@@ -1,138 +1,52 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Phone, ShieldCheck, Loader2, Mail, ArrowLeft, FlaskConical } from "lucide-react";
+import { Mail, ArrowLeft, FlaskConical, Loader2 } from "lucide-react";
 import AuthPage from "@/pages/AuthPage";
-import { trackEvent, identifyUser } from "@/lib/analytics";
+import { trackEvent } from "@/lib/analytics";
 import { enableDevMode, isDevModeAllowed } from "@/lib/devAuth";
 import { SmsLogo } from "@/components/SmsLogo";
 
 /**
- * SMS 로그인 페이지 — 전화번호 + SMS OTP 인증
+ * SMS 로그인 페이지 — 무료 소셜 로그인 (카카오 · 구글) + 이메일 대체
  *
  * 📋 Supabase 대시보드 설정 필수:
- *    Authentication → Providers → Phone → Enable
- *    Twilio / MessageBird / Vonage / Textlocal 중 SMS 공급자 선택 후
- *    Account SID · Auth Token · Message Service SID 또는 From Number 등록.
- *    (개발 중에는 Twilio Trial Account로 인증된 번호만 수신 가능)
+ *    Authentication → Providers → Kakao / Google → Enable
+ *    Client ID · Client Secret 등록.
+ *    Callback URL은 https://stnpepxiysfoblfeqvpu.supabase.co/auth/v1/callback
  */
-
-// "010-1234-5678" / "01012345678" / "+8210..." → E.164 "+8210..."
-function toE164KR(input: string): string | null {
-  const digits = input.replace(/\D/g, "");
-  if (!digits) return null;
-  if (digits.startsWith("82")) return "+" + digits;
-  if (digits.startsWith("0")) return "+82" + digits.slice(1);
-  return "+82" + digits;
-}
-
-// 자동 포맷 010-1234-5678
-function formatKRPhone(input: string): string {
-  const d = input.replace(/\D/g, "").slice(0, 11);
-  if (d.length < 4) return d;
-  if (d.length < 8) return `${d.slice(0, 3)}-${d.slice(3)}`;
-  return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
-}
-
-const RESEND_COOLDOWN_SEC = 60;
 
 export function LoginPage() {
   const [showEmail, setShowEmail] = useState(false);
-  const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [phone, setPhone] = useState("");
-  const [token, setToken] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [resendIn, setResendIn] = useState(0);
+  const [loadingProvider, setLoadingProvider] = useState<"kakao" | "google" | null>(null);
 
-  // 재전송 타이머
-  useEffect(() => {
-    if (resendIn <= 0) return;
-    const id = setTimeout(() => setResendIn((s) => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [resendIn]);
-
-  const handleSendCode = async () => {
-    const e164 = toE164KR(phone);
-    if (!e164 || e164.length < 13) {
-      toast.error("올바른 휴대폰 번호를 입력해주세요");
-      return;
-    }
-    setLoading(true);
+  const handleOAuth = async (provider: "kakao" | "google") => {
+    setLoadingProvider(provider);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: e164,
-        options: { channel: "sms" },
+      const redirectTo = `${window.location.origin}`;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo },
       });
       if (error) throw error;
-      toast.success("인증번호를 전송했습니다");
-      trackEvent("otp_requested", { channel: "sms" });
-      setStep("otp");
-      setResendIn(RESEND_COOLDOWN_SEC);
+      trackEvent("sign_in_attempt", { method: provider });
+      // 리다이렉트가 발생하므로 여기서 로딩 해제는 거의 도달하지 않음
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "인증번호 전송 실패";
-      if (msg.includes("rate limit") || msg.includes("Too many")) {
-        toast.error("잠시 후 다시 시도해주세요 (요청 제한)");
-      } else if (msg.toLowerCase().includes("phone provider")) {
-        toast.error("SMS 서비스가 설정되지 않았습니다", {
-          description: "Supabase Authentication > Providers > Phone을 활성화해주세요.",
+      const msg = e instanceof Error ? e.message : `${provider} 로그인 실패`;
+      if (msg.toLowerCase().includes("provider is not enabled")) {
+        toast.error(`${provider === "kakao" ? "카카오" : "구글"} 로그인이 아직 설정되지 않았어요`, {
+          description: "Supabase Authentication > Providers 에서 활성화해주세요.",
         });
       } else {
         toast.error(msg);
       }
-    } finally {
-      setLoading(false);
+      setLoadingProvider(null);
     }
-  };
-
-  const handleVerify = async () => {
-    const e164 = toE164KR(phone);
-    if (!e164) {
-      toast.error("전화번호가 유효하지 않습니다");
-      return;
-    }
-    if (token.length !== 6) {
-      toast.error("6자리 인증번호를 입력해주세요");
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: e164,
-        token,
-        type: "sms",
-      });
-      if (error) throw error;
-      if (data?.user?.id) identifyUser(data.user.id);
-      toast.success("로그인 성공!");
-      trackEvent("sign_in", { method: "phone_otp" });
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "인증 실패";
-      if (msg.includes("Invalid") || msg.includes("expired")) {
-        toast.error("인증번호가 올바르지 않거나 만료되었습니다");
-      } else {
-        toast.error(msg);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendIn > 0) return;
-    setToken("");
-    await handleSendCode();
-  };
-
-  const handleChangeNumber = () => {
-    setStep("phone");
-    setToken("");
-    setResendIn(0);
   };
 
   const handleDevTestMode = () => {
     enableDevMode();
     toast.success("테스트 모드 진입", { description: "실제 계정 없이 앱을 둘러봅니다" });
-    // AuthProvider가 isDevModeActive를 읽도록 리로드
     setTimeout(() => window.location.reload(), 300);
   };
 
@@ -158,7 +72,7 @@ export function LoginPage() {
       className="min-h-screen bg-background flex flex-col items-center justify-between px-6 py-10"
       style={{ minHeight: "100dvh" }}
     >
-      {/* 상단 로고/타이틀 — SmsLogo 공용 컴포넌트 */}
+      {/* 상단 로고/타이틀 */}
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm gap-1">
         <div className="mb-4">
           <SmsLogo size={88} glow />
@@ -170,109 +84,55 @@ export function LoginPage() {
         </p>
       </div>
 
-      {/* 인증 카드 */}
-      <div className="w-full max-w-sm space-y-4">
-        {step === "phone" ? (
-          <div className="glass-card-glow p-5 space-y-4">
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
-                <Phone className="w-3.5 h-3.5" /> 휴대폰 번호
-              </label>
-              <input
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel"
-                placeholder="010-1234-5678"
-                value={phone}
-                onChange={(e) => setPhone(formatKRPhone(e.target.value))}
-                onKeyDown={(e) => e.key === "Enter" && !loading && handleSendCode()}
-                className="w-full h-12 rounded-xl bg-background/60 border border-white/10 px-4 text-foreground text-base tracking-wide placeholder-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-primary/40"
-              />
-              <p className="text-[11px] text-muted-foreground pt-0.5">
-                SMS로 6자리 인증번호를 보내드립니다
-              </p>
-            </div>
-            <button
-              onClick={handleSendCode}
-              disabled={loading || phone.replace(/\D/g, "").length < 10}
-              className="btn-power w-full text-[15px] disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <Phone className="w-4 h-4" />
-                  인증번호 받기
-                </>
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="glass-card-glow p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <p className="text-[11px] text-muted-foreground">인증번호 전송됨</p>
-                <p className="text-sm font-semibold text-foreground">{phone}</p>
-              </div>
-              <button
-                onClick={handleChangeNumber}
-                className="text-[11px] text-primary hover:underline"
-              >
-                번호 변경
-              </button>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
-                <ShieldCheck className="w-3.5 h-3.5" /> 인증번호 (6자리)
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                maxLength={6}
-                value={token}
-                onChange={(e) => setToken(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                onKeyDown={(e) => e.key === "Enter" && !loading && handleVerify()}
-                className="w-full h-14 rounded-xl bg-background/60 border border-white/10 px-4 text-foreground text-2xl font-bold tracking-[0.4em] text-center placeholder-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-primary/40"
-              />
-              <div className="flex items-center justify-between pt-1">
-                <p className="text-[11px] text-muted-foreground">
-                  문자메시지를 확인해주세요
-                </p>
-                <button
-                  onClick={handleResend}
-                  disabled={resendIn > 0 || loading}
-                  className="text-[11px] text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
-                >
-                  {resendIn > 0 ? `재전송 (${resendIn}s)` : "재전송"}
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={handleVerify}
-              disabled={loading || token.length !== 6}
-              className="btn-power w-full text-[15px] disabled:opacity-50"
-            >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4" />
-                  인증하고 로그인
-                </>
-              )}
-            </button>
-          </div>
-        )}
+      {/* 로그인 버튼 스택 */}
+      <div className="w-full max-w-sm space-y-3">
+        {/* 카카오 로그인 — Primary */}
+        <button
+          onClick={() => handleOAuth("kakao")}
+          disabled={loadingProvider !== null}
+          aria-label="카카오로 시작하기"
+          className="w-full h-[52px] rounded-full flex items-center justify-center gap-2 font-bold text-[15px] transition-transform active:scale-95 disabled:opacity-60"
+          style={{ background: "#FEE500", color: "#191919" }}
+        >
+          {loadingProvider === "kakao" ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              <KakaoIcon />
+              카카오로 시작하기
+            </>
+          )}
+        </button>
+
+        {/* 구글 로그인 — Secondary */}
+        <button
+          onClick={() => handleOAuth("google")}
+          disabled={loadingProvider !== null}
+          aria-label="구글로 시작하기"
+          className="w-full h-[52px] rounded-full flex items-center justify-center gap-2 font-semibold text-[14px] transition-transform active:scale-95 disabled:opacity-60"
+          style={{
+            background: "#FFFFFF",
+            color: "#1F1F1F",
+            border: "1px solid rgba(0,0,0,0.12)",
+          }}
+        >
+          {loadingProvider === "google" ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              <GoogleIcon />
+              구글로 시작하기
+            </>
+          )}
+        </button>
 
         {/* 이메일 로그인 대체 링크 */}
         <button
           onClick={() => setShowEmail(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <Mail className="w-3.5 h-3.5" />
-          이메일로 가입 / 로그인
+          이메일로 로그인
         </button>
 
         {/* 🧪 개발 테스트 모드 — localhost 전용 */}
@@ -283,17 +143,51 @@ export function LoginPage() {
             aria-label="개발 테스트 모드로 입장"
           >
             <FlaskConical className="w-3.5 h-3.5" />
-            개발 테스트 모드로 입장 (Supabase 불필요)
+            개발 테스트 모드 (Supabase 불필요)
           </button>
         )}
 
         {/* 약관 고지 */}
-        <p className="text-[10px] text-muted-foreground/60 text-center leading-relaxed">
+        <p className="text-[10px] text-muted-foreground/60 text-center leading-relaxed pt-2">
           계속 진행하면 <span className="underline">이용약관</span>과{" "}
           <span className="underline">개인정보처리방침</span>에 동의하는 것으로 간주됩니다.
         </p>
       </div>
     </div>
+  );
+}
+
+function KakaoIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3C6.48 3 2 6.48 2 10.8c0 2.76 1.88 5.2 4.72 6.6l-1.08 3.96c-.1.36.3.65.62.45l4.78-3.14c.32.02.64.04.96.04 5.52 0 10-3.48 10-7.8C22 6.48 17.52 3 12 3z"
+        fill="#191919"
+      />
+    </svg>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.65l-3.57-2.77c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.28-1.93-6.14-4.52H2.18v2.84A10.99 10.99 0 0 0 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.86 14.12A6.6 6.6 0 0 1 5.5 12c0-.74.13-1.45.36-2.12V7.04H2.18A10.99 10.99 0 0 0 1 12c0 1.77.42 3.44 1.18 4.96l3.68-2.84z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.04l3.68 2.84C6.72 7.3 9.14 5.38 12 5.38z"
+      />
+    </svg>
   );
 }
 
