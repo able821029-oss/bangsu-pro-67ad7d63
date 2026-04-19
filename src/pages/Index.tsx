@@ -4,7 +4,7 @@ import { InstallBanner } from "@/components/InstallBanner";
 import { OnboardingSlides } from "@/components/OnboardingSlides";
 import { AdminFab } from "@/components/AdminFab";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
-import { SmsLogo } from "@/components/SmsLogo";
+import { KakaoInAppBanner } from "@/components/KakaoInAppBanner";
 import { HomeTab } from "@/pages/HomeTab";
 import { BlogPost, useAppStore } from "@/stores/appStore";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -42,45 +42,11 @@ const TabLoadingFallback = () => (
   </div>
 );
 
-function SplashScreen({ onDone }: { onDone: () => void }) {
-  const [phase, setPhase] = useState<"in" | "out">("in");
-
-  useEffect(() => {
-    const outTimer = setTimeout(() => setPhase("out"), 1100);
-    const doneTimer = setTimeout(onDone, 1500);
-    return () => { clearTimeout(outTimer); clearTimeout(doneTimer); };
-  }, [onDone]);
-
-  return (
-    <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 100,
-        background: "linear-gradient(145deg, #060D1F 0%, #0E0720 60%, #150822 100%)",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        opacity: phase === "out" ? 0 : 1, transition: "opacity 0.4s ease-out",
-      }}
-    >
-      <style>{`
-        @keyframes logoIn { 0%{transform:scale(0.3) rotate(-10deg);opacity:0} 65%{transform:scale(1.15) rotate(2deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
-        @keyframes fadeUp { from{transform:translateY(14px);opacity:0} to{transform:translateY(0);opacity:1} }
-        @keyframes glowPulse { 0%,100%{opacity:.35;transform:scale(1)} 50%{opacity:.55;transform:scale(1.08)} }
-        .splash-logo { animation: logoIn 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.1s both }
-        .splash-glow { animation: glowPulse 2s ease-in-out infinite }
-      `}</style>
-      <div className="splash-glow" style={{ position:"absolute", width:260, height:260, borderRadius:"50%", background:"radial-gradient(circle,rgba(35,127,255,.18) 0%,rgba(171,94,190,.10) 50%,transparent 70%)", pointerEvents:"none" }} />
-      <div className="splash-logo" style={{ position:"relative", zIndex:1 }}>
-        <SmsLogo size={100} glow withWordmark />
-      </div>
-    </div>
-  );
-}
-
 function AppContent() {
   const { user, loading } = useAuth();
   const settings = useAppStore((s) => s.settings);
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [viewingPost, setViewingPost] = useState<BlogPost | null>(null);
-  const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("sms_onboarded"));
   const [showReviews, setShowReviews] = useState(false);
 
@@ -94,7 +60,6 @@ function AppContent() {
 
   const handleViewPost = (post: BlogPost) => setViewingPost(post);
   const handleBackFromPost = () => setViewingPost(null);
-  const handleSplashDone = useCallback(() => setShowSplash(false), []);
 
   const handleOnboardingComplete = useCallback(() => {
     localStorage.setItem("sms_onboarded", "true");
@@ -138,11 +103,11 @@ function AppContent() {
     );
   }
 
-  if (showSplash) return <SplashScreen onDone={handleSplashDone} />;
   if (showOnboarding) return <OnboardingSlides onComplete={handleOnboardingComplete} />;
   if (loading) return <FullLoadingFallback />;
   if (!user) return (
     <>
+      <KakaoInAppBanner />
       <Suspense fallback={<FullLoadingFallback />}><LoginPage /></Suspense>
       <AdminFab />
     </>
@@ -187,6 +152,7 @@ function AppContent() {
       className="min-h-screen bg-background flex flex-col"
       style={{ minHeight: "100dvh" }}
     >
+      <KakaoInAppBanner />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-[#4C8EFF] focus:text-white focus:px-4 focus:py-2 focus:rounded-lg"
@@ -195,8 +161,12 @@ function AppContent() {
       </a>
       <main
         id="main-content"
-        className="flex-1 min-h-0 w-full"
-        style={{ WebkitOverflowScrolling: "touch" }}
+        className="flex-1 w-full"
+        style={{
+          WebkitOverflowScrolling: "touch",
+          touchAction: "pan-y",
+          overscrollBehaviorY: "contain",
+        }}
       >
         <ErrorBoundary
           key={activeTab}
