@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Upload, Camera, HelpCircle, X, CheckCircle2, PenLine, Share2 } from "lucide-react";
+import { Upload, Camera, HelpCircle, X, CheckCircle2, PenLine, Share2, FileCheck, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { IconChip } from "@/components/IconChip";
 import { useAppStore, BlogPost, Platform, PostStatus } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
@@ -101,19 +102,28 @@ export function PublishTab({
 
   return (
     <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto">
-      {/* 요약 통계 */}
+      {/* 요약 통계 — 컬러 아이콘 칩 + 큰 숫자 */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-card border border-border rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-foreground">{completedPosts.length}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">작성 완료</p>
+        <div className="glass-card p-3 flex flex-col items-start gap-2">
+          <IconChip icon={PenLine} color="blue" size="sm" />
+          <div>
+            <p className="stat-number text-xl">{completedPosts.length}</p>
+            <p className="text-[10px] stat-unit mt-0.5">작성 완료</p>
+          </div>
         </div>
-        <div className="bg-card border border-border rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-green-500">{posts.filter(p => p.status === "게시완료").length}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">게시 완료</p>
+        <div className="glass-card p-3 flex flex-col items-start gap-2">
+          <IconChip icon={FileCheck} color="green" size="sm" />
+          <div>
+            <p className="stat-number text-xl">{posts.filter(p => p.status === "게시완료").length}</p>
+            <p className="text-[10px] stat-unit mt-0.5">게시 완료</p>
+          </div>
         </div>
-        <div className="bg-card border border-border rounded-xl p-3 text-center">
-          <p className="text-xl font-bold text-amber-500">{inProgressPosts.length}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">작성 중</p>
+        <div className="glass-card p-3 flex flex-col items-start gap-2">
+          <IconChip icon={Clock} color="amber" size="sm" />
+          <div>
+            <p className="stat-number text-xl">{inProgressPosts.length}</p>
+            <p className="text-[10px] stat-unit mt-0.5">작성 중</p>
+          </div>
         </div>
       </div>
 
@@ -145,7 +155,7 @@ export function PublishTab({
       {completedPosts.length > 0 ? (
         <div className="space-y-4">
           {completedPosts.map((post) => (
-            <div key={post.id} className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
+            <div key={post.id} className="glass-card p-4 space-y-3">
                     <button onClick={() => onViewPost(post)} className="w-full text-left">
                 <div className="flex items-start gap-3">
                   <div className="w-12 h-12 rounded-lg bg-secondary overflow-hidden shrink-0">
@@ -202,9 +212,9 @@ export function PublishTab({
           ))}
         </div>
       ) : (
-        <div className="bg-card rounded-[--radius] border border-border p-8 text-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
-            <PenLine className="w-8 h-8 text-primary" />
+        <div className="glass-card p-8 text-center space-y-4">
+          <div className="icon-chip icon-chip-lg mx-auto">
+            <PenLine className="w-6 h-6" color="#237FFF" strokeWidth={2} />
           </div>
           <div>
             <p className="font-semibold text-sm">아직 작성된 글이 없어요</p>
@@ -227,7 +237,7 @@ export function PublishTab({
         <div className="space-y-2">
           <p className="text-sm font-semibold text-muted-foreground">작성 중인 글</p>
           {inProgressPosts.map((post) => (
-            <div key={post.id} className="bg-card rounded-[--radius] border border-border p-3 space-y-2">
+            <div key={post.id} className="glass-card p-3 space-y-2">
               <button onClick={() => onViewPost(post)} className="w-full flex items-center gap-3 text-left">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate">{post.title}</p>

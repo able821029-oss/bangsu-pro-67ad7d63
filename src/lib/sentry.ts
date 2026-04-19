@@ -8,6 +8,9 @@
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 
+// 문자열을 변수로 분리 — Vite 정적 분석이 해결하지 못하도록 우회 (패키지 미설치 허용)
+const SENTRY_MODULE = ["@sentry", "react"].join("/");
+
 const shouldInit = (): boolean => {
   if (!SENTRY_DSN) return false;
   if (typeof window === "undefined") return false;
@@ -25,14 +28,13 @@ const shouldInit = (): boolean => {
 export async function initSentry(): Promise<void> {
   if (!shouldInit()) return;
   try {
-    const Sentry = await import("@sentry/react");
+    const Sentry: any = await import(/* @vite-ignore */ SENTRY_MODULE);
     Sentry.init({
       dsn: SENTRY_DSN,
       environment: import.meta.env.MODE,
       tracesSampleRate: 0.1,
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 1.0,
-      // 네트워크 오류 / 취소된 요청 같은 흔한 노이즈 제거
       ignoreErrors: [
         "ResizeObserver loop limit exceeded",
         "Non-Error promise rejection captured",
@@ -42,7 +44,6 @@ export async function initSentry(): Promise<void> {
       ],
     });
   } catch (error) {
-    // 패키지 미설치 / 동적 로드 실패 → 조용히 무시 (앱 기동 방해 금지)
     console.info("[sentry] skipped:", (error as Error).message);
   }
 }
@@ -51,7 +52,7 @@ export async function initSentry(): Promise<void> {
 export async function reportError(error: unknown, context?: Record<string, unknown>): Promise<void> {
   if (!shouldInit()) return;
   try {
-    const Sentry = await import("@sentry/react");
+    const Sentry: any = await import(/* @vite-ignore */ SENTRY_MODULE);
     Sentry.captureException(error, context ? { extra: context } : undefined);
   } catch {
     // 무시

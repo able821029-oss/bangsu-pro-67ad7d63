@@ -1,6 +1,19 @@
 import { useState } from "react";
 import { NotificationPanel, type NotificationItem } from "@/components/NotificationPanel";
-import { Camera } from "lucide-react";
+import {
+  Camera,
+  Bell,
+  AlertTriangle,
+  ChevronRight,
+  PenLine,
+  Upload,
+  Film,
+  Flame,
+  Gauge,
+  Sparkles,
+  Hammer,
+  FileText,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -15,7 +28,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { IconChip } from "@/components/IconChip";
 import { useAppStore, PostStatus, BlogPost } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 
@@ -111,12 +124,21 @@ export function HomeTab({
   ).length;
 
   return (
-    <div className="px-5 pt-6 pb-28 space-y-6 max-w-lg mx-auto">
-      {/* Stitch Header */}
-      <header className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <span aria-hidden="true" className="material-symbols-outlined text-[#237FFF] text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>architecture</span>
-          <h1 className="text-lg font-bold text-[#237FFF]">SMS</h1>
+    <div className="px-5 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
+      {/* Header — 아바타 + 인사말 + 알림 */}
+      <header className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-full p-0.5 bg-brand-gradient shrink-0">
+          <div className="w-full h-full rounded-full bg-background overflow-hidden flex items-center justify-center">
+            <span className="text-xl">👷</span>
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-bold text-foreground truncate">
+            안녕하세요, {settings.companyName ? `${settings.companyName}` : "사장님"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            이번 달 <span className="text-primary font-semibold">{completed}건</span>의 글을 작성했어요
+          </p>
         </div>
         <div className="relative">
           <button
@@ -124,9 +146,9 @@ export function HomeTab({
             aria-expanded={showNotifications}
             aria-haspopup="dialog"
             onClick={() => setShowNotifications((v) => !v)}
-            className="relative hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4C8EFF] rounded-lg"
+            className="icon-chip relative"
           >
-            <span aria-hidden="true" className="material-symbols-outlined text-[#414754]">notifications</span>
+            <Bell size={20} strokeWidth={2} color="#237FFF" />
             {notifications.length > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[10px] text-white font-bold flex items-center justify-center">
                 {notifications.length}
@@ -142,62 +164,80 @@ export function HomeTab({
         </div>
       </header>
 
-      {/* Stitch Amber Warning Banner */}
+      {/* Amber Warning Banner */}
       {!settings.companyName && (
         <button
           onClick={() => onNavigate("mypage")}
           aria-label="경고: 업체 정보를 먼저 입력해 주세요"
-          className="w-full bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded-r-xl flex justify-between items-center"
+          className="w-full p-4 rounded-2xl flex justify-between items-center"
+          style={{
+            background: "linear-gradient(135deg, rgba(245,158,11,0.16), rgba(245,158,11,0.05))",
+            border: "1px solid rgba(245,158,11,0.35)",
+            boxShadow: "0 0 20px rgba(245,158,11,0.10)",
+          }}
         >
           <div className="flex items-center gap-3">
-            <span aria-hidden="true" className="material-symbols-outlined text-amber-500">warning</span>
-            <p className="text-amber-200 font-bold text-sm">업체 정보를 먼저 입력해 주세요</p>
+            <IconChip icon={AlertTriangle} color="amber" size="sm" />
+            <p className="text-amber-300 font-bold text-sm">업체 정보를 먼저 입력해 주세요</p>
           </div>
-          <span aria-hidden="true" className="material-symbols-outlined text-amber-500 text-sm">arrow_forward_ios</span>
+          <ChevronRight size={18} strokeWidth={2.2} className="text-amber-400" />
         </button>
       )}
 
-      {/* Stitch Glassmorphism User Card */}
-      <section className="glass-card p-6 space-y-5">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full p-0.5 bg-brand-gradient">
-            <div className="w-full h-full rounded-full bg-background overflow-hidden flex items-center justify-center">
-              <span className="text-2xl">👷</span>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold">{settings.companyName ? `${settings.companyName} 사장님` : "사장님"}</h2>
-              <span className="bg-[#4C8EFF] text-[#00285C] px-2 py-0.5 rounded-full text-[10px] font-bold">{subscription.plan} 플랜</span>
-            </div>
-            {medal && (
-              <button onClick={() => setShowBadgeSheet(true)} className="flex items-center gap-1">
-                <span className="text-xs font-bold" style={{ color: medal.color }}>{medal.icon} {medal.label}</span>
-              </button>
-            )}
-          </div>
+      {/* Flagship Usage Card — 에너지 대시보드 스타일 (큰 숫자 + 듀얼 스탯) */}
+      <section className="glass-card-glow p-5 space-y-5">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-[#C1C6D7]">이번 달 블로그 사용량</span>
+          <span className="bg-[#4C8EFF]/20 text-[#4C8EFF] px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide border border-[#4C8EFF]/30">
+            {subscription.plan} 플랜
+          </span>
         </div>
-        <div className="space-y-2">
-          <div className="flex justify-between items-end">
-            <span className="text-sm font-medium text-[#C1C6D7]">블로그 이번달 사용량</span>
-            <span className="text-sm font-bold label-font text-primary">{subscription.usedCount} <span className="text-muted-foreground text-xs font-normal">/ {subscription.maxCount}건</span></span>
+        <div className="space-y-1">
+          <div className="flex items-baseline gap-2">
+            <span className="stat-number text-5xl text-primary text-glow">{subscription.usedCount}</span>
+            <span className="stat-unit text-base">/ {subscription.maxCount}건</span>
           </div>
-          <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-            <div
-              className="h-full bg-brand-gradient rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(usagePercent, 100)}%`, boxShadow: "0 0 8px rgba(35,127,255,0.4)" }}
-            />
+          <p className="text-xs text-muted-foreground">
+            남은 사용량 <span className="font-semibold text-foreground">{Math.max(remaining, 0)}건</span>
+          </p>
+        </div>
+        {/* 글로우 바 */}
+        <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.min(usagePercent, 100)}%`,
+              background: "linear-gradient(90deg, #237FFF 0%, #4C8EFF 50%, #AB5EBE 100%)",
+              boxShadow: "0 0 12px rgba(35,127,255,0.6), 0 0 4px rgba(171,94,190,0.4)",
+            }}
+          />
+        </div>
+        {/* 듀얼 스탯 — 완료된 글 / 이번달 영상 */}
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="flex items-center gap-3">
+            <IconChip icon={FileText} color="blue" />
+            <div>
+              <p className="stat-number text-xl">{completed}건</p>
+              <p className="text-[11px] stat-unit">완료된 글</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <IconChip icon={Film} color="purple" />
+            <div>
+              <p className="stat-number text-xl">{videoCount}개</p>
+              <p className="text-[11px] stat-unit">이번달 영상</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Stitch Power CTA */}
+      {/* Power CTA — 강화된 글로우 */}
       <button
         onClick={() => onNavigate("content")}
-        className="w-full h-[52px] bg-brand-gradient rounded-full flex items-center justify-center gap-2 shadow-lg shadow-[#4C8EFF]/20 active:scale-95 transition-transform duration-200"
+        className="btn-power w-full text-base"
       >
-        <span aria-hidden="true" className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>photo_camera</span>
-        <span className="text-white font-bold text-lg">지금 바로 글 작성하기</span>
+        <Camera className="w-5 h-5" strokeWidth={2.2} />
+        <span>지금 바로 글 작성하기</span>
       </button>
 
       {/* 현장 도우미 바로가기 */}
@@ -206,46 +246,57 @@ export function HomeTab({
           sessionStorage.setItem("sms-open-settings-page", "fieldtools");
           onNavigate("mypage");
         }}
-        className="w-full flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3"
+        className="w-full glass-card flex items-center gap-3 px-4 py-3"
       >
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
-          style={{ background: "linear-gradient(135deg,rgba(35,127,255,0.15),rgba(171,94,190,0.15))" }}>
-          🔨
-        </div>
+        <IconChip icon={Hammer} color="orange" />
         <div className="flex-1 text-left">
           <p className="text-sm font-semibold">현장 도우미</p>
           <p className="text-xs text-muted-foreground">일당 계산 · 날씨 판단 · 임금체불 신고</p>
         </div>
-        <span className="text-xs text-primary font-semibold">바로가기 →</span>
+        <ChevronRight size={16} className="text-primary" />
       </button>
 
-      {/* Stitch Stats Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => onNavigate("publish")} className="bg-muted rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
-          <div className="flex justify-between items-start">
-            <span className="text-muted-foreground text-xs">블로그 작성</span>
-            <span className="text-[#4AE176] text-[10px] font-bold flex items-center">
-              <span aria-hidden="true" className="material-symbols-outlined text-[12px]">arrow_drop_up</span>3
-            </span>
+      {/* Stats Grid — 컬러 아이콘 칩 + 큰 숫자 (픽토그램 레퍼런스) */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={() => onNavigate("publish")}
+          className="glass-card p-4 flex flex-col gap-2 text-left w-full min-h-[120px]"
+        >
+          <IconChip icon={PenLine} color="blue" />
+          <div className="mt-auto">
+            <p className="stat-number text-2xl">{completed}<span className="stat-unit text-base ml-1">건</span></p>
+            <p className="text-[11px] text-muted-foreground mt-1">블로그 작성</p>
           </div>
-          <div className="headline-font font-bold text-2xl text-foreground">{completed}건</div>
         </button>
-        <button onClick={() => onNavigate("publish")} className="bg-muted rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
-          <div className="flex justify-between items-start">
-            <span className="text-muted-foreground text-xs">게시 완료</span>
-            <span className="text-[#4AE176] text-[10px] font-bold flex items-center">
-              <span aria-hidden="true" className="material-symbols-outlined text-[12px]">arrow_drop_up</span>2
-            </span>
+        <button
+          onClick={() => onNavigate("publish")}
+          className="glass-card p-4 flex flex-col gap-2 text-left w-full min-h-[120px]"
+        >
+          <IconChip icon={Upload} color="green" />
+          <div className="mt-auto">
+            <p className="stat-number text-2xl">{published}<span className="stat-unit text-base ml-1">건</span></p>
+            <p className="text-[11px] text-muted-foreground mt-1">게시 완료</p>
           </div>
-          <div className="headline-font font-bold text-2xl text-foreground">{published}건</div>
         </button>
-        <button onClick={() => onNavigate("shorts")} className="bg-muted rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
-          <span className="text-muted-foreground text-xs">이번달 영상</span>
-          <div className="headline-font font-bold text-2xl text-foreground">{videoCount}개</div>
+        <button
+          onClick={() => onNavigate("shorts")}
+          className="glass-card p-4 flex flex-col gap-2 text-left w-full min-h-[120px]"
+        >
+          <IconChip icon={Film} color="purple" />
+          <div className="mt-auto">
+            <p className="stat-number text-2xl">{videoCount}<span className="stat-unit text-base ml-1">개</span></p>
+            <p className="text-[11px] text-muted-foreground mt-1">이번 달 영상</p>
+          </div>
         </button>
-        <button onClick={() => setShowBadgeSheet(true)} className="bg-muted rounded-[1rem] p-5 flex flex-col justify-between h-[120px] text-left w-full">
-          <span className="text-muted-foreground text-xs">연속 사용</span>
-          <div className="headline-font font-bold text-2xl text-foreground">{subscription.consecutiveMonths}개월</div>
+        <button
+          onClick={() => setShowBadgeSheet(true)}
+          className="glass-card p-4 flex flex-col gap-2 text-left w-full min-h-[120px]"
+        >
+          <IconChip icon={Flame} color="orange" />
+          <div className="mt-auto">
+            <p className="stat-number text-2xl">{subscription.consecutiveMonths}<span className="stat-unit text-base ml-1">개월</span></p>
+            <p className="text-[11px] text-muted-foreground mt-1">연속 사용</p>
+          </div>
         </button>
       </div>
 

@@ -500,8 +500,8 @@ export function CameraTab({
           </div>
         </div>
 
-        {/* Location & Date card — glass-card style */}
-        <div className="bg-white/[0.06] backdrop-blur-md rounded-xl border border-white/10 p-4 space-y-3">
+        {/* Location & Date card — glass-card with glow */}
+        <div className="glass-card p-4 space-y-3">
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground flex items-center gap-1 font-[Inter]">
               <MapPin className="w-3 h-3" /> 시공 위치
@@ -624,8 +624,8 @@ export function CameraTab({
               onClick={() => setSelectedPersona(p.id)}
               className={`w-full text-left px-4 py-3 rounded-xl transition-all ${
                 selectedPersona === p.id
-                  ? "border border-[#4C8EFF] bg-[#4C8EFF]/10"
-                  : "border border-white/10 bg-card"
+                  ? "glass-card-glow"
+                  : "glass-card"
               }`}
             >
               <p className="font-semibold text-sm text-foreground font-[Manrope]">{p.label}</p>

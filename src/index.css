@@ -189,16 +189,30 @@ main { min-height: 0; }
 }
 
 @layer components {
-  /* Stitch Glassmorphism Card */
+  /* Stitch Glassmorphism Card — 블루 글로우 강화 */
   .glass-card {
-    background: rgba(255, 255, 255, 0.06);
+    background: linear-gradient(180deg, rgba(76, 142, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(76, 142, 255, 0.18);
     border-radius: var(--radius);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 0 24px rgba(35, 127, 255, 0.08);
   }
   .light .glass-card {
     background: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(35, 127, 255, 0.08);
+  }
+  /* 카드 호버/활성 시 글로우 강화 */
+  .glass-card-glow {
+    background: linear-gradient(180deg, rgba(76, 142, 255, 0.10) 0%, rgba(171, 94, 190, 0.05) 100%);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(76, 142, 255, 0.32);
+    border-radius: var(--radius);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 0 32px rgba(35, 127, 255, 0.18);
   }
   /* Stitch Tonal Card (No-Line rule) */
   .tonal-card {
@@ -207,14 +221,51 @@ main { min-height: 0; }
   }
   .chart-card {
     background: rgba(76, 142, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(76, 142, 255, 0.18);
     border-radius: var(--radius);
+    box-shadow: 0 0 20px rgba(35, 127, 255, 0.06);
   }
-  /* Stitch Power Gradient CTA */
+  /* Stitch Power Gradient CTA — 글로우 강화 */
   .btn-power {
     @apply bg-brand-gradient text-white font-bold rounded-full h-[52px] px-6;
     @apply flex items-center justify-center gap-2;
-    @apply shadow-lg active:scale-95 transition-transform duration-200;
+    @apply active:scale-95 transition-transform duration-200;
+    box-shadow: 0 8px 24px rgba(35, 127, 255, 0.35), 0 0 20px rgba(76, 142, 255, 0.25);
+  }
+  /* 픽토그램 아이콘 칩 — 둥근 사각형 흰 배경, 색상별 */
+  .icon-chip {
+    @apply w-11 h-11 rounded-2xl flex items-center justify-center shrink-0;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.4) inset;
+  }
+  .light .icon-chip {
+    background: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+  .icon-chip-sm { @apply w-9 h-9 rounded-xl; }
+  .icon-chip-lg { @apply w-12 h-12 rounded-2xl; }
+  /* 하단 탭 활성 배경 — 사각형 글로우 */
+  .nav-active-bg {
+    background: linear-gradient(180deg, rgba(35, 127, 255, 0.22), rgba(76, 142, 255, 0.10));
+    border: 1px solid rgba(76, 142, 255, 0.35);
+    box-shadow: 0 0 16px rgba(35, 127, 255, 0.35);
+  }
+}
+
+/* 글로우 유틸리티 */
+@layer utilities {
+  .text-glow { text-shadow: 0 0 16px rgba(76, 142, 255, 0.6); }
+  .ring-glow { box-shadow: 0 0 24px rgba(35, 127, 255, 0.45); }
+  .stat-number {
+    font-family: 'Manrope', 'Noto Sans KR', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .stat-unit {
+    font-family: 'Inter', 'Noto Sans KR', sans-serif;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
   }
 }
 

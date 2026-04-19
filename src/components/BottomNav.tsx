@@ -20,10 +20,14 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
   return (
     <nav aria-label="주요 메뉴" className="fixed bottom-0 left-0 right-0 z-50 safe-bottom">
       <div
-        className="h-[84px] bg-background/80 backdrop-blur-xl border-t border-white/10 rounded-t-[40px] shadow-[0_-12px_32px_rgba(0,0,0,0.4)] flex justify-around items-center px-4 pb-6"
+        className="h-[84px] backdrop-blur-2xl border-t border-white/10 rounded-t-[32px] flex justify-around items-center px-4 pb-6"
+        style={{
+          background: "linear-gradient(180deg, rgba(14,19,34,0.92), rgba(14,19,34,0.98))",
+          boxShadow: "0 -12px 32px rgba(0,0,0,0.4), 0 -1px 0 rgba(76,142,255,0.18) inset",
+        }}
       >
         {tabs.map(({ id, icon: Icon, label, center }) => {
-          const isActive = activeTab === id || (id === "shorts" && activeTab === "shorts");
+          const isActive = activeTab === id;
           if (center) {
             return (
               <button
@@ -31,15 +35,19 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 onClick={() => onTabChange(id)}
                 aria-label={label}
                 aria-current={isActive ? "page" : undefined}
-                className="relative -mt-6 flex flex-col items-center"
+                className="relative -mt-7 flex flex-col items-center"
               >
                 <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(35,127,255,0.4)] active:scale-90 transition-transform"
-                  style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)" }}
+                  className="w-[58px] h-[58px] rounded-2xl flex items-center justify-center active:scale-90 transition-transform"
+                  style={{
+                    background: "linear-gradient(135deg, #237FFF, #AB5EBE)",
+                    boxShadow:
+                      "0 8px 24px rgba(35,127,255,0.5), 0 0 20px rgba(76,142,255,0.4), 0 1px 0 rgba(255,255,255,0.2) inset",
+                  }}
                 >
-                  <Icon className="w-6 h-6 text-white" strokeWidth={2.5} />
+                  <Icon className="w-7 h-7 text-white" strokeWidth={2.2} />
                 </div>
-                <span className="text-[10px] font-bold mt-1 text-primary">{label}</span>
+                <span className="text-[10px] font-bold mt-1.5 text-primary tracking-wide">{label}</span>
               </button>
             );
           }
@@ -50,14 +58,14 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
               aria-label={label}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 rounded-full p-2 transition-colors duration-300",
-                isActive
-                  ? "text-[#237FFF] bg-white/5"
-                  : "text-[#414754] hover:text-[#4C8EFF]",
+                "flex flex-col items-center justify-center gap-0.5 w-14 h-14 rounded-2xl transition-all duration-300",
+                isActive ? "nav-active-bg text-[#4C8EFF]" : "text-[#6B7180] hover:text-[#4C8EFF]",
               )}
             >
-              <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
-              <span className="font-bold text-[10px] tracking-wide">{label}</span>
+              <Icon className="w-[22px] h-[22px]" strokeWidth={isActive ? 2.4 : 1.8} />
+              <span className={cn("font-semibold text-[10px] tracking-wide", isActive && "text-glow")}>
+                {label}
+              </span>
             </button>
           );
         })}
