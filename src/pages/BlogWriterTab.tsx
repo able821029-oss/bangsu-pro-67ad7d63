@@ -8,6 +8,7 @@ import {
   MAX_DRAFTS,
   BlogPost,
   ContentBlock,
+  Platform,
 } from "@/stores/appStore";
 import { IconChip } from "@/components/IconChip";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import type { TabId } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
+import { compressImage } from "@/lib/imageCompress";
 
 type WizardStep = 1 | 2;
 
@@ -113,6 +115,7 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
   const settings = useAppStore((s) => s.settings);
   const selectedPersona = useAppStore((s) => s.selectedPersona);
   const selectedPlatforms = useAppStore((s) => s.selectedPlatforms);
+  const togglePlatform = useAppStore((s) => s.togglePlatform);
 
   const [step, setStep] = useState<WizardStep>(1);
   const [saving, setSaving] = useState(false);
@@ -330,6 +333,8 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
           draft={draft}
           onChange={(patch) => updateDraft(activeIdx, patch)}
           onNext={handleNext}
+          selectedPlatforms={selectedPlatforms}
+          onTogglePlatform={togglePlatform}
         />
       ) : (
         <Step2Sections
@@ -368,10 +373,14 @@ function Step1Form({
   draft,
   onChange,
   onNext,
+  selectedPlatforms,
+  onTogglePlatform,
 }: {
   draft: ReturnType<typeof useAppStore.getState>["drafts"][number];
   onChange: (patch: Partial<ReturnType<typeof useAppStore.getState>["drafts"][number]>) => void;
   onNext: () => void;
+  selectedPlatforms: Platform[];
+  onTogglePlatform: (p: Platform) => void;
 }) {
   return (
     <div className="glass-card p-5 space-y-4">
@@ -419,9 +428,58 @@ function Step1Form({
         onChange={(v) => onChange({ siteEtc: v })}
       />
 
+      {/* 발행 채널 선택 */}
+      <PlatformPicker selected={selectedPlatforms} onToggle={onTogglePlatform} />
+
       <button onClick={onNext} className="btn-power w-full mt-2">
         다음 <ArrowRight className="w-5 h-5" />
       </button>
+    </div>
+  );
+}
+
+function PlatformPicker({
+  selected,
+  onToggle,
+}: {
+  selected: Platform[];
+  onToggle: (p: Platform) => void;
+}) {
+  const options: { id: Platform; label: string; sub: string }[] = [
+    { id: "naver", label: "네이버 블로그", sub: "긴 글 · SEO" },
+    { id: "instagram", label: "인스타그램", sub: "정사각 · 해시태그" },
+    { id: "tiktok", label: "틱톡", sub: "숏폼 스크립트" },
+  ];
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">발행 채널</label>
+      <div className="grid grid-cols-3 gap-2">
+        {options.map((o) => {
+          const on = selected.includes(o.id);
+          return (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => onToggle(o.id)}
+              aria-pressed={on}
+              className={cn(
+                "rounded-xl px-2 py-2.5 text-left transition-all border",
+                on
+                  ? "bg-primary/10 border-primary/40 ring-1 ring-primary/30"
+                  : "bg-background/40 border-white/10 hover:border-white/20",
+              )}
+            >
+              <p className={cn("text-[12px] font-semibold", on ? "text-primary" : "text-foreground")}>
+                {o.label}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{o.sub}</p>
+            </button>
+          );
+        })}
+      </div>
+      {selected.length === 0 && (
+        <p className="text-[11px] text-destructive">최소 1개 이상 선택해 주세요</p>
+      )}
     </div>
   );
 }
@@ -651,13 +709,27 @@ function SectionCard({
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      onUpdate({
-        photo: {
-          id: crypto.randomUUID(),
-          dataUrl: (ev.target?.result as string) || "",
-        },
-      });
+    reader.onload = async (ev) => {
+      const raw = (ev.target?.result as string) || "";
+      if (!raw) return;
+      try {
+        // localStorage/Supabase 용량 보호를 위해 800px · JPEG 70%로 압축
+        const compressed = await compressImage(raw, 800, 0.7);
+        onUpdate({
+          photo: {
+            id: crypto.randomUUID(),
+            dataUrl: compressed,
+          },
+        });
+      } catch {
+        // 압축 실패 시 원본 그대로 사용
+        onUpdate({
+          photo: {
+            id: crypto.randomUUID(),
+            dataUrl: raw,
+          },
+        });
+      }
     };
     reader.readAsDataURL(file);
     e.target.value = "";
