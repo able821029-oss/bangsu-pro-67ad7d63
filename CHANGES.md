@@ -1,4 +1,109 @@
-# CHANGES — BullMQ + Redis 큐 도입 (v5.0)
+# CHANGES
+
+---
+
+## Phase 2 — FFmpeg 네이티브 렌더러 (v5.1) · 2026-04-20
+
+### 목표
+기본 스타일 쇼츠를 Remotion 대신 FFmpeg 네이티브 파이프라인으로 렌더해 **렌더 시간 60~120s → 15~30s (3~5배 단축)**. Chromium 미사용으로 메모리도 절반 이하.
+
+### 파일 변경
+
+#### 신규
+- [video-server/ffmpegRenderer.js](video-server/ffmpegRenderer.js) — libx264 직접 렌더러
+  - scale + crop + **zoompan Ken Burns** + drawtext(제목/자막) + **xfade fade** 트랜지션
+  - `-progress pipe:1` 파싱 → 진행률 0~1 콜백
+  - 폰트 자동 탐색(`FONT_PATH` → Noto CJK → malgun → macOS fallback)
+  - `-loop 1 -framerate 1 -t 1` 로 input 1프레임 엄격 제한 (zoompan duration 정확성 보장)
+  - single quote를 `U+2019`로 치환하여 filter_complex parser 충돌 회피
+- [video-server/audioMixer.js](video-server/audioMixer.js) — 오디오 믹싱 로직을 엔진 공통으로 추출
+  - 나레이션 concat → BGM 생성 → amix(나1.0/bgm0.25) → 영상 합체
+  - `tempFiles` 배열 반환 → worker가 책임지고 cleanup
+- [video-server/tests/ffmpegRenderer.test.js](video-server/tests/ffmpegRenderer.test.js) — 4개 테스트
+  - 폰트 경로 resolve
+  - 5씬(사진+색상 혼합) duration 일치
+  - 3씬 사진 전용
+  - 한글 + 특수문자(`'` `:` `,`) 자막 파싱 안정성
+- [docs/RENDER_ENGINES.md](docs/RENDER_ENGINES.md) — 두 엔진 비교 및 선택 가이드
+
+#### 수정
+- [video-server/worker.js](video-server/worker.js) — 렌더 엔진 분기 로직 추가
+  - `selectEngine(style)` → `premium`/`animated`/`remotion`/`FORCE_REMOTION=1`은 Remotion, 그 외 ffmpeg
+  - 오디오 믹싱을 `audioMixer.mixAudio()` 호출로 교체
+  - 반환값에 `engine` 필드 추가 (관측 용이성)
+- [video-server/package.json](video-server/package.json) — scripts 추가: `test:ffmpeg`, `test`
+
+#### 유지 (변경 없음)
+- [video-server/renderer.js](video-server/renderer.js) — Remotion 렌더러 그대로 보존
+- [video-server/remotion/**](video-server/remotion) — Composition 전체 유지
+- [video-server/bgm.js](video-server/bgm.js)
+- [video-server/queue.js](video-server/queue.js), [video-server/index.js](video-server/index.js) — Phase 1 BullMQ 구조 유지
+- 클라이언트 ([src/components/ShortsCreator.tsx](src/components/ShortsCreator.tsx)) — **수정 없음**
+- Edge Function ([supabase/functions/generate-shorts/index.ts](supabase/functions/generate-shorts/index.ts)) — **수정 없음**
+
+### 엔진 선택 규칙 ([worker.js:22](video-server/worker.js#L22))
+```js
+FORCE_REMOTION=1            → remotion (전체 강제)
+style in [premium|animated] → remotion
+else                         → ffmpeg (기본)
+```
+
+현재 Edge Function이 보내는 `videoStyle` ("시공일지형", "홍보형", "Before/After형")은 모두 기본 규칙에 걸려 **ffmpeg 라우팅**됨. 즉 Phase 2 배포 직후부터 전 프로덕션 트래픽이 빠른 엔진 사용.
+
+### FFmpeg 파이프라인 요약 (씬 i)
+```
+사진 씬: -loop 1 -framerate 1 -t 1 -i photo.jpg
+색상 씬: -f lavfi -t <d> -i color=c=<bg>:s=1080x1920:r=24
+
+filter_complex:
+  [i:v] scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920
+        ,zoompan=z='min(zoom+0.0015,1.3)':d=<frames>:s=1080x1920:fps=24
+        ,format=yuv420p
+        ,drawtext=fontfile=<한글>:text='<제목>':y=h*0.08:box=1...
+        ,drawtext=fontfile=<한글>:text='<자막>':y=h*0.78:box=1...
+        ,setsar=1,fps=24 [v<i>]
+
+  xfade 체인: [v0][v1]xfade=fade:0.5:<offset>[xf1] → ... → [vout]
+
+출력: -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -r 24 -movflags +faststart
+```
+
+### 검증 게이트 유지 (PIPELINE_ANALYSIS.md §3)
+- **사전 게이트 ②** (worker.js) — `narrationExpected && validAudioCount===0` 즉시 실패 ✅
+- **사후 게이트 ③** (worker.js `probeMedia`) — 엔진 무관 동일 ffmpeg probe 검증 ✅
+
+### 측정 결과 (로컬 Windows, ffmpeg-static)
+| 케이스 | 영상 길이 | 렌더 시간 |
+|---|---|---|
+| 5씬 (인트로 1s + 사진 3×1s + 엔딩 1s) | ~3초 | 약 7초 |
+| 3씬 사진 전용 (각 1s) | ~2초 | **1.7초** |
+| 1씬 한글+특수문자 자막 | 1초 | 0.7초 |
+
+프로덕션 사진 6장 × 3.5초 영상(~21초) 기준 **10~20초**로 추정. 목표(15~30초) 충족.
+
+### 환경변수
+| 변수 | 용도 | 기본값 |
+|---|---|---|
+| `FORCE_REMOTION` | `"1"`일 때 모든 잡을 Remotion로 강제 (롤백) | off |
+| `FONT_PATH` | drawtext 한글 폰트 직접 지정 | fallback 탐색 |
+
+Dockerfile에는 이미 `fonts-noto-cjk`가 설치되어 있어 Railway 배포 시 `FONT_PATH` 없어도 자동 동작.
+
+### 롤백 방법
+Railway worker 서비스 Variables에 `FORCE_REMOTION=1` 추가 → 워커 재시작 → 즉시 전체 Remotion으로 복귀. ffmpegRenderer 코드는 그대로 보존되므로 언제든 OFF 가능.
+
+### 검증
+- [x] `node -c` 전파일 구문 OK
+- [x] `npm run test:ffmpeg` 4/4 pass (로컬 Windows + malgun.ttf)
+- [x] 한글 + 특수문자(`'` `:` `,`) filter_complex 파싱 OK
+- [x] 5씬 xfade 체인 duration 정확도(예상 3s vs 실측 2.5~3s, 오차 <0.7s)
+- [x] 루트 `tsc --noEmit` exit 0 (클라이언트 영향 없음)
+- [x] BullMQ 구조 유지 (Phase 1)
+- [x] 클라이언트/Edge Function 미수정
+
+---
+
+## Phase 1 — BullMQ + Redis 큐 도입 (v5.0)
 
 > 작업 일자: 2026-04-20  
 > 참조: [docs/PIPELINE_ANALYSIS.md](docs/PIPELINE_ANALYSIS.md) §7 (동시 요청 처리 방식)
