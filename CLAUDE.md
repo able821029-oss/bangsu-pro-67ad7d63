@@ -1,6 +1,6 @@
 # SMS 앱 — Claude Code 개발 규칙
 
-> 마지막 갱신: 2026-04-19
+> 마지막 갱신: 2026-04-20
 
 ## 1. 프로젝트 정보
 
@@ -37,24 +37,67 @@ home · calendar · shorts(center) · content · mypage
 - 중앙 `shorts` 탭만 원형 글로우 배경, 나머지 4탭은 **사각형** `nav-active-bg` 하이라이트
 
 ### 직접 글쓰기 탭 구조 (2026-04-20 확정 · 변경 금지)
-`src/pages/BlogWriterTab.tsx`의 아래 구성은 **항시 고정**. 필드 제거·순서 변경·다른 화면으로 분리 모두 금지.
+`src/pages/BlogWriterTab.tsx`의 아래 구성은 **항시 고정** 단일 스크롤. Step1/Step2 위저드 제거됨. 필드 제거·순서 변경·다른 화면으로 분리 모두 금지.
 
-1. **상단 현장 정보** (`Step1Form`): 제목 · 지역(시도/시군구/동 3단계) · 시공면적 · 공법 · 기타 · 발행 채널
-2. **섹션 영역** (`Step2Sections` → `SectionCard`): 각 섹션은 소제목 · 사진 · 글쓰기 세 요소로 고정
+1. **상단 현장 정보** (`FieldsBlock`): 제목 · 지역(시도/시군구/동 3단계) · 시공면적 · 공법 · 기타 · 발행 채널
+2. **섹션 영역** (`SectionsBlock` → `SectionCard`): 각 섹션은 소제목 · 사진 · 글쓰기 세 요소로 고정
 3. **"+ 글쓰기 추가" 버튼**: 섹션을 수동으로 한 개씩 추가
 
 위 1~3은 앱의 핵심 워크플로이므로 개편/리팩토링 시에도 반드시 유지. 새 기능은 이 뼈대 위에 덧붙이는 방향으로만 확장.
 
-### 인증 방식 (2026-04-19 변경)
-- **전화번호 + SMS OTP** (`LoginPage.tsx`)
-- 카카오/네이버 OAuth는 UI·코드에서 제거됨 (이메일 로그인은 대체 링크로 유지)
-- 구현: `supabase.auth.signInWithOtp({ phone, channel: "sms" })` + `verifyOtp({ phone, token, type: "sms" })`
-- 한국 번호 E.164 정규화(`toE164KR`), 60초 재전송 쿨다운
-- **실제 SMS 발송은 Supabase Dashboard → Authentication → Providers → Phone 활성화 필수** (Twilio/MessageBird/Vonage/Textlocal 택1)
+### AI 글쓰기 플로우 (2026-04-20 확정)
+`src/pages/CameraTab.tsx`는 2단계 위저드로 동작. Step2는 직접 글쓰기와 **동일한 3블록 편집 화면**이 뜬다.
 
-### 무료 플랜 한도 (서버측)
-- 블로그 5건 / 영상 1개 월 기준
-- `usage_counters` 테이블 + `increment_usage(type)` RPC 설계 예정 (현재는 로컬 store에서 집계)
+- **Step 1**: 사진(최대 10장, 400px/q0.7 압축) · 현장 정보(지역·일자·면적·공법·기타) · 제목(비우면 AI가 자동 생성)
+- **Step 2**: 3블록 편집 화면 — `FieldsBlock`(편집 가능한 현장정보 carry-over) + `SectionsBlock`(`SectionCard` 재사용) + 버튼 3종
+  - **[+ 글쓰기 추가]**: 빈 섹션 수동 추가
+  - **[AI로 자동 완성]**: `generate-blog` 호출 → 결과(blocks)를 `blocksToSections`로 역변환하여 섹션 일괄 채움
+  - **[저장하기]**: sections → blocks 변환 후 posts 테이블 insert + PostDetailPage 이동
+
+AI 실패해도 편집기는 독립 작동하므로 "결과 안 나옴" 재발 방지. 제목 길이 < 8자일 때 `location + siteMethod`로 클라이언트 보강.
+
+### 인증 방식 (2026-04-20 재변경 · 최종)
+- **이메일 + 비밀번호** (`AuthPage.tsx`). `LoginPage.tsx`는 AuthPage를 그대로 노출하는 얇은 래퍼.
+- SMS OTP·카카오·구글·네이버 OAuth **모두 제거**. Supabase Email provider는 기본 활성화라 대시보드 설정 불필요.
+- 비밀번호 재설정은 `reset-password` Edge Function 경유.
+- dev 테스트 모드(`isDevModeAllowed()`)는 `import.meta.env.PROD`에서 강제 비활성화되어 localhost에서만 표시.
+
+### 무료 플랜 한도 (2026-04-20 현재)
+- 블로그 5건 / 영상 1건 월 기준 (`subscription.maxCount`, `maxVideo`)
+- **사용량 집계**: `subscription.usedCount` 증가 로직 미구현 → HomeTab이 `posts`를 `createdAt.startsWith(YYYY-MM)` 필터로 파생 계산
+- 향후 `usage_counters` RPC 도입 시 파생 계산 제거 예정 ([HomeTab.tsx:68-79](src/pages/HomeTab.tsx#L68-L79))
+
+### 핵심 기능 맵 (2026-04-20 현재 작동 중)
+
+| 영역 | 경로 | 상태 | 비고 |
+|---|---|---|---|
+| 홈 대시보드 | `HomeTab.tsx` | ✅ | 이번 달 사용량·4주 차트·등급 메달·SEO 점수 |
+| 일정 캘린더 | `CalendarTab.tsx` | ✅ | 월별 시공 일정·일당 계산·날씨 판단·임금체불 |
+| AI 글쓰기 | `CameraTab.tsx` | ✅ | 2단계 플로우(사진+현장정보 → 3블록 편집) |
+| 직접 글쓰기 | `BlogWriterTab.tsx` | ✅ | 3블록 고정 구조, 최대 4개 동시 작성 |
+| 발행 현황 | `PublishTab.tsx` | ✅ | 네이버·인스타·틱톡 현황 |
+| 쇼츠 영상 | `ShortsCreator.tsx` | ✅ | Remotion + ElevenLabs 유료 나레이션 + Railway 렌더 |
+| 글 상세·SEO 분석 | `PostDetailPage.tsx` + `SeoScoreBadge.tsx` | ✅ | Haiku 기반 SEO 점수 분석 |
+| 업체 설정 | `ProfileSettings.tsx` | ✅ | 업체명·로고·SNS 연동(네이버·인스타·틱톡 전부 "연결하기" 버튼) |
+| 로그인 | `AuthPage.tsx` | ✅ | 이메일+비밀번호 + 재설정 |
+
+### Edge Function 맵 (2026-04-20 현재)
+
+| 함수 | 모델/외부API | `verify_jwt` | 용도 |
+|---|---|---|---|
+| `generate-blog` | Claude Haiku 4.5 + Vision | `false` | AI 블로그 생성 (prompt caching 적용) |
+| `generate-shorts` | Claude Haiku 4.5 + ElevenLabs | `false` | 쇼츠 스크립트 + 나레이션 오디오 |
+| `tts-preview` | ElevenLabs | `false` | 음성 미리듣기 |
+| `seo-analyze` | Claude Haiku 4.5 | `false` | SEO 점수 분석 (prompt caching 적용) |
+| `render-video` | Supabase → Railway proxy | `false` | 2분 초과 영상 렌더 대신 Railway 직접 호출이 기본 경로 |
+| `test-elevenlabs` | ElevenLabs | `false` | 관리자 도구 키 유효성 확인 |
+| `reset-password` | Supabase admin API | `true` | 이메일 기반 비밀번호 재설정 |
+| `delete-account` | Supabase admin API | `true` | 회원 탈퇴 |
+| `google-calendar-sync` | Google OAuth | `true` | 일정 연동 |
+| `kakao-pay` | 카카오페이 | `true` | 결제 (키 미수령, UI mock) |
+| `naver-oauth` | 네이버 | `true` | 레거시, 미사용 |
+
+**`verify_jwt=false` 6함수**는 anon 호출 허용 — API 비용 남용 방지는 ANTHROPIC·ElevenLabs 쿼터와 Supabase 글로벌 rate limit에 의존. Origin 헤더 검증은 **후속 개선 예정**.
 
 ## 3. 디자인 시스템 (2026-04-19 개편)
 
@@ -123,19 +166,29 @@ await page.screenshot({ path: 'check.png', fullPage: true });
 | `Failed to load url /src/main.tsx` | `#` 경로에서 실행 중 → `/e/dev/sms-app`으로 이동 |
 | `Failed to resolve import "@sentry/react"` | `src/lib/sentry.ts`의 동적 import에 `@vite-ignore` + 변수 문자열 필요 |
 | Edge Function 500 | `return new Response(JSON.stringify({error}), { status: 200 })` 로 200+error 응답 사용 |
+| Edge Function 401 Unauthorized | 공개 AI 함수면 `supabase/config.toml`에 `verify_jwt=false` 후 `--no-verify-jwt` 플래그로 재배포 |
+| Edge Function 405 (Railway 호출 시) | `VITE_VIDEO_SERVER_URL`이 `https://` 없이 설정됨 → 클라이언트가 상대경로로 해석. 코드에 자동 보정 있지만 env도 수정 권장 |
+| Edge Function Payload Too Large | 사진을 여러 장 보내지 말고 대표 1장만 (`photos.slice(0,1)` + 400px 압축) |
+| ElevenLabs 401 `detected_unusual_activity` | Free Tier 차단 — **Starter 유료 구독 필수** |
 | 사진 업로드 > 6MB | `compressPhotos()` 유틸로 클라이언트 압축 |
 | `photos.slice` 타입 에러 | `photos.slice(0,5).map((p,i) => ({ dataUrl: p.dataUrl, index: i+1 }))` |
+| AI 제목이 "방수공사" 한 단어 | 클라이언트에서 `rawTitle.length < 8`이면 `location + siteMethod + rawTitle`로 보강 |
+| "시공 시공 완료" 중복 제목 | mock/fallback에서 `detectedType`에 "시공" 포함 여부에 따라 `완료` / `시공 완료` 분기 |
 
 ## 7. 확정된 기술 결정
 
 | 항목 | 결정 |
 |---|---|
-| LLM 모델 (Edge Function) | `claude-haiku-4-5-20251001` (속도 우선) |
-| 영상 렌더링 | Remotion (Canvas/FFmpeg 대체 완료) |
+| LLM 모델 (Edge Function 전체) | `claude-haiku-4-5-20251001` — 속도·비용 최적. Sonnet·Opus 사용 금지 |
+| LLM Prompt Caching | `generate-blog`, `seo-analyze` 시스템 프롬프트에 `cache_control: ephemeral` 적용 |
+| Edge Function 인증 정책 | 공개 AI 엔드포인트 6개는 `verify_jwt=false` (supabase/config.toml 명시). 사용자 데이터 함수(`reset-password` 등)는 `true` 유지 |
+| TTS | **ElevenLabs Starter 유료** ($6/월, 30,000자). Free Tier는 데이터센터 IP 차단되므로 사용 불가. 음성 6종(남 3·여 3). Web Speech API는 폴백만 |
+| 영상 렌더링 | Remotion (Canvas/FFmpeg 대체 완료). Supabase 150초 제한 회피 위해 Railway 직접 호출이 기본. `VITE_VIDEO_SERVER_URL`이 `https://` 없이 들어와도 클라이언트가 자동 보정 |
 | 패키지 매니저 | **npm 전용** (bun 금지, `bun.lock` / `bun.lockb` 재생성 금지) |
 | 결제 | 카카오페이 + 토스페이먼츠 (키 미수령, UI는 mock) |
-| 분석 | GA4 + Microsoft Clarity (운영 환경만) |
+| 분석 | GA4 + Microsoft Clarity (운영 환경만, env 없으면 no-op) |
 | 에러 트래킹 | Sentry (동적 import, 패키지 미설치 허용) |
+| 보안 헤더 | `public/_headers`에 HSTS / X-Frame-Options DENY / Referrer-Policy / Permissions-Policy. CSP는 후속 작업 |
 
 ## 8. 삭제된 파일 (재생성 금지)
 - `.lovable/` — Lovable 미사용
