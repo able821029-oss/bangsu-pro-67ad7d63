@@ -14,9 +14,32 @@ const VOICE_MAP: Record<string, string> = {
   "female_bright": "pFZP5JQG7iQjIQuC4Bku",
 };
 
+const ALLOWED_ORIGINS = new Set([
+  "https://sms-app-9p9.pages.dev",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
+function isAllowedOrigin(req: Request): boolean {
+  const origin = req.headers.get("origin") || "";
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  try {
+    const { hostname } = new URL(origin);
+    return hostname.endsWith(".pages.dev") && hostname.includes("sms-app");
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+  if (!isAllowedOrigin(req)) {
+    return new Response(JSON.stringify({ error: "허용되지 않은 호출" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {

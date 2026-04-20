@@ -3,6 +3,7 @@ import { HashRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { NetworkStatusBanner } from "@/components/NetworkStatusBanner";
 import Index from "./pages/Index.tsx";
 import AdminPage from "./pages/admin/AdminPage.tsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.tsx";
@@ -15,6 +16,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <NetworkStatusBanner />
       <HashRouter>
         <Routes>
           <Route path="/" element={<Index />} />

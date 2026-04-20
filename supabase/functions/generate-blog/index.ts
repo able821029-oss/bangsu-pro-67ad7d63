@@ -70,9 +70,34 @@ const platformFormats: Record<string, string> = {
 - 해시태그 5~10개`,
 };
 
+// 공개 AI 엔드포인트 — 허용된 Origin만 호출 가능 (남용·비용 유출 방어)
+const ALLOWED_ORIGINS = new Set([
+  "https://sms-app-9p9.pages.dev",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
+function isAllowedOrigin(req: Request): boolean {
+  const origin = req.headers.get("origin") || "";
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  // CF Pages 브랜치 프리뷰(*.sms-app-9p9.pages.dev) 허용
+  try {
+    const { hostname } = new URL(origin);
+    return hostname.endsWith(".pages.dev") && hostname.includes("sms-app");
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+  if (!isAllowedOrigin(req)) {
+    return new Response(JSON.stringify({ error: "허용되지 않은 호출" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {

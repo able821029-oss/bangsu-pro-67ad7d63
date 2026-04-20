@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/bgmSynth";
 import { compressPhotos } from "@/lib/imageCompress";
+import { fetchWithRetry, invokeWithRetry } from "@/lib/fetchWithRetry";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { mirraToRemotionScene, type SmsScene, type SmsVideoProps } from "@/remotion/types";
 
@@ -458,23 +459,21 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     try {
       // 사진 압축 (Edge Function 6MB 제한 대응)
       const compressedPhotos = await compressPhotos(photos.slice(0, 6));
-      const { data: scriptData, error: scriptErr } = await supabase.functions.invoke("generate-shorts", {
-        body: {
-          photos: compressedPhotos.map((dataUrl, i) => ({ dataUrl, index: i + 1 })),
-          workType: "자동판단",
-          videoStyle,
-          narrationType: narrationEnabled ? "있음" : "없음",
-          voiceId: selectedVoice || "male_pro",
-          scriptMode,
-          manualScript: scriptMode === "manual" ? manualScript : undefined,
-          maxDurationSec: 120, // 2분 제한
-          location: settings.serviceArea || "",
-          buildingType: "",
-          constructionDate: new Date().toISOString().slice(0, 10),
-          companyName: settings.companyName,
-          phoneNumber: settings.phoneNumber,
-          workTopic: workTopic.trim(),                        // 오늘의 작업 한 줄
-        },
+      const { data: scriptData, error: scriptErr } = await invokeWithRetry(supabase, "generate-shorts", {
+        photos: compressedPhotos.map((dataUrl, i) => ({ dataUrl, index: i + 1 })),
+        workType: "자동판단",
+        videoStyle,
+        narrationType: narrationEnabled ? "있음" : "없음",
+        voiceId: selectedVoice || "male_pro",
+        scriptMode,
+        manualScript: scriptMode === "manual" ? manualScript : undefined,
+        maxDurationSec: 120, // 2분 제한
+        location: settings.serviceArea || "",
+        buildingType: "",
+        constructionDate: new Date().toISOString().slice(0, 10),
+        companyName: settings.companyName,
+        phoneNumber: settings.phoneNumber,
+        workTopic: workTopic.trim(),                        // 오늘의 작업 한 줄
       });
 
       if (scriptErr) throw new Error(scriptErr.message);
@@ -513,7 +512,9 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       let renderData: { videoUrl?: string; error?: string; detail?: string } | null = null;
       let renderErrMsg: string | null = null;
       try {
-        const r = await fetch(`${RAILWAY_URL}/render-video`, {
+        // 일시적 502/504/네트워크 오류 시 자동으로 최대 2회 재시도 (총 3번 시도).
+        // Remotion 렌더는 길어질 수 있어 timeout 3분.
+        const r = await fetchWithRetry(`${RAILWAY_URL}/render-video`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -524,6 +525,9 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             phoneNumber: settings.phoneNumber,
             bgmType: bgm,
           }),
+          retries: 2,
+          retryDelayMs: 1500,
+          timeoutMs: 180_000,
         });
         renderData = await r.json().catch(() => null);
         if (!r.ok) renderErrMsg = renderData?.error || `HTTP ${r.status}`;
