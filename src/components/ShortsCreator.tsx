@@ -692,6 +692,17 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       }
 
       const serverRenderOk = !renderErrMsg && !renderData?.error && !!renderData?.videoUrl;
+
+      // ── 서버 렌더 실패 시 즉시 error 상태로 전환 (이전에는 '완성' 화면이 잘못 표시되던 버그) ──
+      // videoUrl이 없으면 플레이어에 영상/음성 모두 없음 → 사용자가 "완성"으로 오인
+      if (!serverRenderOk) {
+        throw new Error(
+          renderErrMsg ||
+            renderData?.error ||
+            "서버 렌더링에 실패했습니다. 다시 시도해 주세요."
+        );
+      }
+
       if (serverRenderOk && renderData?.videoUrl) {
         // 서버 렌더링 성공 → MP4에 나레이션/BGM이 이미 합쳐져 있음 (이중 재생 방지)
         setVideoUrl(renderData.videoUrl);
@@ -733,8 +744,6 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             console.warn("[shorts_videos] DB insert 실패:", error.message);
           });
         }
-      } else {
-        console.warn("[SMS] 서버 렌더링 실패:", renderData?.error || renderErrMsg);
       }
 
       // 클라이언트 폴백 오디오 재생 완전 제거 (2026-04-20)
