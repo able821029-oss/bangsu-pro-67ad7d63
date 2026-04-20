@@ -781,32 +781,11 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             </div>
           )}
           {scriptMode === "ai" && (
-            <div className="space-y-3">
-              <p className="text-xs text-[#8B90A0]">
-                사진과 오늘의 작업 힌트를 조합하여 AI가 시공 현장에 맞는 나레이션을 생성합니다.
-              </p>
-
-              {/* 오늘의 작업 한 줄 (필수) */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground flex items-center gap-1">
-                  오늘의 작업 <span className="text-[#EF4444]">*</span>
-                  <span className="text-[10px] font-normal text-muted-foreground ml-auto">
-                    {workTopic.length}/30
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  value={workTopic}
-                  maxLength={30}
-                  onChange={(e) => setWorkTopic(e.target.value)}
-                  placeholder="예) 욕실 방수 시공 / 신메뉴 파스타 / 커트+염색"
-                  className="w-full bg-[#161B2B] border border-white/5 rounded-xl px-3 py-3 text-sm text-[#DEE1F7] placeholder-[#8B90A0] focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  짧고 구체적으로 써주세요. AI가 이 문구를 힌트로 스크립트를 생성합니다.
-                </p>
-              </div>
-            </div>
+            <p className="text-xs text-[#8B90A0]">
+              사진과 오늘의 작업 힌트를 조합하여 AI가 시공 현장에 맞는 나레이션을 생성합니다.
+              <br />
+              <span className="text-[#AB5EBE] font-semibold">↓ 아래 &quot;오늘의 작업&quot; 입력란을 채워 주세요</span>
+            </p>
           )}
         </div>
 
@@ -879,6 +858,43 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         {/* 이번달 영상 현황 */}
         <UsageMeter used={videoUsed} max={videoLimit} plan={subscription.plan}
           onUpgrade={() => { sessionStorage.setItem("sms-open-settings-page", "pricing"); if (onNavigate) { onNavigate("mypage"); } }} />
+
+        {/* 오늘의 작업 — '영상 만들기' 버튼 바로 위에 강조 노출 (AI 모드에서만) */}
+        {scriptMode === "ai" && (
+          <div
+            className="rounded-2xl p-4 space-y-2 shadow-lg"
+            style={{
+              background: "linear-gradient(135deg, rgba(35,127,255,0.12), rgba(171,94,190,0.12))",
+              border: `1.5px solid ${workTopic.trim() ? "rgba(35,127,255,0.45)" : "rgba(239,68,68,0.55)"}`,
+              boxShadow: workTopic.trim()
+                ? "0 0 18px rgba(35,127,255,0.18)"
+                : "0 0 18px rgba(239,68,68,0.22)",
+            }}
+          >
+            <label className="flex items-center gap-2 text-sm font-bold text-foreground">
+              <span className="inline-flex w-6 h-6 rounded-full items-center justify-center bg-gradient-to-br from-[#237FFF] to-[#AB5EBE] text-white text-[11px] font-black">!</span>
+              오늘의 작업
+              <span className="text-[#EF4444]">*</span>
+              <span className="text-[10px] font-normal text-muted-foreground ml-auto">
+                {workTopic.length}/30
+              </span>
+            </label>
+            <input
+              type="text"
+              value={workTopic}
+              maxLength={30}
+              onChange={(e) => setWorkTopic(e.target.value)}
+              placeholder="예) 욕실 방수 시공 / 옥상 우레탄 도장 / 외벽 보수"
+              className="w-full bg-background/80 border border-white/10 rounded-xl px-4 py-3 text-[15px] font-semibold text-foreground placeholder:text-muted-foreground placeholder:font-normal focus-visible:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              짧고 구체적으로 써주세요. AI가 이 문구를 힌트로 스크립트와 나레이션을 생성합니다.
+              {!workTopic.trim() && (
+                <span className="block mt-1 text-[#EF4444] font-semibold">⚠ 비워두면 영상 생성이 안 됩니다</span>
+              )}
+            </p>
+          </div>
+        )}
 
         <div className="space-y-2">
           {(() => {
