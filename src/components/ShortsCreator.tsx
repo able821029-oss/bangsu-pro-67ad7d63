@@ -521,7 +521,9 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
       console.warn(`[SMS] 나레이션: ${narrationAudios.filter(Boolean).length}/${narrationAudios.length}개 ElevenLabs 오디오, BGM: ${bgm}`);
 
-      // ── Railway 서버 직접 호출 (Supabase 150s 제한 우회) ──
+      // ── Railway 비동기 렌더 (jobId 발급 → 3초마다 상태 폴링) ──
+      // 이전 동기 호출은 Railway 게이트웨이가 162초 전후로 504 반환하여 중도 실패했음.
+      // 짧은 HTTP 호출만 반복해서 게이트웨이 타임아웃 자체를 회피한다.
       setProgressText("🖥️ 서버에서 영상 렌더링 중... (1~2분 소요)");
       progressCeiling = 92;
       setProgressPct((p) => Math.max(p, 30));
@@ -535,9 +537,8 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       let renderData: { videoUrl?: string; error?: string; detail?: string } | null = null;
       let renderErrMsg: string | null = null;
       try {
-        // 일시적 502/504/네트워크 오류 시 자동으로 최대 2회 재시도 (총 3번 시도).
-        // Remotion 렌더는 길어질 수 있어 timeout 3분.
-        const r = await fetchWithRetry(`${RAILWAY_URL}/render-video`, {
+        // 1) jobId 발급 (수초 내 응답)
+        const startRes = await fetchWithRetry(`${RAILWAY_URL}/render-start`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -548,12 +549,60 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             phoneNumber: settings.phoneNumber,
             bgmType: bgm,
           }),
-          retries: 1,                // 1차 시도 실패 시 1회 추가 (총 2번)
-          retryDelayMs: 2000,        // 첫 번째 재시도 대기를 2초로 (Railway 서버 회복 여유)
-          timeoutMs: 300_000,        // 5분 — Remotion 긴 렌더도 504 나기 전에 완료되도록
+          retries: 2,
+          retryDelayMs: 1500,
+          timeoutMs: 60_000,
         });
-        renderData = await r.json().catch(() => null);
-        if (!r.ok) renderErrMsg = renderData?.error || `HTTP ${r.status}`;
+        const startJson = await startRes.json().catch(() => null);
+        if (!startRes.ok || !startJson?.jobId) {
+          // 구버전 서버(배포 전)면 render-start가 없을 수 있음 → /render-video 폴백
+          throw new Error(startJson?.error || `HTTP ${startRes.status}`);
+        }
+        const jobId: string = startJson.jobId;
+        console.warn(`[SMS] 렌더 jobId: ${jobId}`);
+
+        // 2) 상태 폴링 — 최대 8분
+        const pollDeadline = Date.now() + 8 * 60 * 1000;
+        while (Date.now() < pollDeadline) {
+          await new Promise((r) => setTimeout(r, 3000));
+          let statusJson: { status?: string; progress?: number; videoUrl?: string; error?: string } | null = null;
+          try {
+            const statusRes = await fetchWithRetry(`${RAILWAY_URL}/render-status/${jobId}`, {
+              method: "GET",
+              retries: 2,
+              retryDelayMs: 1500,
+              timeoutMs: 15_000,
+            });
+            statusJson = await statusRes.json().catch(() => null);
+            if (!statusRes.ok) {
+              console.warn(`[SMS] 상태 조회 ${statusRes.status} — 다음 폴링에 재시도`);
+              continue;
+            }
+          } catch (e: any) {
+            // 일시적 네트워크 오류는 다음 틱에 재시도
+            console.warn(`[SMS] 폴링 일시 오류:`, e?.message);
+            continue;
+          }
+          if (!statusJson) continue;
+
+          // 서버 진행률을 30~92 구간에 반영
+          if (typeof statusJson.progress === "number") {
+            const serverMapped = 30 + Math.round((statusJson.progress / 100) * 62);
+            progressCeiling = Math.min(92, Math.max(progressCeiling, serverMapped));
+            setProgressPct((p) => Math.max(p, serverMapped));
+          }
+          if (statusJson.status === "done" && statusJson.videoUrl) {
+            renderData = { videoUrl: statusJson.videoUrl };
+            break;
+          }
+          if (statusJson.status === "error") {
+            renderErrMsg = statusJson.error || "서버 렌더 실패";
+            break;
+          }
+        }
+        if (!renderData && !renderErrMsg) {
+          renderErrMsg = "렌더 타임아웃 (8분 초과)";
+        }
       } catch (e: any) {
         renderErrMsg = e?.message || "네트워크 오류";
       }
