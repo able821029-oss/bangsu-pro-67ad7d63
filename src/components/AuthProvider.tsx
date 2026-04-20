@@ -73,6 +73,44 @@ async function loadPostsIntoStore(userId: string) {
   }
 }
 
+/** 쇼츠 영상 보관함을 DB에서 스토어로 로드 */
+async function loadShortsVideosIntoStore(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from("shorts_videos")
+      .select("id, title, video_url, thumbnail_data_url, video_style, voice_id, bgm_type, scenes_preview, photo_count, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      // 테이블이 아직 없으면 조용히 skip (마이그레이션 미실행 환경)
+      if (!error.message.includes("does not exist")) {
+        console.warn("[Auth] shorts_videos load error:", error.message);
+      }
+      return;
+    }
+    if (!data || data.length === 0) return;
+
+    useAppStore.getState().setShortsVideos(
+      data.map((row) => ({
+        id: row.id,
+        title: row.title ?? "무제 쇼츠",
+        videoUrl: row.video_url ?? "",
+        thumbnailDataUrl: row.thumbnail_data_url ?? undefined,
+        videoStyle: row.video_style ?? undefined,
+        voiceId: row.voice_id ?? undefined,
+        bgmType: row.bgm_type ?? undefined,
+        scenesPreview: Array.isArray(row.scenes_preview) ? row.scenes_preview as string[] : undefined,
+        photoCount: row.photo_count ?? 0,
+        createdAt: row.created_at ?? new Date().toISOString(),
+      })),
+    );
+  } catch (e) {
+    console.warn("[Auth] loadShortsVideosIntoStore error:", e);
+  }
+}
+
 /** 로그인한 사용자의 업체정보를 DB에서 로드하여 Zustand 스토어에 주입 */
 async function loadProfileIntoStore(userId: string) {
   try {
@@ -136,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === "SIGNED_IN" && session?.user) {
         loadProfileIntoStore(session.user.id);
         loadPostsIntoStore(session.user.id);
+        loadShortsVideosIntoStore(session.user.id);
       }
     });
 
@@ -151,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         loadProfileIntoStore(session.user.id);
         loadPostsIntoStore(session.user.id);
+        loadShortsVideosIntoStore(session.user.id);
       }
     }).catch(() => {
       setLoading(false);

@@ -3,6 +3,7 @@ import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Squar
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
+import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/bgmSynth";
@@ -145,7 +146,8 @@ function VoiceCard({
 }
 
 export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onClose: () => void; onNavigate?: (tab: string) => void; autoStart?: boolean }) {
-  const { photos, settings, subscription, addPhoto, removePhoto, posts } = useAppStore();
+  const { photos, settings, subscription, addPhoto, removePhoto, posts, addShortsVideo } = useAppStore();
+  const { user } = useAuth();
   const hasAutoStarted = useRef(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -533,6 +535,39 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       if (serverRenderOk && renderData?.videoUrl) {
         // 서버 렌더링 성공 → MP4에 나레이션/BGM이 이미 합쳐져 있음 (이중 재생 방지)
         setVideoUrl(renderData.videoUrl);
+
+        // 보관함에 저장 — 나중에 다시 다운로드할 수 있도록
+        const savedVideo = {
+          id: crypto.randomUUID(),
+          title: workTopic.trim() || scenes[0]?.title || "무제 쇼츠",
+          videoUrl: renderData.videoUrl,
+          thumbnailDataUrl: compressedPhotos[0] || undefined,
+          videoStyle,
+          voiceId: selectedVoice || undefined,
+          bgmType: bgm,
+          scenesPreview: scenes.slice(0, 6).map((s) => s.title || "").filter(Boolean),
+          photoCount: photos.length,
+          createdAt: new Date().toISOString(),
+        };
+        addShortsVideo(savedVideo);
+
+        if (user) {
+          // DB에 저장 (실패해도 로컬 보관함은 유지)
+          void supabase.from("shorts_videos").insert({
+            id: savedVideo.id,
+            user_id: user.id,
+            title: savedVideo.title,
+            video_url: savedVideo.videoUrl,
+            thumbnail_data_url: savedVideo.thumbnailDataUrl || null,
+            video_style: savedVideo.videoStyle || null,
+            voice_id: savedVideo.voiceId || null,
+            bgm_type: savedVideo.bgmType || null,
+            scenes_preview: savedVideo.scenesPreview || null,
+            photo_count: savedVideo.photoCount,
+          }).then(({ error }) => {
+            if (error) console.warn("[shorts_videos] DB insert 실패 (테이블 미생성일 수 있음):", error.message);
+          });
+        }
       } else {
         console.warn("[SMS] 서버 렌더링 실패:", renderData?.error || renderErrMsg);
       }

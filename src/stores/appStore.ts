@@ -85,6 +85,20 @@ export function createEmptyDraft(): BlogDraft {
   };
 }
 
+export interface ShortsVideo {
+  id: string;
+  title: string;
+  videoUrl: string;
+  thumbnailDataUrl?: string;  // 첫 사진 기반 썸네일 (작게 압축된 data URL)
+  videoStyle?: string;         // "작업일지형" | "홍보형" | "before_after"
+  voiceId?: string;
+  bgmType?: string;
+  durationSec?: number;
+  scenesPreview?: string[];    // 장면 제목 6개 요약
+  photoCount: number;
+  createdAt: string;
+}
+
 export interface Coupon {
   id: string;
   code: string;
@@ -134,6 +148,7 @@ interface AppState {
   selectedPersona: Persona;
   currentPost: BlogPost | null;
   posts: BlogPost[];
+  shortsVideos: ShortsVideo[];
   settings: Settings;
   subscription: Subscription;
   coupons: Coupon[];
@@ -156,6 +171,9 @@ interface AppState {
   addPost: (post: BlogPost) => void;
   updatePostStatus: (id: string, status: PostStatus) => void;
   updatePost: (id: string, updates: Partial<BlogPost>) => void;
+  addShortsVideo: (video: ShortsVideo) => void;
+  removeShortsVideo: (id: string) => void;
+  setShortsVideos: (videos: ShortsVideo[]) => void;
   updateSettings: (settings: Partial<Settings>) => void;
   addCoupon: (coupon: Coupon) => void;
   addInquiry: (inquiry: Inquiry) => void;
@@ -194,6 +212,7 @@ export const useAppStore = create<AppState>()(
   selectedPersona: "장인형",
   currentPost: null,
   posts: [],
+  shortsVideos: [],
   settings: {
     companyName: "",
     phoneNumber: "",
@@ -270,6 +289,11 @@ export const useAppStore = create<AppState>()(
       }
       return { settings: next };
     }),
+  addShortsVideo: (video) =>
+    set((state) => ({ shortsVideos: [video, ...state.shortsVideos] })),
+  removeShortsVideo: (id) =>
+    set((state) => ({ shortsVideos: state.shortsVideos.filter((v) => v.id !== id) })),
+  setShortsVideos: (videos) => set({ shortsVideos: videos }),
   addCoupon: (coupon) =>
     set((state) => ({ coupons: [...state.coupons, coupon] })),
   addInquiry: (inquiry) =>

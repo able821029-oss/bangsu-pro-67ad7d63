@@ -20,6 +20,8 @@ import { FieldToolsPage } from "@/pages/FieldToolsPage";
 import { FaqPage } from "@/pages/settings/FaqPage";
 import { ContactPage } from "@/pages/settings/ContactPage";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
+import { ShortsLibrary } from "@/components/ShortsLibrary";
+import { Film } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 
 const openPricing = (from: string, setPage: (p: "pricing") => void) => {
@@ -33,6 +35,7 @@ export function MyPage() {
   const { user, signOut } = useAuth();
   const subscription = useAppStore(s => s.subscription);
   const settings = useAppStore(s => s.settings);
+  const shortsCount = useAppStore(s => s.shortsVideos.length);
   const [name, setName] = useState("");
   const [googleConnected, setGoogleConnected] = useState(false);
   const [page, setPage] = useState<Page>(() => {
@@ -179,6 +182,15 @@ export function MyPage() {
           플랜 업그레이드
           <ChevronRight className="w-5 h-5" />
         </button>
+      </div>
+
+      {/* 내 쇼츠 보관함 */}
+      <div className="mx-5 mb-5 space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Film className="w-4 h-4 text-primary" />
+          <h2 className="text-sm font-bold text-foreground">내 쇼츠 영상 ({shortsCount})</h2>
+        </div>
+        <ShortsLibrary />
       </div>
 
       {/* 구글 캘린더 */}
