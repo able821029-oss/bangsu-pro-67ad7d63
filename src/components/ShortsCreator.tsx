@@ -501,8 +501,18 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       console.warn(`[SMS] 나레이션: ${narrationAudios.filter(Boolean).length}/${narrationAudios.length}개 ElevenLabs 오디오, BGM: ${bgm}`);
 
       // ── Railway 서버 직접 호출 (Supabase 150s 제한 우회) ──
-      setProgressText("🖥️ 서버에서 영상 렌더링 중...");
-      setProgressPct(20);
+      setProgressText("🖥️ 서버에서 영상 렌더링 중... (1~2분 소요)");
+      setProgressPct(30);
+
+      // Railway 렌더 진행 중 진행률을 부드럽게 증가시켜 '멈춤' 체감 제거
+      const progressTimer = setInterval(() => {
+        setProgressPct((prev) => {
+          if (prev >= 92) return prev; // 완료 전에는 92% 이하에서 멈춤
+          // 초반엔 빠르게, 후반엔 느리게
+          const inc = prev < 55 ? 2.5 : prev < 75 ? 1.3 : 0.6;
+          return Math.min(prev + inc, 92);
+        });
+      }, 1200);
 
       // env가 https:// 없이 도메인만 세팅된 경우 자동 보정 (CF Pages 설정 실수 방어)
       const rawUrl =
@@ -534,6 +544,8 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         if (!r.ok) renderErrMsg = renderData?.error || `HTTP ${r.status}`;
       } catch (e: any) {
         renderErrMsg = e?.message || "네트워크 오류";
+      } finally {
+        clearInterval(progressTimer); // 진행률 자동 증가 중지
       }
 
       const serverRenderOk = !renderErrMsg && !renderData?.error && !!renderData?.videoUrl;
@@ -582,13 +594,16 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         console.warn("[SMS] 서버 렌더링 실패:", renderData?.error || renderErrMsg);
       }
 
-      // 나레이션 + BGM 재생 예약 (서버 렌더 실패 시 클라이언트 폴백 재생)
+      // 클라이언트 폴백 오디오 재생 완전 제거 (2026-04-20)
+      // 이전엔 서버 렌더 실패 시 narrationAudios + BGM을 클라이언트에서 자체 재생했지만,
+      // 영상 없이 소리만 나오는 UX가 더 혼란스러움. 서버 렌더 성공 시 MP4 내장 오디오
+      // 하나만 재생하고, 실패 시엔 재생 자체를 하지 않음 → "다시 만들기"로 재시도 유도.
       audioPlayedRef.current = false;
       pendingAudioRef.current = {
-        narrationAudios: !serverRenderOk && narrationEnabled ? narrationAudios : [],
+        narrationAudios: [],
         narrationTexts: [],
         voiceConfig: null,
-        bgmType: serverRenderOk ? "none" : bgm,
+        bgmType: "none",
       };
 
       setProgressPct(100);

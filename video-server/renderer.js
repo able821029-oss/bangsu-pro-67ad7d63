@@ -82,9 +82,9 @@ async function renderVideo({
     inputProps,
     // Railway Hobby 대응 — 속도 우선 최적화
     concurrency: 3, // 병렬 프레임 렌더링 (메모리 허용 범위 내 최대)
-    jpegQuality: 65,
+    jpegQuality: 62,
     imageFormat: "jpeg",
-    scale: 0.45, // 486x864 — 품질-속도 균형
+    scale: 0.40, // 432x768 — 렌더 시간 ~20% 단축 (2026-04-20 최적화)
     muted: true, // Remotion 오디오는 사용 안 함 (ffmpeg로 후처리)
     logLevel: "warn",
     chromiumOptions: {
