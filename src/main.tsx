@@ -17,8 +17,8 @@ window.addEventListener("error", (e) => {
 window.addEventListener("unhandledrejection", (e) => {
   const reason = e.reason;
   const msg = typeof reason === "string" ? reason : reason?.message || String(reason);
-  // AbortError는 정상 취소 (타임아웃 · 사용자 네비게이션)
-  if (/AbortError|The operation was aborted/i.test(msg)) return;
+  // AbortError / signal aborted — fetchWithRetry의 타임아웃 후 재시도에서 정상 처리되는 이벤트
+  if (/AbortError|The operation was aborted|signal is aborted/i.test(msg)) return;
   console.error("[unhandledrejection]", msg, reason);
 });
 

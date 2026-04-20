@@ -85,8 +85,16 @@ async function loadShortsVideosIntoStore(userId: string) {
 
     if (error) {
       // 테이블이 아직 없으면 조용히 skip (마이그레이션 미실행 환경)
-      if (!error.message.includes("does not exist")) {
-        console.warn("[Auth] shorts_videos load error:", error.message);
+      // Supabase REST API는 "Could not find the table" / PostgREST PGRST106도 같은 케이스
+      const msg = error.message || "";
+      const tableMissing =
+        msg.includes("does not exist") ||
+        msg.includes("Could not find the table") ||
+        msg.includes("PGRST106") ||
+        (error as { code?: string }).code === "PGRST106" ||
+        (error as { code?: string }).code === "42P01";
+      if (!tableMissing) {
+        console.warn("[Auth] shorts_videos load error:", msg);
       }
       return;
     }

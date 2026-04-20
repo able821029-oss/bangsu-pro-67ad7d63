@@ -569,7 +569,16 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             scenes_preview: savedVideo.scenesPreview || null,
             photo_count: savedVideo.photoCount,
           }).then(({ error }) => {
-            if (error) console.warn("[shorts_videos] DB insert 실패 (테이블 미생성일 수 있음):", error.message);
+            if (!error) return;
+            const msg = error.message || "";
+            const tableMissing =
+              msg.includes("does not exist") ||
+              msg.includes("Could not find the table") ||
+              msg.includes("PGRST106");
+            if (!tableMissing) {
+              console.warn("[shorts_videos] DB insert 실패:", msg);
+            }
+            // 테이블 미생성이면 조용히 skip — 로컬 store에는 이미 저장됨
           });
         }
       } else {
