@@ -35,7 +35,7 @@ const personaPrompts: Record<string, string> = {
 };
 
 const seoRules = `[네이버 SEO 글쓰기 필수 규칙]
-① 제목: 25자 이내, 키워드 앞배치, {지역} {업종} {공사종류} 형식
+① 제목: 반드시 10~25자. {지역} + {공사종류} + 차별화 문구를 포함 (예: "호원2동 외벽방수 10년 장인의 꼼꼼 시공"). 한 단어(예: "방수공사")만 절대 금지.
 ② 본문: 반드시 1,500자 이상 (최적 1,800~2,000자)
 ③ 키워드: 메인 키워드 5~6회 자연 반복, 과도한 반복 금지
 ④ 본문 구조 (소제목 필수):
@@ -218,6 +218,8 @@ JSON 형식으로만 응답해주세요.`,
       const area = siteArea || "미상";
       const method = siteMethod || "전문 공법";
       const etc = siteEtc || "";
+      // 제목에 "시공"이 중복되지 않도록 detectedType에 이미 "시공"이 포함되면 "완료"만 덧붙임
+      const titleSuffix = /시공/.test(detectedType) ? "완료" : "시공 완료";
       const mockBlocks: any[] = [
         { type: "subtitle", content: "현장 소개" },
         { type: "text", content: `${constructionDate || "오늘"} ${location || "현장"}에서 진행한 ${detectedType} 시공입니다. 시공 면적은 ${area}이며, ${method}으로 시공했습니다.${etc ? ` 특이사항: ${etc}.` : ""}` },
@@ -233,7 +235,7 @@ JSON 형식으로만 응답해주세요.`,
       });
       mockBlocks.push({ type: "text", content: `${companyName || "SMS"} 시공 완료. 문의: ${phoneNumber || "전화문의"}` });
       return new Response(JSON.stringify({
-        title: `${location || "현장"} ${detectedType} 시공 완료`,
+        title: `${location || "현장"} ${detectedType} ${titleSuffix}`,
         detectedWorkType: detectedType,
         blocks: mockBlocks,
         hashtags: [detectedType, "시공업체추천", (location || "") + "시공", "시공후기", companyName || "SMS", "시공완료", detectedType + "업체", detectedType + "전문", "시공현장", "건물시공", "누수해결", detectedType + "추천", "방수업체추천", "시공사례", "블로그마케팅"],
@@ -281,8 +283,9 @@ JSON 형식으로만 응답해주세요.`,
       });
       fallbackBlocks.push({ type: "text", content: `${companyName || "SMS"}에서 ${location || "현장"} ${detectedType} 시공을 완료했습니다. 문의: ${phoneNumber || "전화문의"}` });
 
+      const titleSuffix2 = /시공/.test(detectedType) ? "완료" : "시공 완료";
       const mockResponse = {
-        title: `${location || "현장"} ${detectedType} 시공 완료`,
+        title: `${location || "현장"} ${detectedType} ${titleSuffix2}`,
         detectedWorkType: detectedType,
         blocks: fallbackBlocks,
         hashtags: platform === "instagram"

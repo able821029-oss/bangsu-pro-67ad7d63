@@ -279,7 +279,12 @@ export function CameraTab({
 
       // AI 결과(blocks)를 편집 가능한 sections로 변환: subtitle + 바로 뒤따르는 text/photo를 한 섹션으로 묶음
       const merged = blocksToSections(aiResult.blocks || [], photos);
-      setTitle(aiResult.title || title);
+      // 제목이 너무 짧으면(한 단어 "방수공사" 케이스) location·siteMethod로 보강
+      const rawTitle = (aiResult.title || title || "").trim();
+      const safeTitle = rawTitle.length >= 8
+        ? rawTitle
+        : [location, siteMethod, rawTitle || "시공 완료"].filter(Boolean).join(" ").trim();
+      setTitle(safeTitle);
       setEditSections(merged.length > 0 ? merged : editSections);
       setEditHashtags(aiResult.hashtags || []);
 

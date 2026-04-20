@@ -188,7 +188,7 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
         {/* SNS 연동 */}
         <div className="glass-card p-5 space-y-3">
           <p className="text-sm font-semibold text-foreground">SNS 연동 상태</p>
-          <ConnStatus label="네이버 블로그" connected={settings.naverConnected} />
+          <ConnStatus label="네이버 블로그" connected={settings.naverConnected} onConnect={() => handleConnect("네이버 블로그")} />
           <ConnStatus label="인스타그램" connected={settings.instagramConnected} onConnect={() => handleConnect("인스타그램")} />
           <ConnStatus label="틱톡" connected={settings.tiktokConnected} onConnect={() => handleConnect("틱톡")} />
         </div>

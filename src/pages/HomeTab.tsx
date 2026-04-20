@@ -68,6 +68,16 @@ export function HomeTab({
   const completed = posts.filter((p) => p.status === "완료" || p.status === "게시완료").length;
   const videoCount = subscription.videoUsed ?? 0;
 
+  // 이번 달 사용량 — subscription.usedCount 증가 로직이 아직 백엔드에 없어서 posts 기반으로 파생.
+  // usage_counters RPC가 붙으면 이 블록을 subscription.usedCount로 되돌리면 됨.
+  const currentMonth = new Date().toISOString().slice(0, 7); // "2026-04"
+  const monthlyUsed = posts.filter(
+    (p) =>
+      (p.status === "완료" || p.status === "게시완료") &&
+      typeof p.createdAt === "string" &&
+      p.createdAt.startsWith(currentMonth),
+  ).length;
+
   // 실제 주간 발행 데이터 계산
   const weeklyData = (() => {
     const now = new Date();
@@ -83,8 +93,8 @@ export function HomeTab({
     });
   })();
 
-  const usagePercent = subscription.maxCount > 0 ? (subscription.usedCount / subscription.maxCount) * 100 : 0;
-  const remaining = subscription.maxCount - subscription.usedCount;
+  const usagePercent = subscription.maxCount > 0 ? (monthlyUsed / subscription.maxCount) * 100 : 0;
+  const remaining = subscription.maxCount - monthlyUsed;
 
   const tier = getMedalTier(subscription.consecutiveMonths);
   const medal = tier > 0 ? medalInfo[tier] : null;
@@ -180,7 +190,7 @@ export function HomeTab({
         </div>
         <div className="space-y-1">
           <div className="flex items-baseline gap-2">
-            <span className="stat-number text-5xl text-primary text-glow">{subscription.usedCount}</span>
+            <span className="stat-number text-5xl text-primary text-glow">{monthlyUsed}</span>
             <span className="stat-unit text-base">/ {subscription.maxCount}건</span>
           </div>
           <p className="text-xs text-muted-foreground">
