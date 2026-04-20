@@ -222,11 +222,13 @@ export function CameraTab({
       setGenStep("analyzing");
       const primaryPlatform = selectedPlatforms[0];
 
-      // 사진 압축 (Edge Function 6MB 제한 대응)
-      const compressed = await compressPhotos(photos.slice(0, 5));
+      // Claude Vision에 보낼 대표 사진 1장만 더 공격적으로 압축 (400px/q=0.5) —
+      // 나머지는 로컬에만 유지해 DB에 저장. Edge Function 6MB · 150s 한계 회피.
+      const primaryCompressed = await compressPhotos(photos.slice(0, 1), 400);
       const { data, error } = await supabase.functions.invoke("generate-blog", {
         body: {
-          photos: compressed.map((dataUrl, i) => ({ dataUrl, index: i + 1 })),
+          photos: primaryCompressed.map((dataUrl, i) => ({ dataUrl, index: i + 1 })),
+          photoCount: photos.length,
           persona: selectedPersona,
           platform: primaryPlatform,
           location,
