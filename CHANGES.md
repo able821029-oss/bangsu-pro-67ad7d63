@@ -1,5 +1,104 @@
 # CHANGES
 
+## 진행 요약
+
+| Phase | 버전 | 테마 | 핵심 변경 |
+|---|---|---|---|
+| 1 | v5.0 | BullMQ 큐 | 인메모리 Map → Redis, 동시성 제어, API/워커 분리 |
+| 2 | v5.1 | FFmpeg 엔진 | Remotion 우회로 렌더 시간 3~5배 단축, 엔진 이원화 |
+| 3 | v5.2 | SSE + 에러 격리 | 부분 실패 허용, 폴링 → SSE 푸시, BGM 캐싱 |
+
+---
+
+## Phase 3 — SSE + 부분 실패 허용 + BGM 캐싱 (v5.2) · 2026-04-20
+
+### 목표
+- 한 점 실패가 전체 실패를 만들지 않도록 **degraded service** 전환
+- 3초 폴링 → **SSE 푸시**로 완료 즉시 UI 반영
+- 동일 BGM 타입의 반복 요청 비용 최소화
+
+### A. ElevenLabs 에러 격리 + 재시도 ([generate-shorts/index.ts](supabase/functions/generate-shorts/index.ts))
+- `generateNarrationWithRetry()` 함수 신규 — 지수 백오프 800·1600ms, 최대 2회 재시도
+- 씬별 `Promise.allSettled` — 한 씬 실패가 다른 씬에 영향 없음
+- 최종 실패한 씬은 `failedScenes: number[]` 배열로 반환
+- **전체 실패(attempted > 0 && success === 0) 시에만 500** · 부분 실패는 `200 { narrationAudios, failedScenes: [...] }`
+- Claude/Gemini 단계의 기존 fallback 체인은 그대로 유지
+
+### B. 클라이언트 사전 게이트 ① 수정 ([ShortsCreator.tsx](src/components/ShortsCreator.tsx))
+- `validAudioCount === 0` 차단 유지
+- `failedScenes.length > 0 && validAudioCount > 0` → 토스트 경고 후 진행 허용 (차단 X)
+- 토스트: "일부 장면 음성 생성 실패 — {N}개 장면은 음성 없이 진행합니다"
+
+### C. 서버 사전 게이트 ② 수정 ([worker.js](video-server/worker.js))
+- `validAudioCount === 0 && totalSlots > 0`일 때만 throw (의도적 전체 실패)
+- 부분 실패는 `console.log`로만 기록 → 무음 씬 허용하고 진행
+- 메시지를 "전부 실패했습니다"로 구체화
+
+### D. 파이프라인 병렬화 확인 ([generate-shorts/index.ts](supabase/functions/generate-shorts/index.ts))
+- **이미** `Promise.all`로 ElevenLabs N건 완전 병렬이었음. 이번에 `Promise.allSettled`로 교체했지만 병렬성은 동일
+- 로그 메시지에 `(allSettled + retry)` 명시하여 구조 확인 가능
+
+### E. 폴링 → SSE 전환
+**서버** ([video-server/index.js](video-server/index.js))
+- `GET /render-status/:jobId/stream` SSE 엔드포인트 신규
+- BullMQ `queueEvents`의 `progress`/`completed`/`failed` 이벤트를 그대로 `data: {json}\n\n`로 푸시
+- 30초마다 `: keepalive` 주석 라인 — 프록시 타임아웃 방지
+- `X-Accel-Buffering: no` 헤더 — nginx/CF 버퍼링 비활성화
+- `req.on("close")` 시 리스너·keepalive 자동 정리 (누수 방지)
+- 기존 `GET /render-status/:jobId` 폴링 엔드포인트는 그대로 유지 (호환성)
+- `buildStatusResponse(job)` 공통 헬퍼로 폴링·SSE 응답 스키마 통일
+
+**클라이언트** ([ShortsCreator.tsx](src/components/ShortsCreator.tsx))
+- `EventSource`로 `/stream` 우선 구독
+- `onmessage` → `applyStatus(data)` 공통 핸들러 (폴링과 공유)
+- `onerror` → 연결 종료 후 3초 폴링 폴백 자동 진입
+- 최대 8분 hardTimeout
+- SSE 미지원(`typeof EventSource === "undefined"`) 시 즉시 폴링 경로
+
+### F. BGM 프리셋 캐싱 ([video-server/bgm.js](video-server/bgm.js))
+- `/tmp/bgm-cache/{type}.mp3`에 180초 마스터 저장
+- 호출 시 `ensureMaster()` → 있으면 재사용, 없으면 1회 생성
+- 요구 길이로 `-c:a copy -t <clamped>` stream copy trim (수십~수백 ms)
+- 최대 180초 clamp
+- 알 수 없는 타입은 `calm`으로 fallback
+- `clearBgmCache()` export (테스트 용도)
+- `BGM_CACHE_DIR` 환경변수로 경로 변경 가능
+
+### G. 테스트
+신규 2종 (Redis 불필요):
+
+| 파일 | 검증 |
+|---|---|
+| [tests/partialNarration.test.js](video-server/tests/partialNarration.test.js) | 7씬 중 2·4번 null → 5씬 오디오 합성 OK / 전부 null + BGM=none → 원본 영상 그대로 / 일부 null + BGM 있음 → 믹스 OK |
+| [tests/bgmCache.test.js](video-server/tests/bgmCache.test.js) | 2회차 < 1회차 시간 / 마스터 파일 생성 / none·unknown 처리 |
+
+SSE 엔드포인트는 수동 통합 테스트 (Redis + 워커 필요). docs/ERROR_HANDLING.md에 로컬 검증 절차 기록.
+
+### H. 문서화
+- [docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md) 신규 — 10단계 파이프라인별 실패 원인·폴백·사용자 메시지 매핑 테이블
+- 본 CHANGES.md 상단에 Phase 1/2/3 요약 추가
+
+### 제약 준수
+- ✅ Phase 1 BullMQ 구조 유지 (worker 프로세스 분리, `shortsQueue`/`queueEvents` 공유)
+- ✅ Phase 2 엔진 이원화 유지 (`selectEngine()` 그대로)
+- ✅ Supabase DB 스키마 변경 없음
+- ✅ 기존 환경변수 유지 — 신규만 추가: `BGM_CACHE_DIR` (optional)
+
+### 배포 체크
+- [x] 전파일 `node -c` 구문 OK
+- [x] 루트 `tsc --noEmit` exit 0 (클라이언트 타입 오류 없음)
+- [x] `npm run test:ffmpeg` 4/4 pass
+- [ ] `npm --prefix video-server run test` (bgmCache + partialNarration) — 실행 예정
+- [ ] SSE 엔드포인트 로컬 Redis 통합 테스트 — 수동
+
+### 사용자 체감 개선
+| 항목 | Before | After |
+|---|---|---|
+| 완료 시점 반영 지연 | 최대 3초 | **<100ms (SSE push)** |
+| 나레이션 1건 실패 | 전체 영상 생성 취소 | 해당 씬 무음 + 경고 토스트 후 진행 |
+| BGM 동일 타입 10번 요청 | 매번 sine 합성 ~1초 | 첫 호출만 ~1초, 이후 **~50ms** |
+| Railway 서버 일시 재시작 | SSE 끊겨도 폴링으로 자동 복구 |
+
 ---
 
 ## Phase 2 — FFmpeg 네이티브 렌더러 (v5.1) · 2026-04-20

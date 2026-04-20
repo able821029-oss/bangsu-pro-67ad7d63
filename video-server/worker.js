@@ -80,11 +80,18 @@ async function processShortsJob(job) {
       throw new Error("scenes, photos 필수");
     }
 
-    // ── 사전 게이트 ② ──
+    // ── 사전 게이트 ②: 전부 null일 때만 차단 (부분 실패는 허용) ──
     const validAudioCount = (narrationAudios || []).filter(Boolean).length;
-    if (narrationExpected && validAudioCount === 0) {
+    const totalNarrationSlots = (narrationAudios || []).length;
+    if (narrationExpected && validAudioCount === 0 && totalNarrationSlots > 0) {
       throw new Error(
-        "나레이션 음성 생성 실패 — ElevenLabs 응답이 비어있어 영상을 만들지 않았습니다. 다시 시도해 주세요."
+        "나레이션 음성 생성이 전부 실패했습니다 — ElevenLabs 서비스를 확인하고 다시 시도해 주세요."
+      );
+    }
+    const missingCount = totalNarrationSlots - validAudioCount;
+    if (narrationExpected && missingCount > 0 && validAudioCount > 0) {
+      console.log(
+        `[${jobId}] 부분 실패 허용 — ${missingCount}/${totalNarrationSlots}개 씬 음성 없음 (무음으로 진행)`
       );
     }
 

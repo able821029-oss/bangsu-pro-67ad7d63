@@ -520,11 +520,20 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
 
       const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
       const validAudioCount = narrationAudios.filter(Boolean).length;
-      console.warn(`[SMS] 나레이션: ${validAudioCount}/${narrationAudios.length}개 ElevenLabs 오디오, BGM: ${bgm}`);
+      const failedScenes: number[] = Array.isArray(scriptData?.failedScenes) ? scriptData.failedScenes : [];
+      console.warn(
+        `[SMS] 나레이션: ${validAudioCount}/${narrationAudios.length}개 ElevenLabs 오디오, 실패 씬 [${failedScenes.join(",")}], BGM: ${bgm}`
+      );
 
-      // ── 사전 게이트: 나레이션 ON인데 유효 오디오 0개면 서버 보내기 전 중단 ──
+      // ── 사전 게이트 ①: 나레이션 ON인데 유효 오디오 '0개'일 때만 차단. 부분 실패는 허용. ──
       if (narrationEnabled && validAudioCount === 0) {
-        throw new Error("나레이션 음성 생성이 실패했습니다 (ElevenLabs 응답 없음). 잠시 후 다시 시도해 주세요.");
+        throw new Error("나레이션 음성 생성이 전부 실패했습니다 (ElevenLabs 응답 없음). 잠시 후 다시 시도해 주세요.");
+      }
+      if (narrationEnabled && failedScenes.length > 0) {
+        toast({
+          title: "일부 장면 음성 생성 실패",
+          description: `${failedScenes.length}개 장면은 음성 없이 진행합니다.`,
+        });
       }
 
       // ── Railway 비동기 렌더 (jobId 발급 → 3초마다 상태 폴링) ──
@@ -568,49 +577,102 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         const jobId: string = startJson.jobId;
         console.warn(`[SMS] 렌더 jobId: ${jobId}`);
 
-        // 2) 상태 폴링 — 최대 8분
-        const pollDeadline = Date.now() + 8 * 60 * 1000;
-        while (Date.now() < pollDeadline) {
-          await new Promise((r) => setTimeout(r, 3000));
-          let statusJson: { status?: string; progress?: number; stage?: string; videoUrl?: string; error?: string } | null = null;
-          try {
-            const statusRes = await fetchWithRetry(`${RAILWAY_URL}/render-status/${jobId}`, {
-              method: "GET",
-              retries: 2,
-              retryDelayMs: 1500,
-              timeoutMs: 15_000,
-            });
-            statusJson = await statusRes.json().catch(() => null);
-            if (!statusRes.ok) {
-              console.warn(`[SMS] 상태 조회 ${statusRes.status} — 다음 폴링에 재시도`);
-              continue;
-            }
-          } catch (e: any) {
-            // 일시적 네트워크 오류는 다음 틱에 재시도
-            console.warn(`[SMS] 폴링 일시 오류:`, e?.message);
-            continue;
-          }
-          if (!statusJson) continue;
-
-          // 서버 진행률을 30~92 구간에 반영
-          if (typeof statusJson.progress === "number") {
-            const serverMapped = 30 + Math.round((statusJson.progress / 100) * 62);
+        // 공통 상태 핸들러 — SSE·폴링 모두에서 진행률/stage/완료/실패 처리를 재사용
+        type StatusJson = {
+          status?: string;
+          progress?: number;
+          stage?: string;
+          videoUrl?: string;
+          error?: string;
+        };
+        const applyStatus = (s: StatusJson): "done" | "error" | "continue" => {
+          if (typeof s.progress === "number") {
+            const serverMapped = 30 + Math.round((s.progress / 100) * 62);
             progressCeiling = Math.min(92, Math.max(progressCeiling, serverMapped));
             setProgressPct((p) => Math.max(p, serverMapped));
           }
-          // 서버가 알려주는 현재 단계 문구를 사용자에게 그대로 노출 (검증/업로드 등)
-          if (statusJson.stage) {
-            setProgressText(`🖥️ ${statusJson.stage}... (서버)`);
+          if (s.stage) setProgressText(`🖥️ ${s.stage}... (서버)`);
+          if (s.status === "done" && s.videoUrl) {
+            renderData = { videoUrl: s.videoUrl };
+            return "done";
           }
-          if (statusJson.status === "done" && statusJson.videoUrl) {
-            renderData = { videoUrl: statusJson.videoUrl };
-            break;
+          if (s.status === "error") {
+            renderErrMsg = s.error || "서버 렌더 실패";
+            return "error";
           }
-          if (statusJson.status === "error") {
-            renderErrMsg = statusJson.error || "서버 렌더 실패";
-            break;
+          return "continue";
+        };
+
+        // 2a) SSE 우선 시도 — 브라우저가 EventSource 지원 시 push 기반으로 즉시 반영
+        let sseSettled = false;
+        if (typeof EventSource !== "undefined") {
+          await new Promise<void>((resolve) => {
+            let es: EventSource | null = null;
+            const hardTimeout = setTimeout(() => {
+              // 8분이면 스트림 포기. 아직 끝나지 않았으면 폴링으로 계속 시도
+              if (es) es.close();
+              resolve();
+            }, 8 * 60 * 1000);
+
+            try {
+              es = new EventSource(`${RAILWAY_URL}/render-status/${jobId}/stream`);
+            } catch (e) {
+              console.warn("[SMS] EventSource 생성 실패, 폴링으로:", e);
+              clearTimeout(hardTimeout);
+              resolve();
+              return;
+            }
+
+            es.onmessage = (ev) => {
+              let data: StatusJson | null = null;
+              try { data = JSON.parse(ev.data); } catch { /* ignore */ }
+              if (!data) return;
+              const r = applyStatus(data);
+              if (r === "done" || r === "error") {
+                sseSettled = true;
+                clearTimeout(hardTimeout);
+                es?.close();
+                resolve();
+              }
+            };
+            es.onerror = () => {
+              // 연결 중단 — 폴링으로 폴백. 이미 완료 수신 후 서버가 종료한 경우 sseSettled=true
+              clearTimeout(hardTimeout);
+              es?.close();
+              resolve();
+            };
+          });
+        }
+
+        // 2b) SSE 미완료 또는 미지원 → 3초 폴링으로 폴백
+        if (!sseSettled && !renderData && !renderErrMsg) {
+          console.warn("[SMS] SSE 미완료 → 3초 폴링 폴백");
+          const pollDeadline = Date.now() + 8 * 60 * 1000;
+          while (Date.now() < pollDeadline) {
+            await new Promise((r) => setTimeout(r, 3000));
+            let statusJson: StatusJson | null = null;
+            try {
+              const statusRes = await fetchWithRetry(`${RAILWAY_URL}/render-status/${jobId}`, {
+                method: "GET",
+                retries: 2,
+                retryDelayMs: 1500,
+                timeoutMs: 15_000,
+              });
+              statusJson = await statusRes.json().catch(() => null);
+              if (!statusRes.ok) {
+                console.warn(`[SMS] 상태 조회 ${statusRes.status} — 다음 폴링에 재시도`);
+                continue;
+              }
+            } catch (e: any) {
+              console.warn(`[SMS] 폴링 일시 오류:`, e?.message);
+              continue;
+            }
+            if (!statusJson) continue;
+            const r = applyStatus(statusJson);
+            if (r !== "continue") break;
           }
         }
+
         if (!renderData && !renderErrMsg) {
           renderErrMsg = "렌더 타임아웃 (8분 초과)";
         }

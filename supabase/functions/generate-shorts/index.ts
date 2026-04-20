@@ -43,6 +43,30 @@ async function generateNarration(
   }
 }
 
+/**
+ * 지수 백오프 재시도 래퍼 — 최대 2회 추가 시도 (총 3번).
+ * 매 시도마다 generateNarration이 null 반환하면 800ms·1600ms 대기 후 재시도.
+ * ElevenLabs 429/500 일시적 장애를 자가 복구한다.
+ */
+async function generateNarrationWithRetry(
+  text: string,
+  apiKey: string,
+  voiceId: string,
+  maxRetries = 2,
+): Promise<string | null> {
+  if (!text || !apiKey) return null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const audio = await generateNarration(text, apiKey, voiceId);
+    if (audio) return audio;
+    if (attempt < maxRetries) {
+      const delay = 800 * Math.pow(2, attempt);
+      console.log(`[ElevenLabs] retry ${attempt + 1}/${maxRetries} after ${delay}ms`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  return null;
+}
+
 const ALLOWED_ORIGINS = new Set([
   "https://sms-app-9p9.pages.dev",
   "http://localhost:8080",
@@ -414,34 +438,70 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       result = { scenes: mockScenes, isMock: true };
     }
 
-    // ── Step 2: ElevenLabs로 나레이션 음성 생성 (병렬 처리) ──
+    // ── Step 2: ElevenLabs 나레이션 (씬별 격리 + 재시도 + 부분 실패 허용) ──
+    // Promise.allSettled로 한 씬이 실패해도 다른 씬에 영향 없음.
+    // 재시도 포함해도 최종 실패한 씬은 failedScenes에 기록해 클라이언트가 경고/진행 선택.
+    // 모든 시도가 실패한 경우에만 500으로 차단.
     const scenes: any[] = result.scenes || [];
-    let narrationAudios: (string | null)[] = [];
+    const narrationAudios: (string | null)[] = new Array(scenes.length).fill(null);
+    const failedScenes: number[] = [];
 
     if (ELEVENLABS_API_KEY && narrationType !== "없음") {
-      console.log(`ElevenLabs TTS 시작 (병렬) — ${scenes.length}개 장면, voiceId: ${resolvedVoiceId}`);
+      console.log(
+        `ElevenLabs TTS 병렬 시작 (allSettled + retry) — ${scenes.length}개 장면, voiceId: ${resolvedVoiceId}`
+      );
       const t0 = Date.now();
-      narrationAudios = await Promise.all(
-        scenes.map(async (scene) => {
-          const text = scene.narration || "";
-          if (!text) return null;
-          try {
-            return await generateNarration(text, ELEVENLABS_API_KEY, resolvedVoiceId);
-          } catch (e) {
-            console.warn("ElevenLabs TTS 실패:", e);
-            return null;
-          }
+
+      type NarrationResult = { idx: number; audio: string | null; skipped: boolean };
+      const settled = await Promise.allSettled<NarrationResult>(
+        scenes.map(async (scene, idx) => {
+          const text = (scene.narration || "").trim();
+          if (!text) return { idx, audio: null, skipped: true };
+          const audio = await generateNarrationWithRetry(text, ELEVENLABS_API_KEY, resolvedVoiceId, 2);
+          return { idx, audio, skipped: false };
         })
       );
+
+      let attemptedCount = 0;
+      settled.forEach((r, i) => {
+        if (r.status === "fulfilled") {
+          narrationAudios[i] = r.value.audio;
+          if (!r.value.skipped) {
+            attemptedCount++;
+            if (!r.value.audio) failedScenes.push(i);
+          }
+        } else {
+          attemptedCount++;
+          failedScenes.push(i);
+          const reason = (r as PromiseRejectedResult).reason;
+          console.error(
+            `[ElevenLabs] scene ${i} 최종 예외:`,
+            reason instanceof Error ? reason.message : reason
+          );
+        }
+      });
+
+      const successCount = narrationAudios.filter(Boolean).length;
+
+      // 하나도 성공하지 못한 경우에만 500 (부분 실패는 허용)
+      if (attemptedCount > 0 && successCount === 0) {
+        console.error(`ElevenLabs 전체 실패 — ${attemptedCount}개 씬 모두 실패`);
+        return new Response(
+          JSON.stringify({
+            error: "나레이션 음성 생성에 전부 실패했습니다. 잠시 후 다시 시도해주세요.",
+            failedScenes,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       console.log(
-        `ElevenLabs TTS 완료 — 성공: ${narrationAudios.filter(Boolean).length}/${scenes.length} (${Date.now() - t0}ms)`
+        `ElevenLabs TTS 완료 — 성공 ${successCount}/${scenes.length}, 실패 씬 [${failedScenes.join(",")}] (${Date.now() - t0}ms)`
       );
-    } else {
-      narrationAudios = scenes.map(() => null);
     }
 
     return new Response(
-      JSON.stringify({ ...result, narrationAudios }),
+      JSON.stringify({ ...result, narrationAudios, failedScenes }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
