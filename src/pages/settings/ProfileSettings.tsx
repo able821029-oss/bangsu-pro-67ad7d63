@@ -89,8 +89,24 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
     toast({ title: "프로필이 저장되었습니다", description: `${settings.companyName} · ${settings.phoneNumber}` });
   };
 
-  const handleConnect = (platform: string) => {
-    toast({ title: `${platform} 업로드 안내`, description: "글 작성 후 복사 → 붙여넣기 방식으로 업로드합니다." });
+  // SNS 연동은 실제 OAuth가 아니라 "복사·붙여넣기로 발행 중" 사용자 체크.
+  // 키(naverConnected 등)를 토글하고 토스트로 안내한다.
+  const handleToggleConnect = (platform: "naver" | "instagram" | "tiktok") => {
+    const keyMap = {
+      naver: "naverConnected" as const,
+      instagram: "instagramConnected" as const,
+      tiktok: "tiktokConnected" as const,
+    };
+    const labelMap = { naver: "네이버 블로그", instagram: "인스타그램", tiktok: "틱톡" };
+    const key = keyMap[platform];
+    const next = !settings[key];
+    updateSettings({ [key]: next });
+    toast({
+      title: next ? `${labelMap[platform]} 연동 완료` : `${labelMap[platform]} 연동 해제`,
+      description: next
+        ? "글 작성 후 본문을 복사해 해당 플랫폼에 붙여넣기로 발행하세요."
+        : "언제든 다시 연결할 수 있습니다.",
+    });
   };
 
   return (
@@ -188,9 +204,12 @@ export function ProfileSettings({ onBack }: { onBack: () => void }) {
         {/* SNS 연동 */}
         <div className="glass-card p-5 space-y-3">
           <p className="text-sm font-semibold text-foreground">SNS 연동 상태</p>
-          <ConnStatus label="네이버 블로그" connected={settings.naverConnected} onConnect={() => handleConnect("네이버 블로그")} />
-          <ConnStatus label="인스타그램" connected={settings.instagramConnected} onConnect={() => handleConnect("인스타그램")} />
-          <ConnStatus label="틱톡" connected={settings.tiktokConnected} onConnect={() => handleConnect("틱톡")} />
+          <p className="text-[11px] text-muted-foreground -mt-1">
+            글을 복사해 각 플랫폼에 붙여넣기로 발행하는 방식입니다. 쓰시는 플랫폼을 체크해 주세요.
+          </p>
+          <ConnStatus label="네이버 블로그" connected={settings.naverConnected} onToggle={() => handleToggleConnect("naver")} />
+          <ConnStatus label="인스타그램" connected={settings.instagramConnected} onToggle={() => handleToggleConnect("instagram")} />
+          <ConnStatus label="틱톡" connected={settings.tiktokConnected} onToggle={() => handleToggleConnect("tiktok")} />
         </div>
 
         {/* 자동 삽입 */}
@@ -227,7 +246,7 @@ function Field({ icon: Icon, label, placeholder, value, onChange }: { icon: Reac
   );
 }
 
-function ConnStatus({ label, connected, onConnect }: { label: string; connected: boolean; onConnect?: () => void }) {
+function ConnStatus({ label, connected, onToggle }: { label: string; connected: boolean; onToggle: () => void }) {
   return (
     <div className="flex items-center justify-between py-1">
       <p className="text-sm text-[#C1C6D7]">{label}</p>
@@ -236,9 +255,17 @@ function ConnStatus({ label, connected, onConnect }: { label: string; connected:
           {connected ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
           {connected ? "연동됨" : "미연동"}
         </span>
-        {!connected && onConnect && (
-          <button onClick={onConnect} className="text-[10px] font-semibold text-primary bg-[#ADC6FF]/10 px-2 py-1 rounded-lg">연결하기</button>
-        )}
+        <button
+          onClick={onToggle}
+          aria-label={connected ? `${label} 연동 해제` : `${label} 연결하기`}
+          className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors ${
+            connected
+              ? "text-muted-foreground bg-white/5 hover:bg-white/10"
+              : "text-primary bg-[#ADC6FF]/10 hover:bg-[#ADC6FF]/20"
+          }`}
+        >
+          {connected ? "해제" : "연결하기"}
+        </button>
       </div>
     </div>
   );
