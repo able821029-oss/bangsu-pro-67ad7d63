@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { useAppStore, BlogPost, ContentBlock, Platform, Persona, PostStatus } from "@/stores/appStore";
 import { isDevModeActive, disableDevMode, DEV_USER } from "@/lib/devAuth";
+import { isTableKnownMissing, markTableMissing, isTableMissingError } from "@/lib/tableFlags";
 
 interface AuthContextType {
   user: User | null;
@@ -75,6 +76,10 @@ async function loadPostsIntoStore(userId: string) {
 
 /** 쇼츠 영상 보관함을 DB에서 스토어로 로드 */
 async function loadShortsVideosIntoStore(userId: string) {
+  // 테이블 없음이 이미 확인된 세션이면 네트워크 호출 자체를 skip
+  // → 브라우저 콘솔의 'Failed to load resource 404' 반복 노출 방지
+  if (isTableKnownMissing("shorts_videos")) return;
+
   try {
     const { data, error } = await supabase
       .from("shorts_videos")
@@ -84,18 +89,12 @@ async function loadShortsVideosIntoStore(userId: string) {
       .limit(50);
 
     if (error) {
-      // 테이블이 아직 없으면 조용히 skip (마이그레이션 미실행 환경)
-      // Supabase REST API는 "Could not find the table" / PostgREST PGRST106도 같은 케이스
-      const msg = error.message || "";
-      const tableMissing =
-        msg.includes("does not exist") ||
-        msg.includes("Could not find the table") ||
-        msg.includes("PGRST106") ||
-        (error as { code?: string }).code === "PGRST106" ||
-        (error as { code?: string }).code === "42P01";
-      if (!tableMissing) {
-        console.warn("[Auth] shorts_videos load error:", msg);
+      if (isTableMissingError(error as { message?: string; code?: string })) {
+        // 24시간 동안 이 테이블 호출 전체 차단
+        markTableMissing("shorts_videos");
+        return;
       }
+      console.warn("[Auth] shorts_videos load error:", error.message);
       return;
     }
     if (!data || data.length === 0) return;

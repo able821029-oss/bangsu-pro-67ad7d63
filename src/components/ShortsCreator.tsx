@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/bgmSynth";
 import { compressPhotos } from "@/lib/imageCompress";
 import { fetchWithRetry, invokeWithRetry } from "@/lib/fetchWithRetry";
+import { isTableKnownMissing, markTableMissing, isTableMissingError } from "@/lib/tableFlags";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { mirraToRemotionScene, type SmsScene, type SmsVideoProps } from "@/remotion/types";
 
@@ -525,9 +526,9 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             phoneNumber: settings.phoneNumber,
             bgmType: bgm,
           }),
-          retries: 2,
-          retryDelayMs: 1500,
-          timeoutMs: 180_000,
+          retries: 1,                // 1차 시도 실패 시 1회 추가 (총 2번)
+          retryDelayMs: 2000,        // 첫 번째 재시도 대기를 2초로 (Railway 서버 회복 여유)
+          timeoutMs: 300_000,        // 5분 — Remotion 긴 렌더도 504 나기 전에 완료되도록
         });
         renderData = await r.json().catch(() => null);
         if (!r.ok) renderErrMsg = renderData?.error || `HTTP ${r.status}`;
@@ -555,8 +556,8 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         };
         addShortsVideo(savedVideo);
 
-        if (user) {
-          // DB에 저장 (실패해도 로컬 보관함은 유지)
+        // 테이블이 이미 없음이 확인된 세션이면 네트워크 호출 skip → 콘솔 404 노이즈 방지
+        if (user && !isTableKnownMissing("shorts_videos")) {
           void supabase.from("shorts_videos").insert({
             id: savedVideo.id,
             user_id: user.id,
@@ -570,15 +571,11 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             photo_count: savedVideo.photoCount,
           }).then(({ error }) => {
             if (!error) return;
-            const msg = error.message || "";
-            const tableMissing =
-              msg.includes("does not exist") ||
-              msg.includes("Could not find the table") ||
-              msg.includes("PGRST106");
-            if (!tableMissing) {
-              console.warn("[shorts_videos] DB insert 실패:", msg);
+            if (isTableMissingError(error as { message?: string; code?: string })) {
+              markTableMissing("shorts_videos");
+              return;
             }
-            // 테이블 미생성이면 조용히 skip — 로컬 store에는 이미 저장됨
+            console.warn("[shorts_videos] DB insert 실패:", error.message);
           });
         }
       } else {
