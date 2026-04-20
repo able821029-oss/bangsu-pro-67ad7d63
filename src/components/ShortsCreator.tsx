@@ -502,9 +502,11 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       setProgressText("🖥️ 서버에서 영상 렌더링 중...");
       setProgressPct(20);
 
-      const RAILWAY_URL =
+      // env가 https:// 없이 도메인만 세팅된 경우 자동 보정 (CF Pages 설정 실수 방어)
+      const rawUrl =
         (import.meta.env.VITE_VIDEO_SERVER_URL as string | undefined) ||
         "https://bangsu-pro-67ad7d63-production-6e2e.up.railway.app";
+      const RAILWAY_URL = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
 
       let renderData: { videoUrl?: string; error?: string; detail?: string } | null = null;
       let renderErrMsg: string | null = null;
