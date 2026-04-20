@@ -22,6 +22,29 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: unknown) {
     console.error("[ErrorBoundary]", error, info);
+    // 동적 임포트 실패(배포로 청크 해시 바뀜)는 SW 언레지스터 + 강제 새로고침으로 자동 복구
+    const msg = error?.message || "";
+    if (/Failed to fetch dynamically imported module|Loading chunk .* failed|ChunkLoadError/i.test(msg)) {
+      try {
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.getRegistrations().then((regs) => {
+            regs.forEach((r) => r.unregister());
+            // caches API도 비워서 옛 index.html 제거
+            if (typeof caches !== "undefined") {
+              caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).finally(() => {
+                window.location.reload();
+              });
+            } else {
+              window.location.reload();
+            }
+          });
+        } else {
+          window.location.reload();
+        }
+      } catch {
+        window.location.reload();
+      }
+    }
   }
 
   handleReset = () => {

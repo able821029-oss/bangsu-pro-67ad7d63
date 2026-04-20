@@ -597,17 +597,33 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     }
   }, [photos, videoStyle, selectedVoice, settings, toast, workTopic, scriptMode, manualScript, bgm, videoUrl]);
 
-  const handleDownload = () => {
-    if (videoUrl) {
+  const handleDownload = async () => {
+    if (!videoUrl) {
+      toast({
+        title: "영상이 아직 준비되지 않았어요",
+        description: "서버 렌더링이 지연되거나 실패했습니다. '다시 만들기'로 재시도해 주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      // blob으로 다운로드 — 직접 a[download]는 크로스도메인에서 무시될 수 있음
+      const res = await fetch(videoUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = videoUrl;
+      a.href = url;
       a.download = `sms_shorts_${Date.now()}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast({ title: "영상이 다운로드됩니다" });
-    } else {
-      toast({ title: "MP4 저장은 서버 렌더링이 필요합니다", description: "위 미리보기를 화면 녹화로 저장해 주세요.", variant: "destructive" });
+    } catch {
+      // 폴백: 새 창으로 열어 브라우저가 다운로드 처리
+      window.open(videoUrl, "_blank");
+      toast({ title: "새 창에서 영상을 저장해 주세요", description: "우클릭 → 다른 이름으로 저장" });
     }
   };
 
@@ -971,11 +987,24 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         )}
 
         <div className="w-full max-w-xs space-y-3">
-          {/* 저장 */}
-          <Button className="w-full gap-2" style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)", color: "white" }}
-            onClick={handleDownload}>
-            <Download className="w-5 h-5" /> 갤러리에 저장
-          </Button>
+          {/* 저장 — videoUrl이 없으면(서버 렌더 실패) 비활성화 + 설명 */}
+          {videoUrl ? (
+            <Button
+              className="w-full gap-2"
+              style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)", color: "white" }}
+              onClick={handleDownload}
+            >
+              <Download className="w-5 h-5" /> 갤러리에 저장
+            </Button>
+          ) : (
+            <div className="w-full rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+              <p className="text-xs text-amber-500 font-semibold">⚠️ 서버 렌더링이 실패했어요</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                잠시 서버가 바쁘거나 일시적 오류일 수 있습니다. 아래 <strong>다시 만들기</strong>를
+                눌러 재시도해 주세요.
+              </p>
+            </div>
+          )}
           {/* SNS 업로드 */}
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground text-center font-medium">SNS 업로드</p>
