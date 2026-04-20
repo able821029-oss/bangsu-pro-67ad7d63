@@ -116,10 +116,20 @@ function VoiceCard({
 }) {
   const genderIcon = voice.gender === "male" ? "M" : "F";
 
+  // HTML 표준상 <button> 안에 <button>은 불가 — 바깥을 role=button div로 바꿔 접근성은 유지
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
       onClick={onSelect}
-      className="relative w-full text-left p-3 rounded-xl transition-all"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className="relative w-full text-left p-3 rounded-xl transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{
         border: selected ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",
         backgroundColor: selected ? "hsl(var(--muted))" : "hsl(var(--card))",
@@ -133,6 +143,7 @@ function VoiceCard({
       <p className="text-sm font-semibold text-foreground">{genderIcon} {voice.label}</p>
       <p className="text-xs text-muted-foreground mt-0.5">{voice.desc}</p>
       <button
+        type="button"
         onClick={(e) => { e.stopPropagation(); onPreview(); }}
         className="mt-2 flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors"
         style={{
@@ -143,7 +154,7 @@ function VoiceCard({
         {isPlaying ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
         {isPlaying ? "정지" : "미리 듣기"}
       </button>
-    </button>
+    </div>
   );
 }
 
