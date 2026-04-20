@@ -1,41 +1,7 @@
+// SMS 쇼츠 영상 API 서버 (v5.0) — BullMQ 큐에 잡을 쌓고 상태를 조회하는 얇은 게이트웨이
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
-const { execSync, spawnSync } = require("child_process");
-const { createClient } = require("@supabase/supabase-js");
 const { v4: uuidv4 } = require("uuid");
-const ffmpegPath = require("ffmpeg-static");
-const { renderVideo, FPS } = require("./renderer");
-const { generateBgm } = require("./bgm");
-
-// ── 영상 메타데이터 검증 (ffprobe 대체) ──
-// ffmpeg -i 출력 stderr를 파싱해 오디오·비디오 스트림과 길이 확인.
-// 업로드 전 최종 게이트로 사용해 "음성 없는 영상 출력" 사고 차단.
-function probeMedia(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return { ok: false, reason: "파일 없음", hasAudio: false, hasVideo: false, durationSec: 0 };
-  }
-  const stat = fs.statSync(filePath);
-  const proc = spawnSync(
-    ffmpegPath,
-    ["-hide_banner", "-i", filePath, "-f", "null", "-"],
-    { encoding: "utf8" }
-  );
-  const stderr = (proc.stderr || "") + (proc.stdout || "");
-  const hasAudio = /Stream\s+#\d+:\d+[^\n]*Audio:/.test(stderr);
-  const hasVideo = /Stream\s+#\d+:\d+[^\n]*Video:/.test(stderr);
-  const dm = stderr.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
-  const durationSec = dm
-    ? parseInt(dm[1], 10) * 3600 + parseInt(dm[2], 10) * 60 + parseFloat(dm[3])
-    : 0;
-  return {
-    ok: true,
-    hasAudio,
-    hasVideo,
-    durationSec,
-    fileSize: stat.size,
-  };
-}
+const { shortsQueue, queueEvents } = require("./queue");
 
 const app = express();
 
@@ -51,268 +17,167 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "200mb" }));
 
-const SUPABASE_URL = (process.env.SUPABASE_URL || "").trim();
-const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
 // ── API 시크릿 인증 ──
 const API_SECRET = process.env.VIDEO_API_SECRET || "";
 const authMiddleware = (req, res, next) => {
-  const token = req.headers["x-api-secret"] || req.headers.authorization?.replace("Bearer ", "");
+  const token =
+    req.headers["x-api-secret"] ||
+    req.headers.authorization?.replace("Bearer ", "");
   if (!API_SECRET) return next();
   if (token !== API_SECRET) return res.status(401).json({ error: "인증 실패" });
   next();
 };
 
 // ── 헬스체크 ──
-app.get("/health", (_, res) => {
-  res.json({ ok: true, ts: Date.now(), version: "4.0-async", activeJobs: jobs.size });
-});
-
-// ── 비동기 잡 저장소 ──
-// Railway 게이트웨이 504(통상 100~180초) 회피를 위해 렌더를 백그라운드로 돌리고
-// 클라이언트는 짧은 HTTP 호출을 폴링해서 상태를 받아간다.
-const jobs = new Map();
-
-// 1시간 이상 된 잡 정리
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, job] of jobs.entries()) {
-    if (now - job.createdAt > 60 * 60 * 1000) jobs.delete(id);
-  }
-}, 10 * 60 * 1000);
-
-function setJob(id, patch) {
-  const prev = jobs.get(id);
-  if (!prev) return;
-  jobs.set(id, { ...prev, ...patch, updatedAt: Date.now() });
-}
-
-async function runRender(jobId, body) {
-  const videoPath = `/tmp/sms_${jobId}.mp4`;
-  const audioPath = `/tmp/sms_${jobId}_audio.mp3`;
-  const bgmPath = `/tmp/sms_${jobId}_bgm.mp3`;
-  const mixedPath = `/tmp/sms_${jobId}_mixed.mp3`;
-  const finalPath = `/tmp/sms_${jobId}_final.mp4`;
-
-  const startTime = Date.now();
-  const elapsed = () => `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
-
+app.get("/health", async (_, res) => {
   try {
-    const {
-      scenes,
-      photos,
-      narrationAudios,
-      companyName,
-      phoneNumber,
-      bgmType = "none",
-      narrationExpected = false, // 클라이언트가 "나레이션 ON"으로 요청했는지
-    } = body;
-
-    if (!scenes?.length || !photos?.length) {
-      setJob(jobId, { status: "error", error: "scenes, photos 필수" });
-      return;
-    }
-
-    // ── 사전 게이트 1: 나레이션 요청했는데 ElevenLabs 오디오가 0개면 즉시 실패 ──
-    // (Remotion 10~60초 돌린 뒤에 무음 영상 나오는 사고 방지)
-    const validAudioCount = (narrationAudios || []).filter(Boolean).length;
-    if (narrationExpected && validAudioCount === 0) {
-      setJob(jobId, {
-        status: "error",
-        error: "나레이션 음성 생성 실패 — ElevenLabs 응답이 비어있어 영상을 만들지 않았습니다. 다시 시도해 주세요.",
-      });
-      return;
-    }
-
-    console.log(`[${jobId}] 시작 — ${scenes.length}장면 ${photos.length}사진 bgm:${bgmType} 나레이션:${validAudioCount}/${(narrationAudios || []).length}`);
-    setJob(jobId, { status: "rendering", progress: 5, stage: "렌더링 시작" });
-
-    // Step 1: Remotion 렌더링 — 진행률 5% → 75% 구간 매핑
-    const { totalFrames, durationSec } = await renderVideo({
-      scenes,
-      photos: photos.slice(0, 6),
-      companyName,
-      phoneNumber,
-      bgmType,
-      outputPath: videoPath,
-      onProgress: (p) => {
-        const mapped = 5 + Math.round(p * 70); // 5~75
-        setJob(jobId, { status: "rendering", progress: mapped, stage: "장면 렌더링" });
-        if (p % 0.1 < 0.02) console.log(`[${jobId}] 렌더링 ${Math.round(p * 100)}% (${elapsed()})`);
-      },
-    });
-    console.log(`[${jobId}] Remotion 완료: ${totalFrames}프레임 (${elapsed()})`);
-    setJob(jobId, { status: "mixing", progress: 78, stage: "오디오 합성" });
-
-    // Step 2: 나레이션 오디오
-    let hasNarration = false;
-    const validAudios = (narrationAudios || []).filter(Boolean);
-    if (validAudios.length > 0) {
-      const audioFiles = [];
-      for (let i = 0; i < validAudios.length; i++) {
-        const ap = `/tmp/sms_${jobId}_nar_${i}.mp3`;
-        fs.writeFileSync(ap, Buffer.from(validAudios[i], "base64"));
-        audioFiles.push(ap);
-      }
-      if (audioFiles.length === 1) {
-        fs.copyFileSync(audioFiles[0], audioPath);
-      } else {
-        const listFile = `/tmp/sms_${jobId}_list.txt`;
-        fs.writeFileSync(listFile, audioFiles.map((f) => `file '${f}'`).join("\n"));
-        execSync(`${ffmpegPath} -y -f concat -safe 0 -i "${listFile}" -c copy "${audioPath}"`);
-        fs.unlinkSync(listFile);
-      }
-      audioFiles.forEach((f) => { try { fs.unlinkSync(f); } catch {} });
-      hasNarration = true;
-    }
-
-    // Step 3: BGM
-    let hasBgm = false;
-    if (bgmType && bgmType !== "none") {
-      hasBgm = generateBgm(bgmType, durationSec + 1, bgmPath);
-    }
-    setJob(jobId, { progress: 85, stage: "오디오 믹싱" });
-
-    // Step 4: 오디오 믹싱 + 영상 합체
-    let uploadPath = videoPath;
-    let finalAudioPath = null;
-
-    if (hasNarration && hasBgm) {
-      execSync(
-        `${ffmpegPath} -y -i "${audioPath}" -i "${bgmPath}" ` +
-        `-filter_complex "[0:a]volume=1.0[nar];[1:a]volume=0.25[bgm];[nar][bgm]amix=inputs=2:normalize=0[out]" ` +
-        `-map "[out]" -c:a libmp3lame -b:a 192k "${mixedPath}"`
-      );
-      finalAudioPath = mixedPath;
-    } else if (hasNarration) {
-      finalAudioPath = audioPath;
-    } else if (hasBgm) {
-      finalAudioPath = bgmPath;
-    }
-
-    if (finalAudioPath) {
-      execSync(
-        `${ffmpegPath} -y -i "${videoPath}" -i "${finalAudioPath}" ` +
-        `-c:v copy -c:a aac -b:a 192k -shortest -movflags +faststart "${finalPath}"`
-      );
-      uploadPath = finalPath;
-    }
-
-    console.log(`[${jobId}] 오디오 처리 완료 (${elapsed()})`);
-    setJob(jobId, { status: "verifying", progress: 90, stage: "출력 검증 중" });
-
-    // ── 사후 게이트: ffmpeg로 최종 MP4 검증 ──
-    const probe = probeMedia(uploadPath);
-    console.log(`[${jobId}] 검증: video=${probe.hasVideo} audio=${probe.hasAudio} dur=${probe.durationSec}s size=${probe.fileSize}B`);
-    if (!probe.hasVideo) {
-      throw new Error("출력 파일에 영상 스트림이 없습니다");
-    }
-    if (probe.durationSec < 1) {
-      throw new Error(`출력 파일 길이가 비정상입니다 (${probe.durationSec}초)`);
-    }
-    if (probe.fileSize < 10_000) {
-      throw new Error(`출력 파일 크기가 비정상입니다 (${probe.fileSize} bytes)`);
-    }
-    if (narrationExpected && !probe.hasAudio) {
-      throw new Error("최종 영상에 음성이 들어가지 않았습니다 — 다시 시도해 주세요");
-    }
-    if ((hasNarration || hasBgm) && !probe.hasAudio) {
-      throw new Error("오디오 합성은 성공했지만 최종 영상에 반영되지 않았습니다 — 다시 시도해 주세요");
-    }
-
-    setJob(jobId, { status: "uploading", progress: 94, stage: "Supabase 업로드" });
-
-    // Step 5: Supabase Storage 업로드
-    const videoBuffer = fs.readFileSync(uploadPath);
-    const storagePath = `videos/${jobId}.mp4`;
-
-    try {
-      await supabase.storage.createBucket("sms-videos", { public: true, fileSizeLimit: 104857600 });
-    } catch {}
-
-    const { error: uploadErr } = await supabase.storage
-      .from("sms-videos")
-      .upload(storagePath, videoBuffer, { contentType: "video/mp4", cacheControl: "3600" });
-
-    if (uploadErr) throw new Error(`Storage 업로드 실패: ${uploadErr.message}`);
-
-    const { data: { publicUrl: url } } = supabase.storage.from("sms-videos").getPublicUrl(storagePath);
-
-    console.log(`[${jobId}] 완료! (${elapsed()}) → ${url}`);
-    setJob(jobId, {
-      status: "done",
-      progress: 100,
-      stage: "완료",
-      videoUrl: url,
-      durationSec: Math.round(durationSec),
-      frames: totalFrames,
-    });
-  } catch (err) {
-    console.error(`[${jobId}] 오류:`, err.stack || err.message);
-    setJob(jobId, {
-      status: "error",
-      error: err.message?.slice(0, 300) || "unknown",
-    });
-  } finally {
-    [videoPath, audioPath, bgmPath, mixedPath, finalPath].forEach((p) => {
-      try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch {}
-    });
+    const counts = await shortsQueue.getJobCounts(
+      "waiting",
+      "active",
+      "completed",
+      "failed",
+      "delayed"
+    );
+    res.json({ ok: true, ts: Date.now(), version: "5.0-bullmq", queue: counts });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+/**
+ * BullMQ state → 기존 클라이언트 폴링 스키마의 status 필드
+ *  - "completed" → "done"
+ *  - "failed"    → "error"
+ *  - "waiting"/"delayed" → "pending" (대기 큐)
+ *  - "active"    → progress object 안의 subStatus (rendering/mixing/verifying/uploading)
+ */
+function mapState(state, progressData) {
+  if (state === "completed") return "done";
+  if (state === "failed") return "error";
+  if (state === "waiting" || state === "delayed" || state === "waiting-children") return "pending";
+  if (typeof progressData === "object" && progressData?.subStatus) return progressData.subStatus;
+  return "rendering";
 }
 
-// ── POST /render-start — 즉시 jobId 반환, 백그라운드 실행 ──
-app.post("/render-start", authMiddleware, (req, res) => {
-  const jobId = uuidv4();
-  jobs.set(jobId, {
-    jobId,
-    status: "pending",
-    progress: 0,
-    stage: "대기 중",
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  });
-  console.log(`[${jobId}] 큐 등록 (activeJobs=${jobs.size})`);
-  runRender(jobId, req.body).catch((err) => {
-    console.error(`[${jobId}] runRender unhandled:`, err.message);
-    setJob(jobId, { status: "error", error: err.message?.slice(0, 300) || "unknown" });
-  });
-  res.json({ ok: true, jobId });
+// ── POST /render-start — 즉시 jobId 반환, 렌더는 worker가 수행 ──
+app.post("/render-start", authMiddleware, async (req, res) => {
+  try {
+    const jobId = uuidv4();
+    await shortsQueue.add("render", req.body, { jobId });
+    console.log(`[${jobId}] 큐 등록`);
+    res.json({ ok: true, jobId });
+  } catch (e) {
+    console.error("큐 등록 실패:", e?.message || e);
+    res.status(500).json({ error: "큐 등록 실패: " + (e?.message || "unknown") });
+  }
 });
 
-// ── GET /render-status/:jobId ──
-app.get("/render-status/:jobId", authMiddleware, (req, res) => {
-  const job = jobs.get(req.params.jobId);
-  if (!job) return res.status(404).json({ error: "job not found" });
-  res.json(job);
+// ── GET /render-status/:jobId — BullMQ job state를 기존 폴링 응답 스키마로 변환 ──
+app.get("/render-status/:jobId", authMiddleware, async (req, res) => {
+  try {
+    const job = await shortsQueue.getJob(req.params.jobId);
+    if (!job) return res.status(404).json({ error: "job not found" });
+
+    const state = await job.getState();
+    const raw = job.progress;
+
+    // progress는 object({progress, stage, subStatus})로 저장하지만
+    // 잡 등록 직후/BullMQ 초기값은 0(number)일 수 있어 둘 다 처리
+    let progress = 0;
+    let stage = "";
+    if (typeof raw === "object" && raw !== null) {
+      progress = typeof raw.progress === "number" ? raw.progress : 0;
+      stage = raw.stage || "";
+    } else if (typeof raw === "number") {
+      progress = raw;
+    }
+
+    const status = mapState(state, raw);
+
+    if (state === "completed") {
+      const ret = job.returnvalue || {};
+      return res.json({
+        jobId: job.id,
+        status: "done",
+        progress: 100,
+        stage: "완료",
+        videoUrl: ret.videoUrl,
+        durationSec: ret.durationSec,
+        frames: ret.frames,
+      });
+    }
+
+    if (state === "failed") {
+      return res.json({
+        jobId: job.id,
+        status: "error",
+        progress,
+        stage,
+        error: job.failedReason || "unknown",
+      });
+    }
+
+    // waiting/delayed/active
+    const response = {
+      jobId: job.id,
+      status,
+      progress,
+      stage: stage || (state === "waiting" || state === "delayed" ? "대기 중" : ""),
+    };
+
+    // 대기 중이면 큐 포지션을 힌트로 노출 (없으면 생략)
+    if (state === "waiting" || state === "delayed") {
+      try {
+        const pos = typeof job.getPosition === "function" ? await job.getPosition() : undefined;
+        if (typeof pos === "number" && pos > 0) response.queuePosition = pos;
+      } catch {
+        /* ignore */
+      }
+    }
+
+    res.json(response);
+  } catch (e) {
+    console.error("상태 조회 실패:", e?.message || e);
+    res.status(500).json({ error: e?.message || "unknown" });
+  }
 });
 
-// ── POST /render-video (레거시 동기식, 호환 유지) ──
-// 기존 클라이언트가 업데이트되기 전까지 작동하도록 유지. Railway 504 발생 가능.
+/**
+ * 레거시 동기식 엔드포인트 — 기존에 외부에서 /render-video로 호출하던 통합을 위해 유지.
+ * 내부적으로 큐에 잡을 올리고 waitUntilFinished로 완료를 기다린다.
+ * Railway 엣지 프록시 504 위험은 그대로이므로 신규 클라이언트는 /render-start + 폴링 사용 권장.
+ */
 app.post("/render-video", authMiddleware, async (req, res) => {
-  const jobId = uuidv4();
-  jobs.set(jobId, {
-    jobId, status: "pending", progress: 0, stage: "대기 중",
-    createdAt: Date.now(), updatedAt: Date.now(),
-  });
-  await runRender(jobId, req.body);
-  const final = jobs.get(jobId);
-  if (final?.status === "done") {
+  let jobId;
+  try {
+    jobId = uuidv4();
+    const job = await shortsQueue.add("render", req.body, { jobId });
+    const result = await job.waitUntilFinished(queueEvents, 8 * 60 * 1000);
     res.json({
       ok: true,
-      videoUrl: final.videoUrl,
-      jobId,
-      durationSec: final.durationSec,
-      frames: final.frames,
+      videoUrl: result.videoUrl,
+      jobId: job.id,
+      durationSec: result.durationSec,
+      frames: result.frames,
     });
-  } else {
-    res.status(500).json({ error: final?.error || "렌더 실패" });
+  } catch (e) {
+    console.error(`[${jobId}] /render-video 실패:`, e?.message || e);
+    res.status(500).json({ error: e?.message || "렌더 실패", jobId });
   }
 });
 
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`SMS Video Server v4.0 (async polling) — :${PORT}`);
-  console.log(`  FFmpeg: ${ffmpegPath}`);
-  console.log(`  Supabase: ${process.env.SUPABASE_URL ? "연결됨" : "미설정"}`);
+const server = app.listen(PORT, () => {
+  console.log(`SMS Video Server v5.0 (BullMQ) — :${PORT}`);
+  console.log(`  Redis: ${process.env.REDIS_URL ? "연결됨" : "기본 127.0.0.1:6379"}`);
 });
+
+// Graceful shutdown — 진행 중인 HTTP 요청은 마무리, 큐 커넥션은 닫지 않음 (worker 소유)
+async function shutdown(signal) {
+  console.log(`[api] ${signal} 수신, 종료 시작`);
+  server.close(() => process.exit(0));
+  // 강제 종료 안전장치
+  setTimeout(() => process.exit(0), 10_000).unref();
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
