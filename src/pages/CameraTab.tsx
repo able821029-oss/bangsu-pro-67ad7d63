@@ -22,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { compressPhotos } from "@/lib/imageCompress";
 import { SectionCard } from "@/pages/BlogWriterTab";
-import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent } from "@/lib/postQuality";
+import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent, normalizeHashtags } from "@/lib/postQuality";
 
 const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
@@ -287,7 +287,7 @@ export function CameraTab({
         siteMethod,
       }));
       setEditSections(merged.length > 0 ? merged : editSections);
-      setEditHashtags(aiResult.hashtags || []);
+      setEditHashtags(normalizeHashtags(aiResult.hashtags || []));
 
       // 편집 화면(Step 2)을 유지한 채 로딩 오버레이만 닫음 → 사용자가 수정/추가/저장
       setTimeout(() => {
@@ -342,9 +342,11 @@ export function CameraTab({
     try {
       // 품질 보강 — 짧은 제목·빈 해시태그 자동 방어
       const safeTitle = buildSafeTitle({ title, location, siteMethod });
-      const finalHashtags = editHashtags.length > 0
-        ? editHashtags
-        : buildDefaultHashtags({ location, siteMethod, companyName: settings.companyName });
+      const finalHashtags = normalizeHashtags(
+        editHashtags.length > 0
+          ? editHashtags
+          : buildDefaultHashtags({ location, siteMethod, companyName: settings.companyName }),
+      );
 
       // sections → blocks 변환 ([현장정보 요약] → [subtitle → photo → text] 반복)
       const blocks: ContentBlock[] = [];

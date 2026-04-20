@@ -23,6 +23,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAppStore, BlogPost, Platform, ContentBlock } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeHashtags } from "@/lib/postQuality";
 import type { TabId } from "@/components/BottomNav";
 import { ShortsCreator } from "@/components/ShortsCreator";
 
@@ -188,11 +189,12 @@ export function PostDetailPage({
         },
       });
       if (!error && !data?.error) {
+        const cleanTags = normalizeHashtags(data.hashtags || []);
         setTitle(data.title);
         setBlocks(data.blocks);
-        setHashtags(data.hashtags);
-        updatePost(post.id, { title: data.title, blocks: data.blocks, hashtags: data.hashtags });
-        await saveToDb({ title: data.title, blocks: data.blocks, hashtags: data.hashtags });
+        setHashtags(cleanTags);
+        updatePost(post.id, { title: data.title, blocks: data.blocks, hashtags: cleanTags });
+        await saveToDb({ title: data.title, blocks: data.blocks, hashtags: cleanTags });
         toast({ title: "AI 재생성 완료" });
       } else {
         toast({ title: "재생성 실패", description: "다시 시도해주세요", variant: "destructive" });
@@ -383,11 +385,13 @@ export function PostDetailPage({
         <SeoScoreBadge
           post={post}
           onImprove={(improved) => {
-            setTitle(improved.title);
-            setBlocks(improved.blocks);
-            setHashtags(improved.hashtags);
-            updatePost(post.id, improved);
-            saveToDb(improved);
+            const cleanTags = normalizeHashtags(improved.hashtags || []);
+            const cleaned = { ...improved, hashtags: cleanTags };
+            setTitle(cleaned.title);
+            setBlocks(cleaned.blocks);
+            setHashtags(cleanTags);
+            updatePost(post.id, cleaned);
+            saveToDb(cleaned);
           }}
         />
         <Badge variant={statusBadgeVariant[currentStatus] || "default"}>{currentStatus}</Badge>

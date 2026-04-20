@@ -17,7 +17,7 @@ import { useAuth } from "@/components/AuthProvider";
 import type { TabId } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompress";
-import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent } from "@/lib/postQuality";
+import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent, normalizeHashtags } from "@/lib/postQuality";
 
 // 한국 17개 시·도 + 전국
 const REGIONS = [
@@ -211,11 +211,11 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         location: fullLocation,
         siteMethod: draft.siteMethod,
       });
-      const defaultTags = buildDefaultHashtags({
+      const defaultTags = normalizeHashtags(buildDefaultHashtags({
         location: fullLocation,
         siteMethod: draft.siteMethod,
         companyName: settings.companyName,
-      });
+      }));
 
       const newPost: BlogPost = {
         id: crypto.randomUUID(),

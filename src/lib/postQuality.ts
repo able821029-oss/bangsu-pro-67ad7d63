@@ -65,6 +65,27 @@ export function buildDefaultHashtags(ctx: {
 }
 
 /**
+ * 해시태그 정규화 — 선두 `#`·`＃` 전부 제거, 공백·빈 태그 제거, 중복 제거.
+ *
+ * 렌더링 시 `#{tag}` 접두사를 붙이는 구조이므로 저장된 태그에 `#`이 이미 붙어 있으면
+ * UI에 `##태그`로 나옴. AI 응답이 `#호원1동방수`처럼 prefix 포함해 반환하는 케이스
+ * 방어용으로 저장 직전 모든 흐름에서 호출한다.
+ */
+export function normalizeHashtags(raw: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const r of raw) {
+    if (!r) continue;
+    const t = String(r).replace(/^[#＃\s]+/u, "").trim().replace(/\s+/g, "");
+    if (!t) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
+/**
  * 저장 가능한 최소 품질 기준.
  * - 제목이 있고(짧아도 buildSafeTitle이 보강)
  * - 섹션 중 하나 이상이 (소제목+글) 또는 사진을 가짐
