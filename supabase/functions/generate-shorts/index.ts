@@ -25,7 +25,8 @@ async function generateNarration(
         },
         body: JSON.stringify({
           text,
-          model_id: "eleven_turbo_v2_5",
+          // flash_v2_5: turbo 대비 ~30% 빠름 (속도 최적화 2026-04-20). 한국어 품질 유지.
+          model_id: "eleven_flash_v2_5",
           voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.4, use_speaker_boost: true, speed: 0.8 },
         }),
       }
@@ -152,7 +153,7 @@ ${styleGuide[videoStyle] || styleGuide["일지형"]}
 4. 엔딩 장면: 업체명이 title, 전화번호가 subtitle. badge는 업종에 맞게 "예약 문의", "주문 문의", "상담 신청", "방문 예약" 등 중 하나. bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"]
 
 animation 종류: "slide_up", "slide_left", "zoom_in", "fade_in" — 장면마다 다르게 교차 사용.
-duration: 프레임 수 (30fps 기준). 최소 90(3초), 최대 150(5초). 보통 100~120.
+duration: 프레임 수 (24fps 기준). 최소 60(2.5초), 최대 96(4초). 보통 72~84(3~3.5초). 짧고 임팩트 있게.
 bg_colors: 항상 2색 배열. 다크 네이비 계열 (#001130, #0a1628, #1a3a6a, #0d2847 등)
 accent_color: "#237FFF" 또는 "#AB5EBE" 교차 사용.
 narration: ${narrationType === "없음" ? "빈 문자열로" : "20자 이내 짧고 임팩트 있는 한국어 나레이션. 업종에 맞는 자연스러운 말투"}
@@ -171,7 +172,7 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       for (let i = 0; i < lines.length; i++) {
         const hasPhoto = i < photoCount;
         manualScenes.push({
-          duration: 120,
+          duration: 84,
           bg_type: hasPhoto ? "photo" : "gradient",
           bg_colors: ["#0a1628", "#1a3a6a"],
           badge: hasPhoto ? `${i + 1}단계` : "",
@@ -187,7 +188,7 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       // 사진이 대본보다 많으면 나머지 사진도 장면 추가
       for (let i = lines.length; i < photoCount; i++) {
         manualScenes.push({
-          duration: 120, bg_type: "photo", bg_colors: ["#001130", "#0d2847"],
+          duration: 84, bg_type: "photo", bg_colors: ["#001130", "#0d2847"],
           badge: `${i + 1}단계`, title: `시공 ${i + 1}단계`, subtitle: "",
           accent_color: i % 2 === 0 ? "#237FFF" : "#AB5EBE",
           animation: animations[i % 4], photo: `photo_${i + 1}`, narration: "",
@@ -196,7 +197,7 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
 
       // 엔딩 — 업체명 + 로고 + 연락처 강조
       manualScenes.push({
-        duration: 150, bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"],
+        duration: 96, bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"],
         badge: "시공 문의", title: companyName || "SMS",
         subtitle: phoneNumber || "연락주세요", accent_color: "#237FFF",
         animation: "fade_in", photo: null,
@@ -319,8 +320,10 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
           },
           body: JSON.stringify({
             model: "claude-haiku-4-5-20251001",
-            max_tokens: 2048,
-            system: systemPrompt,
+            // 실제 스크립트 JSON은 약 1200~1400 토큰 → 1500 여유.
+            max_tokens: 1500,
+            // 시스템 프롬프트 캐싱 — 재호출 시 입력 토큰 비용·시간 ~90% 절감
+            system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
             messages: [{ role: "user", content: userContent }],
           }),
         });
@@ -344,7 +347,7 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       const topic = (workTopic || "").trim();
       const mockScenes: any[] = [];
       mockScenes.push({
-        duration: 100, bg_type: "gradient", bg_colors: ["#0a1628", "#1a3a6a"],
+        duration: 72, bg_type: "gradient", bg_colors: ["#0a1628", "#1a3a6a"],
         badge: location || "오늘의 현장",
         title: topic || companyName || "작업 리포트",
         subtitle: businessLabel || "정성을 담은 한 컷",
@@ -356,7 +359,7 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       });
       for (let i = 0; i < photoCount; i++) {
         mockScenes.push({
-          duration: 120, bg_type: "photo", bg_colors: ["#001130", "#0d2847"],
+          duration: 84, bg_type: "photo", bg_colors: ["#001130", "#0d2847"],
           badge: `${i + 1}`,
           title: i === 0 ? "시작" : i === photoCount - 1 ? "완성" : "진행 중",
           subtitle: i === 0 ? "꼼꼼한 준비" : i === photoCount - 1 ? "완벽한 결과" : "한 걸음씩 정성껏",
@@ -372,14 +375,14 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
         });
       }
       mockScenes.push({
-        duration: 100, bg_type: "gradient", bg_colors: ["#0d2847", "#1a3a6a"],
+        duration: 72, bg_type: "gradient", bg_colors: ["#0d2847", "#1a3a6a"],
         badge: "결과", title: "기대 이상의 마무리",
         subtitle: "매 순간 최선을", accent_color: "#AB5EBE",
         animation: "zoom_in", photo: null,
         narration: "정성껏 완성했습니다.",
       });
       mockScenes.push({
-        duration: 120, bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"],
+        duration: 84, bg_type: "gradient", bg_colors: ["#001130", "#0a2a5a"],
         badge: "문의 · 예약", title: companyName || "SMS",
         subtitle: phoneNumber || "연락 주세요", accent_color: "#237FFF",
         animation: "fade_in", photo: null,

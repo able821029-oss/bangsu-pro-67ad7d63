@@ -2,10 +2,13 @@
 const { renderMedia, selectComposition } = require("@remotion/renderer");
 const path = require("path");
 
-const FPS = 30;
+// 2026-04-20 속도 최적화
+// - FPS 30 → 24 (시네마틱 톤 유지 + 프레임 수 20% 감소 → 렌더 시간 20% 단축)
+// - ENDING_FRAMES 60(2초) → 48(2초@24fps) 유지
+const FPS = 24;
 const W = 1080;
 const H = 1920;
-const ENDING_FRAMES = 60; // 2초 (기존 5초 → 2초로 단축)
+const ENDING_FRAMES = 48;
 
 // Remotion 번들 경로 (Docker 빌드 시 사전 생성)
 const bundlePath = path.join(__dirname, "remotion-bundle");

@@ -42,7 +42,8 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           text: safeText,
-          model_id: "eleven_turbo_v2_5",
+          // 미리듣기·실제 나레이션 모두 flash_v2_5로 통일해 음색 일치 + 속도 최적
+          model_id: "eleven_flash_v2_5",
           voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.4, use_speaker_boost: true, speed: 0.8 },
         }),
       }
