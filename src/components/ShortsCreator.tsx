@@ -338,10 +338,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
 
     setPlayingVoice(voice.id);
 
-    // 1) 브라우저 내장 Web Speech API 우선 — 무료, 즉시, 인터넷 불필요
-    if (playWithWebSpeech(voice)) return;
-
-    // 2) 폴백: ElevenLabs (유료/쿼터 초과 시 실패 가능)
+    // 1) ElevenLabs 우선 — 최종 영상과 동일한 음성 프로필로 미리듣기 (품질 우선)
     try {
       const { data, error } = await supabase.functions.invoke("tts-preview", {
         body: { voiceId: voice.id, text: PREVIEW_TEXT },
@@ -359,9 +356,13 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         await audio.play();
         return;
       }
+      if (data?.error) console.warn("[TTS] ElevenLabs 응답 에러:", data.error, data.detail);
     } catch (err) {
-      console.warn("[TTS] ElevenLabs 폴백 실패:", err);
+      console.warn("[TTS] ElevenLabs 호출 실패:", err);
     }
+
+    // 2) 폴백: 브라우저 내장 Web Speech API — ElevenLabs 할당량 초과/네트워크 오류 시
+    if (playWithWebSpeech(voice)) return;
 
     setPlayingVoice(null);
     toast({
