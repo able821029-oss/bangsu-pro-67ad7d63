@@ -1,1 +1,21 @@
 project_id = "stnpepxiysfoblfeqvpu"
+
+# 공개 AI 엔드포인트 — 세션 JWT 대신 anon 키만으로 호출 허용.
+# API 비용 남용은 ANTHROPIC/ElevenLabs 쿼터와 Supabase 글로벌 rate limit으로 방어.
+[functions.generate-blog]
+verify_jwt = false
+
+[functions.generate-shorts]
+verify_jwt = false
+
+[functions.tts-preview]
+verify_jwt = false
+
+[functions.test-elevenlabs]
+verify_jwt = false
+
+[functions.seo-analyze]
+verify_jwt = false
+
+[functions.render-video]
+verify_jwt = false
