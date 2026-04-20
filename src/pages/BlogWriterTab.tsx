@@ -720,7 +720,7 @@ function SectionsBlock({
   );
 }
 
-function SectionCard({
+export function SectionCard({
   section,
   index,
   onUpdate,

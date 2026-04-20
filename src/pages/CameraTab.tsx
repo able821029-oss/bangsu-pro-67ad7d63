@@ -10,16 +10,18 @@ import {
   Loader2,
   PenLine,
   ArrowLeft,
+  Plus,
+  Type,
 } from "lucide-react";
 import { KeywordRecommender } from "@/components/KeywordRecommender";
 import { PlatformChip } from "@/components/PlatformChip";
-import { Button } from "@/components/ui/button";
-import { useAppStore, Platform, Persona, BlogPost, ContentBlock } from "@/stores/appStore";
+import { useAppStore, Platform, Persona, BlogPost, ContentBlock, DraftSection, createEmptySection } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { compressPhotos } from "@/lib/imageCompress";
+import { SectionCard } from "@/pages/BlogWriterTab";
 
 const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
@@ -56,6 +58,7 @@ export function CameraTab({
   const { user } = useAuth();
 
   const [wizardStep, setWizardStep] = useState<WizardStep>(1);
+  const [title, setTitle] = useState("");            // 제목 (Step 1에서 입력 or Step 2에서 편집)
   const [location, setLocation] = useState("");
   const [constructionDate, setConstructionDate] = useState(new Date().toISOString().slice(0, 10));
   const [siteArea, setSiteArea] = useState("");      // 시공면적
@@ -64,6 +67,11 @@ export function CameraTab({
   const [isLocating, setIsLocating] = useState(false);
   const [gpsTimedOut, setGpsTimedOut] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  // Step 2 (편집 화면) — 3블록 구조의 섹션 편집용 local state
+  const [editSections, setEditSections] = useState<DraftSection[]>([createEmptySection()]);
+  const [editHashtags, setEditHashtags] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [genStep, setGenStep] = useState<GeneratingStep>("analyzing");
@@ -192,6 +200,14 @@ export function CameraTab({
       toast({ title: "사진을 먼저 촬영해주세요", variant: "destructive" });
       return;
     }
+    // Step 1의 사진들을 섹션으로 자동 배치 (소제목/글은 비워둠 → 사용자가 직접 or AI로 채움)
+    const initial: DraftSection[] = photos.map((p) => ({
+      id: crypto.randomUUID(),
+      subtitle: "",
+      photo: { id: p.id, dataUrl: p.dataUrl },
+      text: "",
+    }));
+    setEditSections(initial.length > 0 ? initial : [createEmptySection()]);
     setWizardStep(2);
   };
 
@@ -261,13 +277,89 @@ export function CameraTab({
 
       const aiResult = data as { title: string; blocks: ContentBlock[]; hashtags: string[] };
 
-      const { data: dbPost, error: dbError } = await supabase
+      // AI 결과(blocks)를 편집 가능한 sections로 변환: subtitle + 바로 뒤따르는 text/photo를 한 섹션으로 묶음
+      const merged = blocksToSections(aiResult.blocks || [], photos);
+      setTitle(aiResult.title || title);
+      setEditSections(merged.length > 0 ? merged : editSections);
+      setEditHashtags(aiResult.hashtags || []);
+
+      // 편집 화면(Step 2)을 유지한 채 로딩 오버레이만 닫음 → 사용자가 수정/추가/저장
+      setTimeout(() => {
+        setIsGenerating(false);
+      }, 600);
+    } catch (err: any) {
+      clearInterval(interval);
+      setGenStep("error");
+      setProgress(0);
+      toast({ title: "오류 발생", description: err.message || "네트워크 오류", variant: "destructive" });
+      setTimeout(() => setIsGenerating(false), 1500);
+    }
+  };
+
+  // AI 결과 blocks를 편집 가능한 sections로 변환
+  function blocksToSections(blocks: ContentBlock[], photoPool: typeof photos): DraftSection[] {
+    const out: DraftSection[] = [];
+    let current: DraftSection | null = null;
+    const pushCurrent = () => {
+      if (current && (current.subtitle || current.text || current.photo)) out.push(current);
+    };
+    for (const b of blocks) {
+      if (b.type === "subtitle") {
+        pushCurrent();
+        current = { id: crypto.randomUUID(), subtitle: b.content || "", photo: null, text: "" };
+      } else if (b.type === "text") {
+        if (!current) current = { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
+        current.text = current.text ? `${current.text}\n${b.content || ""}` : b.content || "";
+      } else if (b.type === "photo") {
+        if (!current) current = { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
+        const match = String(b.content || "").match(/photo-(\d+)/);
+        const idx = match ? parseInt(match[1], 10) - 1 : -1;
+        const pick = photoPool[idx] || photoPool[out.length] || null;
+        if (pick) current.photo = { id: pick.id, dataUrl: pick.dataUrl };
+      }
+    }
+    pushCurrent();
+    return out;
+  }
+
+  const handleSavePost = async () => {
+    const filled = editSections.filter((s) => s.subtitle.trim() || s.text.trim() || s.photo);
+    if (!title.trim() || filled.length === 0) {
+      toast({
+        title: "저장할 내용이 부족합니다",
+        description: "제목과 섹션 최소 1개(소제목/사진/글 중 하나)가 필요합니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSaving(true);
+    try {
+      // sections → blocks 변환 ([현장정보 요약] → [subtitle → photo → text] 반복)
+      const blocks: ContentBlock[] = [];
+      const siteBits: string[] = [];
+      if (location) siteBits.push(`지역: ${location}`);
+      if (siteArea) siteBits.push(`시공면적: ${siteArea}`);
+      if (siteMethod) siteBits.push(`공법: ${siteMethod}`);
+      if (siteEtc) siteBits.push(`기타: ${siteEtc}`);
+      if (siteBits.length > 0) {
+        blocks.push({ type: "subtitle", content: "현장 정보" });
+        blocks.push({ type: "text", content: siteBits.join(" · ") });
+      }
+      filled.forEach((s, i) => {
+        if (s.subtitle.trim()) blocks.push({ type: "subtitle", content: s.subtitle.trim() });
+        if (s.photo) blocks.push({ type: "photo", content: `photo-${i + 1}`, caption: s.subtitle || "" });
+        if (s.text.trim()) blocks.push({ type: "text", content: s.text.trim() });
+      });
+
+      const allPhotos = filled.map((s) => s.photo).filter((p): p is NonNullable<typeof p> => p !== null);
+
+      const { data: dbPost, error: dbError } = user ? await supabase
         .from("posts")
         .insert({
-          title: aiResult.title,
-          blocks: aiResult.blocks as any,
-          hashtags: aiResult.hashtags,
-          photos: photos.map((p) => ({ id: p.id, dataUrl: p.dataUrl })) as any,
+          title: title.trim(),
+          blocks: blocks as any,
+          hashtags: editHashtags,
+          photos: allPhotos.map((p) => ({ id: p.id, dataUrl: p.dataUrl })) as any,
           work_type: "AI자동판단",
           style: "시공일지형",
           persona: selectedPersona,
@@ -276,10 +368,10 @@ export function CameraTab({
           location,
           building_type: "AI자동판단",
           work_date: constructionDate,
-          user_id: user?.id,
+          user_id: user.id,
         })
         .select()
-        .single();
+        .single() : { data: null, error: null };
 
       if (dbError) {
         toast({ title: "DB 저장 실패", description: dbError.message, variant: "destructive" });
@@ -287,12 +379,12 @@ export function CameraTab({
 
       const newPost: BlogPost = {
         id: dbPost?.id || crypto.randomUUID(),
-        title: aiResult.title,
-        photos: [...photos],
+        title: title.trim(),
+        photos: allPhotos,
         workType: "기타",
         style: "시공일지형",
-        blocks: aiResult.blocks,
-        hashtags: aiResult.hashtags,
+        blocks,
+        hashtags: editHashtags,
         status: "완료",
         createdAt: new Date().toISOString().slice(0, 10),
         platforms: [...selectedPlatforms],
@@ -300,19 +392,12 @@ export function CameraTab({
         location,
         siteInfo: { area: siteArea, method: siteMethod, etc: siteEtc },
       };
-
       addPost(newPost);
-      localStorage.removeItem(DRAFT_KEY); // 임시저장 삭제
-      setTimeout(() => {
-        setIsGenerating(false);
-        onViewPost(newPost);
-      }, 800);
-    } catch (err: any) {
-      clearInterval(interval);
-      setGenStep("error");
-      setProgress(0);
-      toast({ title: "오류 발생", description: err.message || "네트워크 오류", variant: "destructive" });
-      setTimeout(() => setIsGenerating(false), 1500);
+      localStorage.removeItem(DRAFT_KEY);
+      toast({ title: "글이 저장되었습니다 ✨" });
+      onViewPost(newPost);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -580,6 +665,19 @@ export function CameraTab({
           </div>
         </div>
 
+        {/* 제목 — 비워두면 다음 화면에서 AI가 자동 생성 */}
+        <div className="glass-card p-4 space-y-1">
+          <label className="text-xs text-muted-foreground flex items-center gap-1 font-[Inter]">
+            <Type className="w-3 h-3" /> 제목
+          </label>
+          <input
+            className="w-full bg-card border border-white/10 rounded-xl px-3 h-12 text-sm outline-none text-foreground placeholder:text-muted-foreground font-[Inter]"
+            placeholder="예) 강남구 옥상 방수 시공 완료 (비워두면 AI 자동 생성)"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
+
         <KeywordRecommender
           location={location}
           onSelectKeyword={(kw) => {
@@ -598,82 +696,133 @@ export function CameraTab({
     );
   }
 
-  // ─── Step 2: 스타일 선택 (Stitch Dark) ───
+  // ─── Step 2: 3블록 편집 화면 (CLAUDE.md §2 고정 구조) ───
+  const updateSection = (id: string, patch: Partial<DraftSection>) =>
+    setEditSections((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const removeSection = (id: string) =>
+    setEditSections((prev) => prev.filter((s) => s.id !== id));
+  const addEmptySection = () =>
+    setEditSections((prev) => [...prev, createEmptySection()]);
+
   return (
-    <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
+    <div className="px-4 pt-6 pb-28 space-y-4 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <button onClick={() => setWizardStep(1)} className="flex items-center gap-1 text-sm text-primary font-medium font-[Inter]">
           <ArrowLeft className="w-4 h-4" /> 이전
         </button>
         <h1 className="text-xl font-bold flex items-center gap-2 text-foreground font-[Manrope]">
-          <PenLine className="w-5 h-5 text-primary" /> 스타일 선택
+          <PenLine className="w-5 h-5 text-primary" /> 글쓰기
         </h1>
-        {/* Wizard progress dots */}
         <div className="flex gap-1.5 items-center">
           <div className="w-1.5 h-1.5 rounded-full bg-[#414754]" />
           <div className="w-4 h-1.5 rounded-full bg-[#4C8EFF]" />
         </div>
       </div>
 
-      {/* Persona cards */}
-      <div>
-        <p className="text-sm font-semibold mb-2 text-[#C1C6D7] font-[Inter]">글쓰기 페르소나</p>
-        <div className="space-y-2">
-          {personas.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedPersona(p.id)}
-              className={`w-full text-left px-4 py-3 rounded-xl transition-all ${
-                selectedPersona === p.id
-                  ? "glass-card-glow"
-                  : "glass-card"
-              }`}
-            >
-              <p className="font-semibold text-sm text-foreground font-[Manrope]">{p.label}</p>
-              <p className="text-xs text-muted-foreground font-[Inter]">{p.desc}</p>
-            </button>
-          ))}
+      {/* 1) 현장 정보 — Step 1 carry-over (편집 가능) */}
+      <div className="glass-card p-4 space-y-3">
+        <label className="text-xs text-muted-foreground flex items-center gap-1 font-[Inter]">
+          <Type className="w-3 h-3" /> 제목
+        </label>
+        <input
+          className="w-full bg-card border border-white/10 rounded-xl px-3 h-12 text-sm outline-none text-foreground placeholder:text-muted-foreground font-[Inter]"
+          placeholder="비워두면 AI가 자동 생성"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+          <div>지역: <span className="text-foreground">{location || "—"}</span></div>
+          <div>일자: <span className="text-foreground">{constructionDate}</span></div>
+          <div>면적: <span className="text-foreground">{siteArea || "—"}</span></div>
+          <div>공법: <span className="text-foreground">{siteMethod || "—"}</span></div>
+          {siteEtc && <div className="col-span-2">기타: <span className="text-foreground">{siteEtc}</span></div>}
         </div>
       </div>
 
-      {/* Platform selection */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold text-[#C1C6D7] font-[Inter]">게시 플랫폼 선택</p>
-          {selectedPlatforms.length === 0 && (
-            <span className="text-xs text-amber-500 font-medium font-[Inter]">하나 이상 선택해 주세요</span>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {platformIds.map((id) => (
-            <PlatformChip
-              key={id}
-              platform={id}
-              selected={selectedPlatforms.includes(id)}
-              onClick={() => togglePlatform(id)}
-            />
-          ))}
-        </div>
-        {selectedPlatforms.length === 0 && (
-          <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2">
-            <p className="text-xs text-amber-500 font-[Inter]">네이버 블로그를 선택하면 검색 상위노출에 유리합니다</p>
+      {/* 페르소나 + 플랫폼 — 콤팩트 */}
+      <div className="glass-card p-3 space-y-2.5">
+        <div>
+          <p className="text-[11px] font-semibold text-muted-foreground mb-1.5 font-[Inter]">페르소나</p>
+          <div className="flex gap-1.5">
+            {personas.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedPersona(p.id)}
+                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  selectedPersona === p.id
+                    ? "bg-primary/20 text-primary border border-primary/40"
+                    : "bg-white/5 text-muted-foreground border border-white/10"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold text-muted-foreground mb-1.5 font-[Inter]">플랫폼</p>
+          <div className="flex flex-wrap gap-1.5">
+            {platformIds.map((id) => (
+              <PlatformChip
+                key={id}
+                platform={id}
+                selected={selectedPlatforms.includes(id)}
+                onClick={() => togglePlatform(id)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* CTA button — Stitch brand gradient */}
+      {/* 2) 섹션 영역 — 소제목·사진·글쓰기 (CLAUDE.md 고정 구조) */}
+      {editSections.length === 0 && (
+        <div className="glass-card p-6 text-center space-y-2">
+          <Sparkles className="w-5 h-5 text-primary mx-auto" />
+          <p className="text-sm font-semibold text-foreground">섹션이 비어있어요</p>
+          <p className="text-xs text-muted-foreground">아래 "AI 자동 완성"으로 한번에 채우거나, "+ 글쓰기 추가"로 직접 작성하세요</p>
+        </div>
+      )}
+      {editSections.map((s, i) => (
+        <SectionCard
+          key={s.id}
+          section={s}
+          index={i}
+          onUpdate={(patch) => updateSection(s.id, patch)}
+          onRemove={() => removeSection(s.id)}
+        />
+      ))}
+
+      {/* 3) + 글쓰기 추가 (항시 고정) */}
       <button
-        className={`w-full h-[52px] rounded-full font-bold text-base flex items-center justify-center gap-2 transition-opacity ${
+        onClick={addEmptySection}
+        className="w-full flex items-center justify-center gap-2 glass-card py-4 font-semibold text-primary border border-dashed border-primary/40 hover:bg-primary/5 transition-colors"
+      >
+        <Plus className="w-4 h-4" /> 글쓰기 추가
+      </button>
+
+      {/* AI 자동 완성 — generate-blog 호출해 섹션 일괄 채움 */}
+      <button
+        className={`w-full h-[52px] rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-opacity ${
           selectedPlatforms.length === 0
             ? "bg-secondary text-muted-foreground opacity-50 cursor-not-allowed"
-            : "bg-gradient-to-r from-[#4C8EFF] to-[#6BA4FF] text-white"
+            : "bg-gradient-to-r from-[#AB5EBE]/80 to-[#4C8EFF]/80 text-white"
         }`}
         onClick={handleStartAI}
-        disabled={selectedPlatforms.length === 0}
+        disabled={selectedPlatforms.length === 0 || isGenerating || saving}
       >
-        <Sparkles className="w-6 h-6" />
-        AI 글쓰기 시작
+        <Sparkles className="w-5 h-5" />
+        AI로 자동 완성
+      </button>
+
+      {/* 저장 */}
+      <button
+        onClick={handleSavePost}
+        disabled={saving || isGenerating}
+        className="btn-power w-full disabled:opacity-50"
+      >
+        {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
+        {saving ? "저장 중..." : "저장하기"}
       </button>
     </div>
   );
