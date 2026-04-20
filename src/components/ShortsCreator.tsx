@@ -168,6 +168,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
   const [remotionScenes, setRemotionScenes] = useState<SmsScene[]>([]);
   const [progressText, setProgressText] = useState("");
   const [progressPct, setProgressPct] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
@@ -453,6 +454,25 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     setStep("generating");
     setProgressText("📝 사진 분석 중...");
     setProgressPct(10);
+    setElapsedSec(0);
+
+    // 경과 시간 카운터 — 진행률이 같은 값이어도 숫자가 계속 움직여 '정체' 체감 제거
+    const startedAt = Date.now();
+    const elapsedTimer = setInterval(() => {
+      setElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+
+    // 진행률 자동 증가 — 단계별 상한을 올려가며 끊김 없이 증가
+    // 처음부터 가동해서 "10%에서 정체" 체감 자체를 제거 (이전엔 Railway 호출 직전부터만 돌렸음)
+    let progressCeiling = 24; // 1단계: 스크립트+나레이션 생성 중
+    const progressTimer = setInterval(() => {
+      setProgressPct((prev) => {
+        if (prev >= progressCeiling) return prev;
+        const gap = progressCeiling - prev;
+        const inc = gap > 20 ? 1.5 : gap > 10 ? 0.9 : 0.4;
+        return Math.min(prev + inc, progressCeiling);
+      });
+    }, 700);
 
     const narrationEnabled = selectedVoice !== null;
     const voice = VOICES.find(v => v.id === selectedVoice);
@@ -488,7 +508,8 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       console.warn("[SMS] 영상 장면:", rScenes.map((s, i) => `${i}: ${s.title}`).join(" | "));
 
       setProgressText("🎬 텍스트 애니메이션 합성 중...");
-      setProgressPct(25);
+      progressCeiling = 29;
+      setProgressPct((p) => Math.max(p, 25));
 
       const voiceConfig = narrationEnabled && voice ? {
         lang: voice.lang,
@@ -502,17 +523,8 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
 
       // ── Railway 서버 직접 호출 (Supabase 150s 제한 우회) ──
       setProgressText("🖥️ 서버에서 영상 렌더링 중... (1~2분 소요)");
-      setProgressPct(30);
-
-      // Railway 렌더 진행 중 진행률을 부드럽게 증가시켜 '멈춤' 체감 제거
-      const progressTimer = setInterval(() => {
-        setProgressPct((prev) => {
-          if (prev >= 92) return prev; // 완료 전에는 92% 이하에서 멈춤
-          // 초반엔 빠르게, 후반엔 느리게
-          const inc = prev < 55 ? 2.5 : prev < 75 ? 1.3 : 0.6;
-          return Math.min(prev + inc, 92);
-        });
-      }, 1200);
+      progressCeiling = 92;
+      setProgressPct((p) => Math.max(p, 30));
 
       // env가 https:// 없이 도메인만 세팅된 경우 자동 보정 (CF Pages 설정 실수 방어)
       const rawUrl =
@@ -544,8 +556,6 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         if (!r.ok) renderErrMsg = renderData?.error || `HTTP ${r.status}`;
       } catch (e: any) {
         renderErrMsg = e?.message || "네트워크 오류";
-      } finally {
-        clearInterval(progressTimer); // 진행률 자동 증가 중지
       }
 
       const serverRenderOk = !renderErrMsg && !renderData?.error && !!renderData?.videoUrl;
@@ -619,6 +629,9 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       } else {
         setErrorMsg((err.message || "다시 시도해 주세요").slice(0, 200));
       }
+    } finally {
+      clearInterval(progressTimer);
+      clearInterval(elapsedTimer);
     }
   }, [photos, videoStyle, selectedVoice, settings, toast, workTopic, scriptMode, manualScript, bgm, videoUrl]);
 
@@ -674,6 +687,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     setPlayingVoice(null);
     setStep("config");
     setProgressPct(0);
+    setElapsedSec(0);
     setVideoUrl(null);
     setErrorMsg("");
   };
@@ -962,10 +976,14 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         </div>
         <div className="w-full max-w-xs space-y-2">
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>진행률</span><span className="font-semibold text-primary">{Math.round(progressPct)}%</span>
+            <span>진행률 · 경과 {elapsedSec}초</span>
+            <span className="font-semibold text-primary">{Math.round(progressPct)}%</span>
           </div>
-          <div className="w-full bg-secondary rounded-full h-3">
-            <div className="bg-primary rounded-full h-3 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+          <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-primary rounded-full h-3 transition-all duration-700 ease-out"
+              style={{ width: `${progressPct}%` }}
+            />
           </div>
         </div>
         <div className="w-full max-w-xs space-y-2">
