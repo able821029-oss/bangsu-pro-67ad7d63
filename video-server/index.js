@@ -29,8 +29,16 @@ const authMiddleware = (req, res, next) => {
 };
 
 // ── 헬스체크 ──
+// Redis가 없으면 503을 반환해 Railway가 배포 실패로 판단하고 이전 버전을 유지하게 한다.
+// (BullMQ 기반 서비스는 Redis 없으면 의미가 없으므로 "Degraded"로 가장하지 않는다.)
 app.get("/health", async (_, res) => {
+  const checks = { redis: false, queue: false };
   try {
+    const client = await shortsQueue.client;
+    if (client && typeof client.ping === "function") {
+      await client.ping();
+      checks.redis = true;
+    }
     const counts = await shortsQueue.getJobCounts(
       "waiting",
       "active",
@@ -38,9 +46,17 @@ app.get("/health", async (_, res) => {
       "failed",
       "delayed"
     );
-    res.json({ ok: true, ts: Date.now(), version: "5.2-sse", queue: counts });
+    checks.queue = true;
+    res.json({ ok: true, ts: Date.now(), version: "5.2-sse", queue: counts, checks });
   } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
+    res.status(503).json({
+      ok: false,
+      ts: Date.now(),
+      version: "5.2-sse",
+      error: e?.message || "unknown",
+      checks,
+      hint: "REDIS_URL이 설정된 Railway Redis addon이 필요합니다",
+    });
   }
 });
 
