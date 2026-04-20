@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import {
-  Plus, X, Camera, ImagePlus, ArrowLeft, ArrowRight, Sparkles, Trash2,
+  Plus, X, Camera, ImagePlus, Sparkles, Trash2,
   MapPin, Ruler, Wrench, FileText as NoteIcon, Type, Loader2,
 } from "lucide-react";
 import {
@@ -17,8 +17,6 @@ import { useAuth } from "@/components/AuthProvider";
 import type { TabId } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompress";
-
-type WizardStep = 1 | 2;
 
 // 한국 17개 시·도 + 전국
 const REGIONS = [
@@ -118,7 +116,6 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
   const selectedPlatforms = useAppStore((s) => s.selectedPlatforms);
   const togglePlatform = useAppStore((s) => s.togglePlatform);
 
-  const [step, setStep] = useState<WizardStep>(1);
   const [saving, setSaving] = useState(false);
 
   const draft = drafts[activeIdx] ?? drafts[0];
@@ -132,12 +129,10 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
       return;
     }
     addDraft();
-    setStep(1);
   };
 
   const handleSwitchDraft = (idx: number) => {
     setActiveDraft(idx);
-    setStep(1);
   };
 
   const handleRemoveDraft = (idx: number) => {
@@ -151,14 +146,6 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
       target.sections.length > 0;
     if (hasContent && !window.confirm("작성 중인 내용이 삭제됩니다. 계속할까요?")) return;
     removeDraft(idx);
-  };
-
-  const handleNext = () => {
-    if (!draft.title.trim()) {
-      toast({ title: "제목을 입력해주세요", variant: "destructive" });
-      return;
-    }
-    setStep(2);
   };
 
   const canSave = (() => {
@@ -322,65 +309,38 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         )}
       </div>
 
-      {/* 위저드 단계 표시 */}
-      <div className="flex items-center gap-2 px-1">
-        <StepPill active={step === 1} label="1 · 현장 정보" />
-        <div className="h-px flex-1 bg-white/10" />
-        <StepPill active={step === 2} label="2 · 섹션 작성" />
-      </div>
+      {/* 1) 현장 정보 — 항시 고정 */}
+      <FieldsBlock
+        draft={draft}
+        onChange={(patch) => updateDraft(activeIdx, patch)}
+        selectedPlatforms={selectedPlatforms}
+        onTogglePlatform={togglePlatform}
+      />
 
-      {step === 1 ? (
-        <Step1Form
-          draft={draft}
-          onChange={(patch) => updateDraft(activeIdx, patch)}
-          onNext={handleNext}
-          selectedPlatforms={selectedPlatforms}
-          onTogglePlatform={togglePlatform}
-        />
-      ) : (
-        <Step2Sections
-          draftIdx={activeIdx}
-          sections={draft.sections}
-          onAddSection={() => addSection(activeIdx)}
-          onAddPhotosAsSections={(photos) => addPhotosAsSections(activeIdx, photos)}
-          onUpdateSection={(id, patch) => updateSection(activeIdx, id, patch)}
-          onRemoveSection={(id) => removeSection(activeIdx, id)}
-          onBack={() => setStep(1)}
-          onSave={handleSave}
-          canSave={canSave}
-          saving={saving}
-        />
-      )}
+      {/* 2) 섹션 영역 + 3) + 글쓰기 추가 — 항시 고정 */}
+      <SectionsBlock
+        sections={draft.sections}
+        onAddSection={() => addSection(activeIdx)}
+        onAddPhotosAsSections={(photos) => addPhotosAsSections(activeIdx, photos)}
+        onUpdateSection={(id, patch) => updateSection(activeIdx, id, patch)}
+        onRemoveSection={(id) => removeSection(activeIdx, id)}
+        onSave={handleSave}
+        canSave={canSave}
+        saving={saving}
+      />
     </div>
   );
 }
 
-function StepPill({ active, label }: { active: boolean; label: string }) {
-  return (
-    <span
-      className={cn(
-        "text-[11px] px-2.5 py-1 rounded-full font-semibold transition-colors",
-        active
-          ? "bg-[#4C8EFF]/20 text-[#4C8EFF] border border-[#4C8EFF]/40"
-          : "text-muted-foreground border border-white/10",
-      )}
-    >
-      {label}
-    </span>
-  );
-}
-
-// ── Step 1: 현장 정보 폼 ──
-function Step1Form({
+// ── 1) 현장 정보 블록 (항시 고정) ──
+function FieldsBlock({
   draft,
   onChange,
-  onNext,
   selectedPlatforms,
   onTogglePlatform,
 }: {
   draft: ReturnType<typeof useAppStore.getState>["drafts"][number];
   onChange: (patch: Partial<ReturnType<typeof useAppStore.getState>["drafts"][number]>) => void;
-  onNext: () => void;
   selectedPlatforms: Platform[];
   onTogglePlatform: (p: Platform) => void;
 }) {
@@ -432,10 +392,6 @@ function Step1Form({
 
       {/* 발행 채널 선택 */}
       <PlatformPicker selected={selectedPlatforms} onToggle={onTogglePlatform} />
-
-      <button onClick={onNext} className="btn-power w-full mt-2">
-        다음 <ArrowRight className="w-5 h-5" />
-      </button>
     </div>
   );
 }
@@ -620,19 +576,17 @@ function FormField({
 // ── Step 2: 섹션 (소제목 + 사진 + 글) 동적 추가 ──
 const MAX_BULK_PHOTOS = 6;
 
-function Step2Sections({
-  draftIdx: _draftIdx,
+// ── 2) 섹션 영역 + 3) + 글쓰기 추가 (항시 고정) ──
+function SectionsBlock({
   sections,
   onAddSection,
   onAddPhotosAsSections,
   onUpdateSection,
   onRemoveSection,
-  onBack,
   onSave,
   canSave,
   saving,
 }: {
-  draftIdx: number;
   sections: ReturnType<typeof useAppStore.getState>["drafts"][number]["sections"];
   onAddSection: () => void;
   onAddPhotosAsSections: (photos: { id: string; dataUrl: string }[]) => number;
@@ -641,7 +595,6 @@ function Step2Sections({
     patch: Partial<ReturnType<typeof useAppStore.getState>["drafts"][number]["sections"][number]>,
   ) => void;
   onRemoveSection: (id: string) => void;
-  onBack: () => void;
   onSave: () => void;
   canSave: boolean;
   saving: boolean;
@@ -755,22 +708,14 @@ function Step2Sections({
         <Plus className="w-4 h-4" /> 글쓰기 추가
       </button>
 
-      <div className="flex gap-2 pt-2">
-        <button
-          onClick={onBack}
-          className="flex-1 h-12 rounded-full border border-white/10 text-sm font-semibold text-foreground flex items-center justify-center gap-1 hover:bg-white/5"
-        >
-          <ArrowLeft className="w-4 h-4" /> 이전
-        </button>
-        <button
-          onClick={onSave}
-          disabled={!canSave || saving}
-          className="flex-[2] btn-power disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-          {saving ? "저장 중..." : "저장하기"}
-        </button>
-      </div>
+      <button
+        onClick={onSave}
+        disabled={!canSave || saving}
+        className="btn-power w-full disabled:opacity-50 mt-1"
+      >
+        {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+        {saving ? "저장 중..." : "저장하기"}
+      </button>
     </div>
   );
 }
