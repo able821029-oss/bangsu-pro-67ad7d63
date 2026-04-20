@@ -519,7 +519,13 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
       } : undefined;
 
       const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
-      console.warn(`[SMS] 나레이션: ${narrationAudios.filter(Boolean).length}/${narrationAudios.length}개 ElevenLabs 오디오, BGM: ${bgm}`);
+      const validAudioCount = narrationAudios.filter(Boolean).length;
+      console.warn(`[SMS] 나레이션: ${validAudioCount}/${narrationAudios.length}개 ElevenLabs 오디오, BGM: ${bgm}`);
+
+      // ── 사전 게이트: 나레이션 ON인데 유효 오디오 0개면 서버 보내기 전 중단 ──
+      if (narrationEnabled && validAudioCount === 0) {
+        throw new Error("나레이션 음성 생성이 실패했습니다 (ElevenLabs 응답 없음). 잠시 후 다시 시도해 주세요.");
+      }
 
       // ── Railway 비동기 렌더 (jobId 발급 → 3초마다 상태 폴링) ──
       // 이전 동기 호출은 Railway 게이트웨이가 162초 전후로 504 반환하여 중도 실패했음.
@@ -548,6 +554,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             companyName: settings.companyName,
             phoneNumber: settings.phoneNumber,
             bgmType: bgm,
+            narrationExpected: narrationEnabled, // 서버 검증 게이트 신호
           }),
           retries: 2,
           retryDelayMs: 1500,
@@ -565,7 +572,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         const pollDeadline = Date.now() + 8 * 60 * 1000;
         while (Date.now() < pollDeadline) {
           await new Promise((r) => setTimeout(r, 3000));
-          let statusJson: { status?: string; progress?: number; videoUrl?: string; error?: string } | null = null;
+          let statusJson: { status?: string; progress?: number; stage?: string; videoUrl?: string; error?: string } | null = null;
           try {
             const statusRes = await fetchWithRetry(`${RAILWAY_URL}/render-status/${jobId}`, {
               method: "GET",
@@ -590,6 +597,10 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
             const serverMapped = 30 + Math.round((statusJson.progress / 100) * 62);
             progressCeiling = Math.min(92, Math.max(progressCeiling, serverMapped));
             setProgressPct((p) => Math.max(p, serverMapped));
+          }
+          // 서버가 알려주는 현재 단계 문구를 사용자에게 그대로 노출 (검증/업로드 등)
+          if (statusJson.stage) {
+            setProgressText(`🖥️ ${statusJson.stage}... (서버)`);
           }
           if (statusJson.status === "done" && statusJson.videoUrl) {
             renderData = { videoUrl: statusJson.videoUrl };

@@ -1,12 +1,41 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const { execSync, spawnSync } = require("child_process");
 const { createClient } = require("@supabase/supabase-js");
 const { v4: uuidv4 } = require("uuid");
 const ffmpegPath = require("ffmpeg-static");
 const { renderVideo, FPS } = require("./renderer");
 const { generateBgm } = require("./bgm");
+
+// ── 영상 메타데이터 검증 (ffprobe 대체) ──
+// ffmpeg -i 출력 stderr를 파싱해 오디오·비디오 스트림과 길이 확인.
+// 업로드 전 최종 게이트로 사용해 "음성 없는 영상 출력" 사고 차단.
+function probeMedia(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return { ok: false, reason: "파일 없음", hasAudio: false, hasVideo: false, durationSec: 0 };
+  }
+  const stat = fs.statSync(filePath);
+  const proc = spawnSync(
+    ffmpegPath,
+    ["-hide_banner", "-i", filePath, "-f", "null", "-"],
+    { encoding: "utf8" }
+  );
+  const stderr = (proc.stderr || "") + (proc.stdout || "");
+  const hasAudio = /Stream\s+#\d+:\d+[^\n]*Audio:/.test(stderr);
+  const hasVideo = /Stream\s+#\d+:\d+[^\n]*Video:/.test(stderr);
+  const dm = stderr.match(/Duration:\s+(\d+):(\d+):(\d+\.\d+)/);
+  const durationSec = dm
+    ? parseInt(dm[1], 10) * 3600 + parseInt(dm[2], 10) * 60 + parseFloat(dm[3])
+    : 0;
+  return {
+    ok: true,
+    hasAudio,
+    hasVideo,
+    durationSec,
+    fileSize: stat.size,
+  };
+}
 
 const app = express();
 
@@ -77,6 +106,7 @@ async function runRender(jobId, body) {
       companyName,
       phoneNumber,
       bgmType = "none",
+      narrationExpected = false, // 클라이언트가 "나레이션 ON"으로 요청했는지
     } = body;
 
     if (!scenes?.length || !photos?.length) {
@@ -84,7 +114,18 @@ async function runRender(jobId, body) {
       return;
     }
 
-    console.log(`[${jobId}] 시작 — ${scenes.length}장면 ${photos.length}사진 bgm:${bgmType}`);
+    // ── 사전 게이트 1: 나레이션 요청했는데 ElevenLabs 오디오가 0개면 즉시 실패 ──
+    // (Remotion 10~60초 돌린 뒤에 무음 영상 나오는 사고 방지)
+    const validAudioCount = (narrationAudios || []).filter(Boolean).length;
+    if (narrationExpected && validAudioCount === 0) {
+      setJob(jobId, {
+        status: "error",
+        error: "나레이션 음성 생성 실패 — ElevenLabs 응답이 비어있어 영상을 만들지 않았습니다. 다시 시도해 주세요.",
+      });
+      return;
+    }
+
+    console.log(`[${jobId}] 시작 — ${scenes.length}장면 ${photos.length}사진 bgm:${bgmType} 나레이션:${validAudioCount}/${(narrationAudios || []).length}`);
     setJob(jobId, { status: "rendering", progress: 5, stage: "렌더링 시작" });
 
     // Step 1: Remotion 렌더링 — 진행률 5% → 75% 구간 매핑
@@ -159,7 +200,28 @@ async function runRender(jobId, body) {
     }
 
     console.log(`[${jobId}] 오디오 처리 완료 (${elapsed()})`);
-    setJob(jobId, { status: "uploading", progress: 92, stage: "Supabase 업로드" });
+    setJob(jobId, { status: "verifying", progress: 90, stage: "출력 검증 중" });
+
+    // ── 사후 게이트: ffmpeg로 최종 MP4 검증 ──
+    const probe = probeMedia(uploadPath);
+    console.log(`[${jobId}] 검증: video=${probe.hasVideo} audio=${probe.hasAudio} dur=${probe.durationSec}s size=${probe.fileSize}B`);
+    if (!probe.hasVideo) {
+      throw new Error("출력 파일에 영상 스트림이 없습니다");
+    }
+    if (probe.durationSec < 1) {
+      throw new Error(`출력 파일 길이가 비정상입니다 (${probe.durationSec}초)`);
+    }
+    if (probe.fileSize < 10_000) {
+      throw new Error(`출력 파일 크기가 비정상입니다 (${probe.fileSize} bytes)`);
+    }
+    if (narrationExpected && !probe.hasAudio) {
+      throw new Error("최종 영상에 음성이 들어가지 않았습니다 — 다시 시도해 주세요");
+    }
+    if ((hasNarration || hasBgm) && !probe.hasAudio) {
+      throw new Error("오디오 합성은 성공했지만 최종 영상에 반영되지 않았습니다 — 다시 시도해 주세요");
+    }
+
+    setJob(jobId, { status: "uploading", progress: 94, stage: "Supabase 업로드" });
 
     // Step 5: Supabase Storage 업로드
     const videoBuffer = fs.readFileSync(uploadPath);
