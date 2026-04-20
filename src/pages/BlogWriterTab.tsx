@@ -17,6 +17,7 @@ import { useAuth } from "@/components/AuthProvider";
 import type { TabId } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompress";
+import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent } from "@/lib/postQuality";
 
 // 한국 17개 시·도 + 전국
 const REGIONS = [
@@ -148,19 +149,14 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
     removeDraft(idx);
   };
 
-  const canSave = (() => {
-    // 섹션 중 최소 하나 이상에 소제목 OR 글이 있어야 저장 가능
-    const hasFilledSection = draft.sections.some(
-      (s) => s.subtitle.trim() || s.text.trim() || s.photo,
-    );
-    return !!(draft.title.trim() && hasFilledSection);
-  })();
+  // "현장 정보"만 있고 실제 섹션이 비어있는 부실 글 저장 방지 (2026-04-20)
+  const canSave = !!draft.title.trim() && hasMinimumContent(draft.sections);
 
   const handleSave = async () => {
     if (!canSave) {
       toast({
         title: "저장할 내용이 부족합니다",
-        description: "제목과 섹션 최소 1개(소제목/사진/글 중 하나)가 필요합니다.",
+        description: "제목과 '소제목+글' 또는 사진이 있는 섹션이 최소 1개 필요합니다.",
         variant: "destructive",
       });
       return;
@@ -209,14 +205,26 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         }
       });
 
+      // 제목·해시태그 품질 방어선 — 짧은 제목/빈 해시태그 자동 보강
+      const safeTitle = buildSafeTitle({
+        title: draft.title,
+        location: fullLocation,
+        siteMethod: draft.siteMethod,
+      });
+      const defaultTags = buildDefaultHashtags({
+        location: fullLocation,
+        siteMethod: draft.siteMethod,
+        companyName: settings.companyName,
+      });
+
       const newPost: BlogPost = {
         id: crypto.randomUUID(),
-        title: draft.title.trim(),
+        title: safeTitle,
         photos,
         workType: "기타",
         style: "시공일지형",
         blocks,
-        hashtags: [],
+        hashtags: defaultTags,
         status: "완료",
         createdAt: new Date().toISOString().slice(0, 10),
         platforms: [...selectedPlatforms],

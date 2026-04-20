@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { compressPhotos } from "@/lib/imageCompress";
 import { SectionCard } from "@/pages/BlogWriterTab";
+import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent } from "@/lib/postQuality";
 
 const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
@@ -279,12 +280,12 @@ export function CameraTab({
 
       // AI 결과(blocks)를 편집 가능한 sections로 변환: subtitle + 바로 뒤따르는 text/photo를 한 섹션으로 묶음
       const merged = blocksToSections(aiResult.blocks || [], photos);
-      // 제목이 너무 짧으면(한 단어 "방수공사" 케이스) location·siteMethod로 보강
-      const rawTitle = (aiResult.title || title || "").trim();
-      const safeTitle = rawTitle.length >= 8
-        ? rawTitle
-        : [location, siteMethod, rawTitle || "시공 완료"].filter(Boolean).join(" ").trim();
-      setTitle(safeTitle);
+      // 제목 품질 방어선 (postQuality 공통 유틸)
+      setTitle(buildSafeTitle({
+        title: aiResult.title || title,
+        location,
+        siteMethod,
+      }));
       setEditSections(merged.length > 0 ? merged : editSections);
       setEditHashtags(aiResult.hashtags || []);
 
@@ -328,17 +329,23 @@ export function CameraTab({
   }
 
   const handleSavePost = async () => {
-    const filled = editSections.filter((s) => s.subtitle.trim() || s.text.trim() || s.photo);
-    if (!title.trim() || filled.length === 0) {
+    if (!title.trim() || !hasMinimumContent(editSections)) {
       toast({
         title: "저장할 내용이 부족합니다",
-        description: "제목과 섹션 최소 1개(소제목/사진/글 중 하나)가 필요합니다.",
+        description: "제목과 '소제목+글' 또는 사진이 있는 섹션이 최소 1개 필요합니다.",
         variant: "destructive",
       });
       return;
     }
+    const filled = editSections.filter((s) => s.subtitle.trim() || s.text.trim() || s.photo);
     setSaving(true);
     try {
+      // 품질 보강 — 짧은 제목·빈 해시태그 자동 방어
+      const safeTitle = buildSafeTitle({ title, location, siteMethod });
+      const finalHashtags = editHashtags.length > 0
+        ? editHashtags
+        : buildDefaultHashtags({ location, siteMethod, companyName: settings.companyName });
+
       // sections → blocks 변환 ([현장정보 요약] → [subtitle → photo → text] 반복)
       const blocks: ContentBlock[] = [];
       const siteBits: string[] = [];
@@ -361,9 +368,9 @@ export function CameraTab({
       const { data: dbPost, error: dbError } = user ? await supabase
         .from("posts")
         .insert({
-          title: title.trim(),
+          title: safeTitle,
           blocks: blocks as any,
-          hashtags: editHashtags,
+          hashtags: finalHashtags,
           photos: allPhotos.map((p) => ({ id: p.id, dataUrl: p.dataUrl })) as any,
           work_type: "AI자동판단",
           style: "시공일지형",
@@ -384,12 +391,12 @@ export function CameraTab({
 
       const newPost: BlogPost = {
         id: dbPost?.id || crypto.randomUUID(),
-        title: title.trim(),
+        title: safeTitle,
         photos: allPhotos,
         workType: "기타",
         style: "시공일지형",
         blocks,
-        hashtags: editHashtags,
+        hashtags: finalHashtags,
         status: "완료",
         createdAt: new Date().toISOString().slice(0, 10),
         platforms: [...selectedPlatforms],
