@@ -168,9 +168,11 @@ JSON 형식:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
-        system: systemPrompt,
+        // JSON 점수 분석 작업은 Haiku로도 충분. Sonnet 대비 속도 3~5배, 비용 ~1/15.
+        model: "claude-haiku-4-5-20251001",
+        // items 7개 + checklist 6개 + overallAdvice 포함 JSON이 약 1800 토큰이라 2200까지 여유.
+        max_tokens: 2200,
+        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: userPrompt }],
       }),
     }) : null;

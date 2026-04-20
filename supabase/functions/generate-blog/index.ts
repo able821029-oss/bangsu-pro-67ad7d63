@@ -250,8 +250,10 @@ JSON 형식으로만 응답해주세요.`,
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
-        system: systemPrompt,
+        // 1800~2000자 한국어 블로그 + blocks/hashtags JSON은 약 2500~2800 토큰 → 3200 여유.
+        max_tokens: 3200,
+        // 시스템 프롬프트는 요청마다 동일 → prompt caching으로 입력 토큰 비용 ~90% 절감
+        system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: userContent }],
       }),
     });
