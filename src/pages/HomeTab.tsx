@@ -63,11 +63,13 @@ export function HomeTab({
   onViewPost: (post: BlogPost) => void;
 }) {
   const posts = useAppStore((s) => s.posts);
+  const shortsVideos = useAppStore((s) => s.shortsVideos);
   const settings = useAppStore((s) => s.settings);
   const subscription = useAppStore((s) => s.subscription);
 
-  // ── 파생 집계 (posts 변경 시에만 재계산) ──────────────────────────────
+  // ── 파생 집계 (posts/shortsVideos 변경 시에만 재계산) ───────────────
   // 2026-04-24: posts 배열이 커질수록 매 렌더 filter 5~7회 반복되던 문제 해결.
+  // 2026-04-25: 주간 발행 그래프에 쇼츠 영상 집계 추가 → 블로그/영상 스택드 바.
   // usage_logs RPC 붙으면 monthlyUsed·weeklyData를 서버 뷰로 교체 예정.
   const stats = useMemo(() => {
     const currentMonth = new Date().toISOString().slice(0, 7); // "2026-04"
@@ -90,23 +92,28 @@ export function HomeTab({
         if (p.platforms.includes("tiktok")) tiktokCount += 1;
       }
     }
-    // 주간 발행 — 4주치 버킷
+    // 주간 발행 — 4주치 버킷 (블로그 + 영상 분리 집계)
     const now = new Date();
     const weeklyData = [3, 2, 1, 0].map((weeksAgo) => {
       const weekStart = new Date(now);
       weekStart.setDate(now.getDate() - now.getDay() - weeksAgo * 7);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
-      const count = posts.reduce((acc, p) => {
+      const blog = posts.reduce((acc, p) => {
         const isDone = p.status === "완료" || p.status === "게시완료";
         if (!isDone) return acc;
         const d = new Date(p.createdAt);
         return d >= weekStart && d <= weekEnd ? acc + 1 : acc;
       }, 0);
-      return { week: `${4 - weeksAgo}주차`, count };
+      const video = shortsVideos.reduce((acc, v) => {
+        if (!v.createdAt) return acc;
+        const d = new Date(v.createdAt);
+        return d >= weekStart && d <= weekEnd ? acc + 1 : acc;
+      }, 0);
+      return { week: `${4 - weeksAgo}주차`, blog, video, count: blog + video };
     });
     return { published, completed, monthlyUsed, weeklyData, naverCount, instaCount, tiktokCount };
-  }, [posts]);
+  }, [posts, shortsVideos]);
 
   const { published, completed, weeklyData } = stats;
 
@@ -427,13 +434,19 @@ export function HomeTab({
 }
 
 // ── 심플 주간 바 차트 — 순수 HTML/CSS로 구현 (recharts 불필요) ──
-function WeeklyBarCard({ weeklyData }: { weeklyData: Array<{ week: string; count: number }> }) {
+function WeeklyBarCard({
+  weeklyData,
+}: {
+  weeklyData: Array<{ week: string; blog: number; video: number; count: number }>;
+}) {
   const total = weeklyData.reduce((sum, w) => sum + w.count, 0);
+  const blogTotal = weeklyData.reduce((sum, w) => sum + w.blog, 0);
+  const videoTotal = weeklyData.reduce((sum, w) => sum + w.video, 0);
   const max = Math.max(...weeklyData.map((w) => w.count), 1);
 
   return (
     <section className="glass-card p-5" aria-label="최근 4주 발행 현황">
-      <div className="flex items-baseline justify-between mb-4">
+      <div className="flex items-baseline justify-between mb-1">
         <h3 className="text-sm font-bold text-foreground">최근 4주 발행</h3>
         <div className="flex items-baseline gap-1">
           <span className="stat-number text-xl">{total}</span>
@@ -441,32 +454,70 @@ function WeeklyBarCard({ weeklyData }: { weeklyData: Array<{ week: string; count
         </div>
       </div>
 
+      {/* 범례 — 블로그·영상 분리 */}
+      <div className="flex items-center gap-3 mb-4 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "#237FFF" }} />
+          블로그 {blogTotal}
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "#AB5EBE" }} />
+          영상 {videoTotal}
+        </span>
+      </div>
+
       {total === 0 ? (
         <div className="h-[140px] flex flex-col items-center justify-center gap-1 text-center">
           <p className="text-xs text-muted-foreground">아직 발행 데이터가 없어요</p>
-          <p className="text-[11px] text-muted-foreground/60">첫 글을 작성해보세요</p>
+          <p className="text-[11px] text-muted-foreground/60">첫 글이나 영상을 만들어보세요</p>
         </div>
       ) : (
         <div className="flex items-end justify-between gap-4 h-[120px]" aria-hidden="true">
           {weeklyData.map((w) => {
-            const pct = Math.max(4, (w.count / max) * 100);
+            const totalPct = Math.max(4, (w.count / max) * 100);
+            const blogRatio = w.count > 0 ? w.blog / w.count : 0;
+            const videoRatio = w.count > 0 ? w.video / w.count : 0;
             return (
-              <div key={w.week} className="flex-1 flex flex-col items-center gap-2 min-w-0">
+              <div
+                key={w.week}
+                className="flex-1 flex flex-col items-center gap-2 min-w-0"
+              >
                 <div className="relative flex-1 w-full flex items-end">
                   <div
-                    className="w-full rounded-t-lg transition-all duration-500"
+                    className="w-full rounded-t-lg overflow-hidden transition-all duration-500 flex flex-col justify-end"
                     style={{
-                      height: `${pct}%`,
-                      background: w.count > 0
-                        ? "linear-gradient(180deg, #4C8EFF 0%, #237FFF 100%)"
-                        : "rgba(76,142,255,0.08)",
-                      boxShadow: w.count > 0 ? "0 0 12px rgba(35,127,255,0.35)" : undefined,
+                      height: `${totalPct}%`,
+                      background:
+                        w.count > 0 ? "transparent" : "rgba(76,142,255,0.08)",
+                      boxShadow:
+                        w.count > 0 ? "0 0 12px rgba(35,127,255,0.25)" : undefined,
                     }}
-                  />
+                  >
+                    {/* 영상(상단, 퍼플) */}
+                    {w.video > 0 && (
+                      <div
+                        className="w-full"
+                        style={{
+                          height: `${videoRatio * 100}%`,
+                          background:
+                            "linear-gradient(180deg, #C47AD8 0%, #AB5EBE 100%)",
+                        }}
+                      />
+                    )}
+                    {/* 블로그(하단, 블루) — rounded 처리 위해 조건 분기 */}
+                    {w.blog > 0 && (
+                      <div
+                        className="w-full"
+                        style={{
+                          height: `${blogRatio * 100}%`,
+                          background:
+                            "linear-gradient(180deg, #4C8EFF 0%, #237FFF 100%)",
+                        }}
+                      />
+                    )}
+                  </div>
                   {w.count > 0 && (
-                    <span
-                      className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-primary"
-                    >
+                    <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-primary">
                       {w.count}
                     </span>
                   )}

@@ -145,6 +145,12 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: Shorts
       errorMsg={errorMsg}
       onRetry={reset}
       onClose={onClose}
+      onUpgrade={() => {
+        // MyPage의 요금제 서브페이지로 진입
+        sessionStorage.setItem("sms-open-settings-page", "pricing");
+        if (onNavigate) onNavigate("mypage");
+        else onClose();
+      }}
     />
   );
 }
