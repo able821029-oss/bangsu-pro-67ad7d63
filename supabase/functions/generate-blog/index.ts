@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { withGuard, CORS_HEADERS, logUsage } from "../_shared/guard.ts";
+import { checkMonthlyLimit } from "../_shared/usageGuard.ts";
 
 // 공통 CORS — 기존 `corsHeaders` 참조를 그대로 두기 위해 alias
 const corsHeaders = CORS_HEADERS;
@@ -71,6 +72,34 @@ const platformFormats: Record<string, string> = {
 // 공개 AI 엔드포인트 — Origin 검증 + 60초에 10회 rate limit (비싼 호출, 보수적)
 serve(withGuard({ fn: "generate-blog", limit: 10, windowSec: 60 }, async (req, ctx) => {
   try {
+    // 서버측 월 한도 검증 — 클라이언트 subscription.maxCount는 신뢰 불가
+    const quota = await checkMonthlyLimit(ctx.userId, ctx.clientKey, "generate-blog");
+    if (!quota.allowed) {
+      void logUsage({
+        user_id: ctx.userId,
+        fn_name: "generate-blog",
+        status: "rate_limited",
+        origin: ctx.origin,
+        extra: { blocked: "quota", plan: quota.plan, used: quota.used, max: quota.max },
+      });
+      return new Response(
+        JSON.stringify({
+          error: "이번 달 블로그 한도를 모두 사용했습니다.",
+          used: quota.used,
+          max: quota.max,
+          plan: quota.plan,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(quota.retryAfterSec),
+          },
+        },
+      );
+    }
+
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";

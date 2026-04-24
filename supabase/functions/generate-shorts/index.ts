@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encodeBase64 } from "https://deno.land/std@0.210.0/encoding/base64.ts";
 import { withGuard, CORS_HEADERS, logUsage } from "../_shared/guard.ts";
+import { checkMonthlyLimit } from "../_shared/usageGuard.ts";
 
 const corsHeaders = CORS_HEADERS;
 
@@ -67,6 +68,34 @@ async function generateNarrationWithRetry(
 // 공개 AI 엔드포인트 — Origin 검증 + 60초에 5회 rate limit (가장 비싼 호출)
 serve(withGuard({ fn: "generate-shorts", limit: 5, windowSec: 60 }, async (req, ctx) => {
   try {
+    // 서버측 월 영상 한도 검증 — plan별 maxVideo 기준
+    const quota = await checkMonthlyLimit(ctx.userId, ctx.clientKey, "generate-shorts");
+    if (!quota.allowed) {
+      void logUsage({
+        user_id: ctx.userId,
+        fn_name: "generate-shorts",
+        status: "rate_limited",
+        origin: ctx.origin,
+        extra: { blocked: "quota", plan: quota.plan, used: quota.used, max: quota.max },
+      });
+      return new Response(
+        JSON.stringify({
+          error: "이번 달 영상 한도를 모두 사용했습니다.",
+          used: quota.used,
+          max: quota.max,
+          plan: quota.plan,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(quota.retryAfterSec),
+          },
+        },
+      );
+    }
+
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
     // ElevenLabs 성별 구분 자연스러운 음성 매핑
