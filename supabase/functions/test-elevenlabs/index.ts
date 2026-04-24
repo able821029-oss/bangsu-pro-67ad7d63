@@ -1,18 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { withGuard, CORS_HEADERS, logUsage } from "../_shared/guard.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const corsHeaders = CORS_HEADERS;
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+// 관리자 키 검증 도구 — Origin 검증 + 60초에 10회 rate limit
+serve(withGuard({ fn: "test-elevenlabs", limit: 10, windowSec: 60 }, async (req, ctx) => {
   try {
     const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
     if (!apiKey) {
+      void logUsage({
+        user_id: ctx.userId,
+        fn_name: "test-elevenlabs",
+        status: "error",
+        origin: ctx.origin,
+        extra: { message: "api_key_missing" },
+      });
       return new Response(
         JSON.stringify({ ok: false, error: "ELEVENLABS_API_KEY 미설정" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -38,6 +40,13 @@ serve(async (req) => {
 
     if (!res.ok) {
       const text = await res.text();
+      void logUsage({
+        user_id: ctx.userId,
+        fn_name: "test-elevenlabs",
+        status: "error",
+        origin: ctx.origin,
+        extra: { message: `elevenlabs_${res.status}`, detail: text.slice(0, 200) },
+      });
       return new Response(
         JSON.stringify({ ok: false, error: `ElevenLabs ${res.status}: ${text.slice(0, 100)}` }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -45,6 +54,13 @@ serve(async (req) => {
     }
 
     const audioBuffer = await res.arrayBuffer();
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "test-elevenlabs",
+      status: "ok",
+      origin: ctx.origin,
+      extra: { audioBytes: audioBuffer.byteLength },
+    });
     return new Response(
       JSON.stringify({
         ok: true,
@@ -53,9 +69,16 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "test-elevenlabs",
+      status: "error",
+      origin: ctx.origin,
+      extra: { message: e instanceof Error ? e.message : "unknown" },
+    });
     return new Response(
       JSON.stringify({ ok: false, error: e instanceof Error ? e.message : "오류" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+}));

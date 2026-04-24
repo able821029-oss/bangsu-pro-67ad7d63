@@ -1,9 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { withGuard, CORS_HEADERS, logUsage } from "../_shared/guard.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const corsHeaders = CORS_HEADERS;
 
 const VOICE_MAP: Record<string, string> = {
   "male_calm": "nPczCjzI2devNBz1zQrb",
@@ -14,37 +12,18 @@ const VOICE_MAP: Record<string, string> = {
   "female_bright": "pFZP5JQG7iQjIQuC4Bku",
 };
 
-const ALLOWED_ORIGINS = new Set([
-  "https://sms-app-9p9.pages.dev",
-  "http://localhost:8080",
-  "http://localhost:5173",
-]);
-function isAllowedOrigin(req: Request): boolean {
-  const origin = req.headers.get("origin") || "";
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.has(origin)) return true;
-  try {
-    const { hostname } = new URL(origin);
-    return hostname.endsWith(".pages.dev") && hostname.includes("sms-app");
-  } catch {
-    return false;
-  }
-}
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-  if (!isAllowedOrigin(req)) {
-    return new Response(JSON.stringify({ error: "허용되지 않은 호출" }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
+// 공개 TTS 미리듣기 — Origin 검증 + 60초에 60회 rate limit (가벼움)
+serve(withGuard({ fn: "tts-preview", limit: 60, windowSec: 60 }, async (req, ctx) => {
   try {
     const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
     if (!apiKey) {
+      void logUsage({
+        user_id: ctx.userId,
+        fn_name: "tts-preview",
+        status: "error",
+        origin: ctx.origin,
+        extra: { message: "api_key_missing" },
+      });
       return new Response(JSON.stringify({ error: "API key missing" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -74,6 +53,13 @@ serve(async (req) => {
 
     if (!res.ok) {
       const errText = await res.text();
+      void logUsage({
+        user_id: ctx.userId,
+        fn_name: "tts-preview",
+        status: "error",
+        origin: ctx.origin,
+        extra: { message: `elevenlabs_${res.status}`, voiceId: resolvedVoiceId },
+      });
       return new Response(JSON.stringify({ error: `ElevenLabs ${res.status}`, detail: errText.slice(0, 200) }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -87,13 +73,28 @@ serve(async (req) => {
     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
     const base64 = btoa(binary);
 
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "tts-preview",
+      status: "ok",
+      origin: ctx.origin,
+      extra: { voiceId: resolvedVoiceId, textLen: safeText.length, audioBytes: audioBuffer.byteLength },
+    });
+
     return new Response(JSON.stringify({ ok: true, audio: base64 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "tts-preview",
+      status: "error",
+      origin: ctx.origin,
+      extra: { message: e instanceof Error ? e.message : "unknown" },
+    });
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "오류" }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}));

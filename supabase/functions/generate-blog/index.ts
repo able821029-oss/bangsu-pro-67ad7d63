@@ -1,10 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { withGuard, CORS_HEADERS, logUsage } from "../_shared/guard.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// 공통 CORS — 기존 `corsHeaders` 참조를 그대로 두기 위해 alias
+const corsHeaders = CORS_HEADERS;
 
 const personaPrompts: Record<string, string> = {
   "장인형": `당신은 30년 경력의 시공 장인입니다. 묵직하고 신뢰감 있는 어조로 작성하세요.
@@ -70,36 +68,8 @@ const platformFormats: Record<string, string> = {
 - 해시태그 5~10개`,
 };
 
-// 공개 AI 엔드포인트 — 허용된 Origin만 호출 가능 (남용·비용 유출 방어)
-const ALLOWED_ORIGINS = new Set([
-  "https://sms-app-9p9.pages.dev",
-  "http://localhost:8080",
-  "http://localhost:5173",
-]);
-function isAllowedOrigin(req: Request): boolean {
-  const origin = req.headers.get("origin") || "";
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.has(origin)) return true;
-  // CF Pages 브랜치 프리뷰(*.sms-app-9p9.pages.dev) 허용
-  try {
-    const { hostname } = new URL(origin);
-    return hostname.endsWith(".pages.dev") && hostname.includes("sms-app");
-  } catch {
-    return false;
-  }
-}
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-  if (!isAllowedOrigin(req)) {
-    return new Response(JSON.stringify({ error: "허용되지 않은 호출" }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
+// 공개 AI 엔드포인트 — Origin 검증 + 60초에 10회 rate limit (비싼 호출, 보수적)
+serve(withGuard({ fn: "generate-blog", limit: 10, windowSec: 60 }, async (req, ctx) => {
   try {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -322,6 +292,13 @@ JSON 형식으로만 응답해주세요.`,
         isMock: true,
       };
 
+      void logUsage({
+        user_id: ctx.userId,
+        fn_name: "generate-blog",
+        status: "error",
+        origin: ctx.origin,
+        extra: { message: `anthropic_api_${anthropicResponse.status}`, platform, persona },
+      });
       return new Response(JSON.stringify(mockResponse), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -337,18 +314,43 @@ JSON 형식으로만 응답해주세요.`,
       parsed = JSON.parse(jsonStr);
     } catch {
       console.error("Failed to parse Claude response:", rawText);
+      void logUsage({
+        user_id: ctx.userId,
+        fn_name: "generate-blog",
+        status: "error",
+        origin: ctx.origin,
+        extra: { message: "response_parse_failed", platform, persona },
+      });
       return new Response(JSON.stringify({ error: "AI 응답 파싱 실패" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // 사용량 로그 (best-effort, 실패는 조용히)
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "generate-blog",
+      status: "ok",
+      tokens_input: claudeData?.usage?.input_tokens ?? null,
+      tokens_output: claudeData?.usage?.output_tokens ?? null,
+      origin: ctx.origin,
+      extra: { platform, persona },
+    });
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-blog error:", e);
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "generate-blog",
+      status: "error",
+      origin: ctx.origin,
+      extra: { message: e instanceof Error ? e.message : "unknown" },
+    });
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "알 수 없는 오류가 발생했습니다" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}));

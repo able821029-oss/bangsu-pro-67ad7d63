@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { encodeBase64 } from "https://deno.land/std@0.210.0/encoding/base64.ts";
+import { withGuard, CORS_HEADERS, logUsage } from "../_shared/guard.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const corsHeaders = CORS_HEADERS;
 
 // ── ElevenLabs TTS 호출 ──
 async function generateNarration(
@@ -67,34 +64,8 @@ async function generateNarrationWithRetry(
   return null;
 }
 
-const ALLOWED_ORIGINS = new Set([
-  "https://sms-app-9p9.pages.dev",
-  "http://localhost:8080",
-  "http://localhost:5173",
-]);
-function isAllowedOrigin(req: Request): boolean {
-  const origin = req.headers.get("origin") || "";
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.has(origin)) return true;
-  try {
-    const { hostname } = new URL(origin);
-    return hostname.endsWith(".pages.dev") && hostname.includes("sms-app");
-  } catch {
-    return false;
-  }
-}
-
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-  if (!isAllowedOrigin(req)) {
-    return new Response(JSON.stringify({ error: "허용되지 않은 호출" }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
+// 공개 AI 엔드포인트 — Origin 검증 + 60초에 5회 rate limit (가장 비싼 호출)
+serve(withGuard({ fn: "generate-shorts", limit: 5, windowSec: 60 }, async (req, ctx) => {
   try {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
@@ -486,6 +457,17 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       // 하나도 성공하지 못한 경우에만 500 (부분 실패는 허용)
       if (attemptedCount > 0 && successCount === 0) {
         console.error(`ElevenLabs 전체 실패 — ${attemptedCount}개 씬 모두 실패`);
+        void logUsage({
+          user_id: ctx.userId,
+          fn_name: "generate-shorts",
+          status: "error",
+          origin: ctx.origin,
+          extra: {
+            message: "elevenlabs_all_failed",
+            attempted: attemptedCount,
+            sceneCount: scenes.length,
+          },
+        });
         return new Response(
           JSON.stringify({
             error: "나레이션 음성 생성에 전부 실패했습니다. 잠시 후 다시 시도해주세요.",
@@ -500,6 +482,21 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
       );
     }
 
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "generate-shorts",
+      status: "ok",
+      origin: ctx.origin,
+      extra: {
+        sceneCount: scenes.length,
+        failedSceneCount: failedScenes.length,
+        scriptMode: scriptMode || "ai",
+        videoStyle,
+        narrationType,
+        isMock: !!result.isMock,
+      },
+    });
+
     return new Response(
       JSON.stringify({ ...result, narrationAudios, failedScenes }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -507,9 +504,16 @@ JSON만 응답. 마크다운 코드 블록 금지.`;
 
   } catch (e) {
     console.error("generate-shorts error:", e);
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "generate-shorts",
+      status: "error",
+      origin: ctx.origin,
+      extra: { message: e instanceof Error ? e.message : "unknown" },
+    });
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "다시 시도해 주세요" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+}));

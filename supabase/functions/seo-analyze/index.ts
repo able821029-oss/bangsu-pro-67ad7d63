@@ -1,16 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { withGuard, CORS_HEADERS, logUsage } from "../_shared/guard.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// 공통 CORS — 기존 `corsHeaders` 참조를 그대로 두기 위해 alias
+const corsHeaders = CORS_HEADERS;
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+// 공개 AI 엔드포인트 — Origin 검증 + 60초에 30회 rate limit
+serve(withGuard({ fn: "seo-analyze", limit: 30, windowSec: 60 }, async (req, ctx) => {
   try {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
@@ -266,14 +261,32 @@ JSON 형식:
       });
     }
 
+    // 사용량 로그 (best-effort, 실패는 조용히)
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "seo-analyze",
+      status: "ok",
+      tokens_input: claudeData?.usage?.input_tokens ?? null,
+      tokens_output: claudeData?.usage?.output_tokens ?? null,
+      origin: ctx.origin,
+      extra: { mode },
+    });
+
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("seo-analyze error:", e);
+    void logUsage({
+      user_id: ctx.userId,
+      fn_name: "seo-analyze",
+      status: "error",
+      origin: ctx.origin,
+      extra: { message: e instanceof Error ? e.message : "unknown" },
+    });
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}));
