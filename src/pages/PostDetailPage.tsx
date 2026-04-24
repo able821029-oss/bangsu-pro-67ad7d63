@@ -17,6 +17,7 @@ import {
   TrendingUp,
   MoreVertical,
   Flag,
+  Sparkles,
 } from "lucide-react";
 import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,13 @@ export function PostDetailPage({
   const [currentStatus, setCurrentStatus] = useState(post.status);
   const [seoResult, setSeoResult] = useState<any>(null);
   const [seoLoading, setSeoLoading] = useState(false);
+  const [seoImproveLoading, setSeoImproveLoading] = useState(false);
+  const [seoImprovePreview, setSeoImprovePreview] = useState<{
+    title: string;
+    blocks: ContentBlock[];
+    hashtags: string[];
+    changes: string[];
+  } | null>(null);
   const [showShortsCreator, setShowShortsCreator] = useState(false);
   const [uploadGuide, setUploadGuide] = useState<Platform | null>(null);
   const [returnPrompt, setReturnPrompt] = useState(false);
@@ -175,6 +183,71 @@ export function PostDetailPage({
     } finally {
       setSeoLoading(false);
     }
+  };
+
+  // AI로 한 번에 개선 — seo-analyze mode="improve" 호출 후 미리보기 다이얼로그로 노출
+  const handleSeoImprove = async () => {
+    setSeoImproveLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("seo-analyze", {
+        body: {
+          mode: "improve",
+          title,
+          blocks,
+          hashtags,
+          location: post.location || "",
+          workType: post.workType,
+        },
+      });
+      if (error || !data || data.error) {
+        toast({
+          title: "개선 제안 실패",
+          description: (data && data.error) || "잠시 후 다시 시도해 주세요.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!data.title || !Array.isArray(data.blocks)) {
+        toast({ title: "AI 응답 형식 오류", variant: "destructive" });
+        return;
+      }
+      setSeoImprovePreview({
+        title: String(data.title),
+        blocks: data.blocks as ContentBlock[],
+        hashtags: normalizeHashtags(Array.isArray(data.hashtags) ? data.hashtags : []),
+        changes: Array.isArray(data.changes) ? data.changes : [],
+      });
+    } catch (e) {
+      toast({
+        title: "네트워크 오류",
+        description: e instanceof Error ? e.message : "다시 시도해 주세요.",
+        variant: "destructive",
+      });
+    } finally {
+      setSeoImproveLoading(false);
+    }
+  };
+
+  const handleApplySeoImprove = async () => {
+    if (!seoImprovePreview) return;
+    const improved = seoImprovePreview;
+    setTitle(improved.title);
+    setBlocks(improved.blocks);
+    setHashtags(improved.hashtags);
+    updatePost(post.id, {
+      title: improved.title,
+      blocks: improved.blocks,
+      hashtags: improved.hashtags,
+    });
+    await saveToDb({
+      title: improved.title,
+      blocks: improved.blocks,
+      hashtags: improved.hashtags,
+    });
+    setSeoImprovePreview(null);
+    toast({ title: "SEO 개선이 적용되었습니다." });
+    // 개선 반영 후 점수 재계산
+    handleAutoSeoAnalyze();
   };
 
   const seoScoreColor = (score: number) => {
@@ -734,6 +807,25 @@ export function PostDetailPage({
               </button>
             )}
           </div>
+
+          {/* AI로 한 번에 개선 — mode:"improve" 호출 → diff 미리보기 후 적용 */}
+          <Button
+            size="sm"
+            className="w-full gap-2"
+            style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)", color: "white" }}
+            onClick={handleSeoImprove}
+            disabled={seoImproveLoading}
+          >
+            {seoImproveLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> AI가 개선 제안 생성 중...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" /> AI로 한 번에 개선
+              </>
+            )}
+          </Button>
           {seoLoading && !seoResult ? (
             <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -919,6 +1011,204 @@ export function PostDetailPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* SEO 개선 미리보기 다이얼로그 — 현재 vs 개선 diff, 적용 전 사용자 확인 */}
+      <SeoImproveDialog
+        open={seoImprovePreview !== null}
+        current={{ title, blocks, hashtags }}
+        next={seoImprovePreview}
+        onApply={handleApplySeoImprove}
+        onCancel={() => setSeoImprovePreview(null)}
+        isSaving={isSaving}
+      />
+    </div>
+  );
+}
+
+// ── SEO 개선 미리보기 Dialog ─────────────────────────────────────────
+function blocksToText(blocks: ContentBlock[]): string {
+  return blocks
+    .filter((b) => b.type === "text" || b.type === "subtitle")
+    .map((b) => (b.type === "subtitle" ? `【${b.content}】` : b.content))
+    .join("\n\n");
+}
+
+function SeoImproveDialog({
+  open,
+  current,
+  next,
+  onApply,
+  onCancel,
+  isSaving,
+}: {
+  open: boolean;
+  current: { title: string; blocks: ContentBlock[]; hashtags: string[] };
+  next: {
+    title: string;
+    blocks: ContentBlock[];
+    hashtags: string[];
+    changes: string[];
+  } | null;
+  onApply: () => void;
+  onCancel: () => void;
+  isSaving: boolean;
+}) {
+  const currentText = blocksToText(current.blocks);
+  const nextText = next ? blocksToText(next.blocks) : "";
+  const currentLen = currentText.length;
+  const nextLen = nextText.length;
+  const currentTagSet = new Set(current.hashtags);
+  const nextTagSet = next ? new Set(next.hashtags) : new Set<string>();
+  const addedTags = next ? next.hashtags.filter((t) => !currentTagSet.has(t)) : [];
+  const removedTags = current.hashtags.filter((t) => !nextTagSet.has(t));
+  const titleChanged = !!next && next.title !== current.title;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <DialogContent className="max-w-[min(560px,92vw)] max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="w-4 h-4 text-primary" />
+            AI 개선 미리보기
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            적용하기 전에 변경 사항을 확인하세요. 원본은 적용 전까지 그대로 유지됩니다.
+          </DialogDescription>
+        </DialogHeader>
+
+        {next && (
+          <div className="space-y-4 text-sm">
+            {/* 요약 — 본문 길이·해시태그 증감 */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg border border-border bg-secondary/40 p-2.5">
+                <p className="text-muted-foreground">본문 길이</p>
+                <p className="font-semibold mt-0.5">
+                  {currentLen.toLocaleString("ko-KR")}자 → {nextLen.toLocaleString("ko-KR")}자
+                  <span
+                    className={`ml-1.5 text-[11px] font-bold ${
+                      nextLen > currentLen
+                        ? "text-green-500"
+                        : nextLen < currentLen
+                          ? "text-yellow-500"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    ({nextLen >= currentLen ? "+" : ""}
+                    {(nextLen - currentLen).toLocaleString("ko-KR")})
+                  </span>
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-secondary/40 p-2.5">
+                <p className="text-muted-foreground">해시태그</p>
+                <p className="font-semibold mt-0.5">
+                  {current.hashtags.length}개 → {next.hashtags.length}개
+                  {(addedTags.length > 0 || removedTags.length > 0) && (
+                    <span className="ml-1.5 text-[11px] font-bold text-green-500">
+                      +{addedTags.length} / -{removedTags.length}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* 변경 사항 배지 */}
+            {next.changes.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-muted-foreground">변경 사항</p>
+                <ul className="space-y-1">
+                  {next.changes.map((c, i) => (
+                    <li key={i} className="flex items-start gap-1.5 text-xs">
+                      <Check className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
+                      <span className="text-foreground">{c}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 제목 diff */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-muted-foreground">제목</p>
+              <DiffRow label="이전" value={current.title} kind="before" />
+              <DiffRow
+                label="개선"
+                value={next.title}
+                kind={titleChanged ? "after" : "same"}
+              />
+            </div>
+
+            {/* 본문 diff (요약) */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-muted-foreground">본문 (처음 400자)</p>
+              <DiffRow label="이전" value={currentText.slice(0, 400) + (currentLen > 400 ? "…" : "")} kind="before" />
+              <DiffRow label="개선" value={nextText.slice(0, 400) + (nextLen > 400 ? "…" : "")} kind="after" />
+            </div>
+
+            {/* 해시태그 추가/제거 */}
+            {(addedTags.length > 0 || removedTags.length > 0) && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-muted-foreground">해시태그 변경</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {addedTags.map((t) => (
+                    <Badge key={`add-${t}`} variant="secondary" className="text-[11px] bg-green-500/15 text-green-400 border border-green-500/40">
+                      +#{t}
+                    </Badge>
+                  ))}
+                  {removedTags.map((t) => (
+                    <Badge key={`rm-${t}`} variant="secondary" className="text-[11px] bg-red-500/10 text-red-400 border border-red-500/30 line-through">
+                      #{t}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={onCancel}
+            disabled={isSaving}
+          >
+            취소
+          </Button>
+          <Button
+            className="flex-1 gap-1.5"
+            style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)", color: "white" }}
+            onClick={onApply}
+            disabled={isSaving || !next}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> 적용 중...
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4" /> 적용하기
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DiffRow({ label, value, kind }: { label: string; value: string; kind: "before" | "after" | "same" }) {
+  const style =
+    kind === "before"
+      ? "bg-red-500/5 border-red-500/20 text-foreground/80"
+      : kind === "after"
+        ? "bg-green-500/5 border-green-500/30 text-foreground"
+        : "bg-secondary/40 border-border text-muted-foreground";
+  return (
+    <div className={`rounded-lg border px-3 py-2 text-xs whitespace-pre-wrap break-words ${style}`}>
+      <span className="block text-[10px] font-semibold uppercase tracking-wide mb-1 opacity-70">
+        {label}
+      </span>
+      {value || <span className="italic text-muted-foreground">(없음)</span>}
     </div>
   );
 }
