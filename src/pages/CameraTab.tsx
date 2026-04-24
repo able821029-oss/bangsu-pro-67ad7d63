@@ -263,11 +263,28 @@ export function CameraTab({
       clearInterval(interval);
 
       if (error || data?.error) {
+        // 서버측 월 한도 초과(429)는 플랜 업그레이드 안내 메시지로 분기
+        const ctx = (error as { context?: { status?: number; clone?: () => { json: () => Promise<unknown> } } } | null)?.context;
+        const status = typeof ctx?.status === "number" ? ctx.status : undefined;
+        let bodyMsg = "";
+        if (ctx && typeof ctx.clone === "function") {
+          try {
+            const body = (await ctx.clone().json()) as { error?: string };
+            if (typeof body?.error === "string") bodyMsg = body.error;
+          } catch {
+            /* ignore */
+          }
+        }
+        const combined = `${data?.error || ""} ${error?.message || ""} ${bodyMsg}`;
+        const isQuota = status === 429 || combined.includes("한도");
+
         setGenStep("error");
         setProgress(0);
         toast({
-          title: "AI 글 생성 실패",
-          description: data?.error || error?.message || "다시 시도해주세요",
+          title: isQuota ? "이번 달 한도 초과" : "AI 글 생성 실패",
+          description: isQuota
+            ? "이번 달 블로그 개수를 모두 사용했습니다. 플랜을 업그레이드해 주세요."
+            : bodyMsg || data?.error || error?.message || "다시 시도해주세요",
           variant: "destructive",
         });
         setTimeout(() => setIsGenerating(false), 1500);

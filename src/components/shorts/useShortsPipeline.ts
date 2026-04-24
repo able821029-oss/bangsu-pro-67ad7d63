@@ -294,7 +294,25 @@ export function useShortsPipeline(
         },
       );
 
-      if (scriptErr) throw new Error(scriptErr.message);
+      if (scriptErr) {
+        // 서버측 월 한도 초과(429)는 플랜 업그레이드 안내 메시지로 분기
+        const ctx = (scriptErr as { context?: { status?: number; json?: () => Promise<unknown>; clone?: () => { json: () => Promise<unknown> } } }).context;
+        const status = typeof ctx?.status === "number" ? ctx.status : undefined;
+        let bodyMsg = "";
+        if (ctx && typeof ctx.clone === "function") {
+          try {
+            const body = (await ctx.clone().json()) as { error?: string };
+            if (typeof body?.error === "string") bodyMsg = body.error;
+          } catch {
+            /* ignore */
+          }
+        }
+        const combined = `${scriptErr.message} ${bodyMsg}`;
+        if (status === 429 || combined.includes("한도")) {
+          throw new Error("이번 달 영상 개수를 모두 사용했습니다. 플랜을 업그레이드해 주세요.");
+        }
+        throw new Error(bodyMsg || scriptErr.message);
+      }
 
       const scenes: MirraScene[] = scriptData?.scenes || [];
       if (scenes.length === 0) throw new Error("스크립트 생성 실패");
