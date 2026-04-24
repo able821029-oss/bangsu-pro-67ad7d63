@@ -15,11 +15,27 @@ import {
   Check,
   AlertTriangle,
   TrendingUp,
+  MoreVertical,
+  Flag,
 } from "lucide-react";
 import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useAppStore, BlogPost, Platform, ContentBlock, photoSrc } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +84,66 @@ export function PostDetailPage({
   const [showShortsCreator, setShowShortsCreator] = useState(false);
   const [uploadGuide, setUploadGuide] = useState<Platform | null>(null);
   const [returnPrompt, setReturnPrompt] = useState(false);
+
+  // 신고하기 (모더레이션)
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<"ad" | "fraud" | "inappropriate" | "other">("inappropriate");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [alreadyReported, setAlreadyReported] = useState(false);
+
+  // 본인이 이미 신고했는지 조회 (RLS로 본인 것만 보임)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) return;
+      const { data } = await supabase
+        .from("post_reports")
+        .select("id")
+        .eq("post_id", post.id)
+        .eq("reporter_user_id", uid)
+        .limit(1);
+      if (!cancelled && data && data.length > 0) setAlreadyReported(true);
+    })();
+    return () => { cancelled = true; };
+  }, [post.id]);
+
+  const handleSubmitReport = async () => {
+    if (reportSubmitting) return;
+    setReportSubmitting(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) {
+        toast({ title: "로그인이 필요합니다", variant: "destructive" });
+        return;
+      }
+      const { error } = await supabase.from("post_reports").insert({
+        post_id: post.id,
+        reporter_user_id: uid,
+        reason: reportReason,
+        details: reportDetails.trim() || null,
+      });
+      if (error) {
+        // UNIQUE 위반 → 이미 신고한 글
+        if ((error as { code?: string }).code === "23505") {
+          setAlreadyReported(true);
+          toast({ title: "이미 신고한 글입니다" });
+        } else {
+          toast({ title: "신고 실패", description: error.message, variant: "destructive" });
+        }
+        return;
+      }
+      setAlreadyReported(true);
+      setReportOpen(false);
+      setReportDetails("");
+      toast({ title: "신고가 접수되었습니다", description: "관리자 검토 후 처리됩니다." });
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
 
 
   useEffect(() => {
@@ -402,6 +478,31 @@ export function PostDetailPage({
           }}
         />
         <Badge variant={statusBadgeVariant[currentStatus] || "default"}>{currentStatus}</Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="p-2 rounded-[--radius] hover:bg-secondary"
+              aria-label="더보기"
+            >
+              <MoreVertical className="w-5 h-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                if (alreadyReported) {
+                  toast({ title: "이미 신고한 글입니다" });
+                  return;
+                }
+                setReportOpen(true);
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <Flag className="w-4 h-4 mr-2" />
+              {alreadyReported ? "신고 완료" : "신고하기"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* 제목 */}
@@ -750,6 +851,74 @@ export function PostDetailPage({
           임시저장
         </Button>
       </div>
+
+      {/* 신고하기 다이얼로그 */}
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Flag className="w-4 h-4 text-destructive" /> 글 신고
+            </DialogTitle>
+            <DialogDescription>
+              부적절한 콘텐츠라고 판단되면 신고해 주세요. 관리자가 검토 후 처리합니다.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1.5">사유</label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { id: "ad", label: "광고/스팸" },
+                  { id: "fraud", label: "사기" },
+                  { id: "inappropriate", label: "부적절" },
+                  { id: "other", label: "기타" },
+                ] as const).map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setReportReason(r.id)}
+                    className={`py-2 rounded-lg text-sm font-medium border transition-colors ${
+                      reportReason === r.id
+                        ? "bg-destructive/10 border-destructive text-destructive"
+                        : "bg-card border-border text-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                상세 설명 <span className="text-muted-foreground/70">(선택)</span>
+              </label>
+              <textarea
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value.slice(0, 500))}
+                rows={3}
+                placeholder="관리자에게 전달할 구체적 사유를 입력하세요"
+                className="w-full bg-secondary rounded-lg px-3 py-2 text-sm outline-none resize-none"
+              />
+              <p className="text-[10px] text-muted-foreground text-right mt-0.5">{reportDetails.length}/500</p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setReportOpen(false)} disabled={reportSubmitting}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleSubmitReport}
+              disabled={reportSubmitting}
+            >
+              {reportSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Flag className="w-4 h-4" />}
+              신고 제출
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
