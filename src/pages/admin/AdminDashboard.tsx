@@ -1,21 +1,27 @@
 import { useState } from "react";
 import {
-  Key, Users, Bot, LogOut, CreditCard, Lock, Home,
+  Key, Users, Bot, LogOut, CreditCard, Lock, Home, BarChart3, Flag, Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminApiKeys } from "./sections/AdminApiKeys";
 import { AdminPersonas } from "./sections/AdminPersonas";
 import { AdminPlans } from "./sections/AdminPlans";
 import { AdminUsers } from "./sections/AdminUsers";
+import { AdminUsage } from "./sections/AdminUsage";
+import { AdminReports } from "./sections/AdminReports";
+import { AdminContacts } from "./sections/AdminContacts";
 import { AdminPasswordChange } from "./sections/AdminPasswordChange";
 
-type AdminSection = "api" | "personas" | "plans" | "users" | "password";
+type AdminSection = "api" | "personas" | "plans" | "users" | "usage" | "reports" | "contacts" | "password";
 
 const sections: { id: AdminSection; label: string; icon: React.ElementType }[] = [
   { id: "api", label: "API 키", icon: Key },
   { id: "personas", label: "페르소나", icon: Bot },
   { id: "plans", label: "요금제", icon: CreditCard },
   { id: "users", label: "가입자", icon: Users },
+  { id: "usage", label: "사용량", icon: BarChart3 },
+  { id: "reports", label: "신고", icon: Flag },
+  { id: "contacts", label: "문의", icon: Mail },
   { id: "password", label: "비밀번호 변경", icon: Lock },
 ];
 
@@ -28,6 +34,9 @@ export function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       case "personas": return <AdminPersonas />;
       case "plans": return <AdminPlans />;
       case "users": return <AdminUsers />;
+      case "usage": return <AdminUsage />;
+      case "reports": return <AdminReports />;
+      case "contacts": return <AdminContacts />;
       case "password": return <AdminPasswordChange />;
     }
   };
