@@ -1,165 +1,25 @@
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus, Music, VolumeX, Mic, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { previewBgm, preloadLogo, isRecordingSupported, isIOSDevice, type MirraScene, type VoiceConfig, type BgmType } from "@/lib/bgmSynth";
-import { compressPhotos } from "@/lib/imageCompress";
-import { fetchWithRetry, invokeWithRetry } from "@/lib/fetchWithRetry";
-import { isTableKnownMissing, markTableMissing, isTableMissingError } from "@/lib/tableFlags";
+import { previewBgm, type BgmType } from "@/lib/bgmSynth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { mirraToRemotionScene, type SmsScene, type SmsVideoProps } from "@/remotion/types";
+import type { VideoStyle, VoiceOption } from "./shorts/types";
+import { VOICES, VIDEO_STYLES, BGM_OPTIONS, PREVIEW_TEXT, isInAppBrowser } from "./shorts/constants";
+import { UsageMeter } from "./shorts/UsageMeter";
+import { VoiceCard } from "./shorts/VoiceCard";
+import { useShortsPipeline } from "./shorts/useShortsPipeline";
 
 // Remotion Player is heavy and uses browser APIs that can fail in embedded
 // WebViews (KakaoTalk inapp). Lazy-load so opening the shorts tab never crashes
 // on module evaluation.
 const ShortsPlayer = lazy(() => import("@/components/ShortsPlayer"));
 
-type VideoStyle = "시공일지형" | "홍보형" | "Before/After형";
-type ShortsStep = "config" | "generating" | "done" | "error" | "ios_guide";
-
-/** KakaoTalk/라인/페이스북 등 카카오·SNS 인앱 브라우저 감지 */
-function isInAppBrowser(): { isInApp: boolean; name: string } {
-  if (typeof navigator === "undefined") return { isInApp: false, name: "" };
-  const ua = navigator.userAgent || "";
-  if (/KAKAOTALK/i.test(ua)) return { isInApp: true, name: "카카오톡" };
-  if (/\bLine\//i.test(ua)) return { isInApp: true, name: "라인" };
-  if (/FBAN|FBAV|Instagram/i.test(ua)) return { isInApp: true, name: "페이스북/인스타" };
-  if (/NAVER\(inapp/i.test(ua)) return { isInApp: true, name: "네이버" };
-  return { isInApp: false, name: "" };
-}
-
-interface VoiceOption {
-  id: string;
-  label: string;
-  desc: string;
-  gender: "male" | "female";
-  lang: string;
-  pitch: number;
-  rate: number;
-  voiceNameHint: string[];
-}
-
-// Web Speech API voices — mapped to Korean-compatible system voices
-const VOICES: VoiceOption[] = [
-  { id: "male_calm", label: "남성 — 차분한", desc: "낮고 안정적", gender: "male", lang: "ko-KR", pitch: 0.5, rate: 0.6, voiceNameHint: ["Google 한국의", "Korean Male"] },
-  { id: "male_pro", label: "남성 — 전문적", desc: "신뢰감 있는", gender: "male", lang: "ko-KR", pitch: 0.7, rate: 0.7, voiceNameHint: ["Google 한국의", "Korean Male"] },
-  { id: "male_strong", label: "남성 — 힘있는", desc: "에너지 넘치는", gender: "male", lang: "ko-KR", pitch: 0.9, rate: 0.85, voiceNameHint: ["Google 한국의", "Korean Male"] },
-  { id: "female_friendly", label: "여성 — 친근한", desc: "따뜻하고 밝은", gender: "female", lang: "ko-KR", pitch: 1.4, rate: 0.7, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
-  { id: "female_pro", label: "여성 — 전문적", desc: "자신감 있는", gender: "female", lang: "ko-KR", pitch: 1.15, rate: 0.75, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
-  { id: "female_bright", label: "여성 — 밝은", desc: "젊고 활기찬", gender: "female", lang: "ko-KR", pitch: 1.7, rate: 0.9, voiceNameHint: ["Google 한국의", "Yuna", "Korean Female"] },
-];
-
-const videoStyles: { id: VideoStyle; label: string; desc: string; icon: string }[] = [
-  { id: "시공일지형", label: "작업일지형", desc: "준비 → 작업 → 완성 순서", icon: "clipboard" },
-  { id: "홍보형", label: "홍보형", desc: "완성컷 강조 + 업체 정보", icon: "megaphone" },
-  { id: "Before/After형", label: "Before/After형", desc: "전후 비교 중심", icon: "refresh" },
-];
-
-const bgmOptions: { id: BgmType; label: string; emoji: string; desc: string }[] = [
-  { id: "upbeat",    label: "에너지",     emoji: "⚡", desc: "강한 비트 · 다이나믹" },
-  { id: "hiphop",   label: "트렌디",      emoji: "🔥", desc: "틱톡 트랩 · MZ 스타일" },
-  { id: "corporate", label: "프로페셔널", emoji: "💼", desc: "신뢰감 · 전문 느낌" },
-  { id: "emotional", label: "감동",       emoji: "✨", desc: "성취감 · 완성 무드" },
-  { id: "calm",      label: "잔잔함",     emoji: "🌿", desc: "깨끗하고 차분한 톤" },
-  { id: "none",      label: "없음",        emoji: "🔇", desc: "무음" },
-];
-
-const PLAN_LIMITS: Record<string, number> = {
-  "무료": 1, "베이직": 5, "프로": 20, "비즈니스": 50, "무제한": 999,
-};
-
-const PREVIEW_TEXT = "안녕하세요. 오늘도 정성껏 작업합니다.";
-
-function UsageMeter({ used, max, plan, onUpgrade }: { used: number; max: number; plan: string; onUpgrade: () => void }) {
-  const ratio = max > 0 ? used / max : 1;
-  const barColor = ratio >= 1 ? "#EF4444" : ratio >= 0.8 ? "#F97316" : "#237FFF";
-  const pct = Math.min(ratio * 100, 100);
-
-  return (
-    <div className="bg-card rounded-[--radius] border border-border p-4 space-y-2">
-      <div className="flex justify-between items-baseline">
-        <p className="text-sm font-semibold flex items-center gap-1.5"><Film className="w-4 h-4 text-primary" /> 이번 달 영상</p>
-        <p className="text-sm font-bold" style={{ color: barColor }}>{used} / {max}개</p>
-      </div>
-      <div className="w-full bg-secondary rounded-full h-2.5">
-        <div className="rounded-full h-2.5 transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
-      </div>
-      {ratio >= 1 && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-2">
-          <p className="text-xs text-destructive font-medium">
-            이번 달 영상 횟수를 모두 사용했습니다.
-            {plan === "무료" && " 베이직 플랜으로 업그레이드하면 월 5개까지 가능해요."}
-            {plan === "베이직" && " 프로 플랜으로 업그레이드하면 월 20개까지 가능해요."}
-            {plan === "프로" && " 비즈니스 플랜으로 업그레이드하면 월 50개까지 가능해요."}
-          </p>
-          {plan !== "비즈니스" && plan !== "무제한" && (
-            <Button size="sm" variant="outline" className="text-xs border-primary text-primary"
-              onClick={onUpgrade}>
-              플랜 업그레이드
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function VoiceCard({
-  voice, selected, onSelect, onPreview, isPlaying,
-}: {
-  voice: VoiceOption; selected: boolean; onSelect: () => void;
-  onPreview: () => void; isPlaying: boolean;
-}) {
-  const genderIcon = voice.gender === "male" ? "M" : "F";
-
-  // HTML 표준상 <button> 안에 <button>은 불가 — 바깥을 role=button div로 바꿔 접근성은 유지
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-pressed={selected}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-      className="relative w-full text-left p-3 rounded-xl transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary"
-      style={{
-        border: selected ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",
-        backgroundColor: selected ? "hsl(var(--muted))" : "hsl(var(--card))",
-      }}
-    >
-      {selected && (
-        <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center bg-primary">
-          <Check className="w-3 h-3 text-white" />
-        </div>
-      )}
-      <p className="text-sm font-semibold text-foreground">{genderIcon} {voice.label}</p>
-      <p className="text-xs text-muted-foreground mt-0.5">{voice.desc}</p>
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onPreview(); }}
-        className="mt-2 flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition-colors"
-        style={{
-          backgroundColor: isPlaying ? "hsl(215 100% 50%)" : "hsl(var(--secondary))",
-          color: isPlaying ? "white" : "hsl(var(--muted-foreground))",
-        }}
-      >
-        {isPlaying ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-        {isPlaying ? "정지" : "미리 듣기"}
-      </button>
-    </div>
-  );
-}
-
 export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onClose: () => void; onNavigate?: (tab: string) => void; autoStart?: boolean }) {
-  const { photos, settings, subscription, addPhoto, removePhoto, posts, addShortsVideo } = useAppStore();
+  const { photos, settings, subscription, addPhoto, removePhoto, addShortsVideo, useVideo } = useAppStore();
   const { user } = useAuth();
   const hasAutoStarted = useRef(false);
   const { toast } = useToast();
@@ -167,6 +27,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const styleRef = useRef<HTMLDivElement>(null);
 
+  // Config 선택 state — 훅 입력
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("시공일지형");
   const [bgm, setBgm] = useState<BgmType>("upbeat");
   const [previewingBgm, setPreviewingBgm] = useState<BgmType | null>(null);
@@ -175,102 +36,29 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
   const [scriptMode, setScriptMode] = useState<"ai" | "manual">("ai");
   const [manualScript, setManualScript] = useState("");
   const [workTopic, setWorkTopic] = useState(""); // 오늘의 작업 한 줄 (AI 힌트)
-  const [step, setStep] = useState<ShortsStep>("config");
-  const [remotionScenes, setRemotionScenes] = useState<SmsScene[]>([]);
-  const [progressText, setProgressText] = useState("");
-  const [progressPct, setProgressPct] = useState(0);
-  const [elapsedSec, setElapsedSec] = useState(0);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState("");
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
-  const pendingAudioRef = useRef<{
-    narrationAudios: (string | null)[];
-    narrationTexts: string[];
-    voiceConfig: VoiceConfig | null;
-    bgmType: BgmType;
-  } | null>(null);
-  const audioPlayedRef = useRef(false);
-  const bgmCtxRef = useRef<AudioContext | null>(null);
-  const narrationAudioRefs = useRef<HTMLAudioElement[]>([]);
 
-  // Play narration + BGM when done screen appears
-  useEffect(() => {
-    if (step !== "done") return;
-    const audio = pendingAudioRef.current;
-    if (!audio || audioPlayedRef.current) return;
-    audioPlayedRef.current = true; // 한 번만 재생
-
-    const { narrationAudios, narrationTexts, voiceConfig, bgmType } = audio;
-    let cancelled = false;
-
-    // ── 1. BGM 재생 ──
-    if (bgmType !== "none") {
-      try {
-        const bgmCtx = previewBgm(bgmType);
-        bgmCtxRef.current = bgmCtx;
-        const totalSec = remotionScenes.reduce((sum, s) => sum + s.durationInFrames, 0) / 30 + 5;
-        setTimeout(() => {
-          if (!cancelled && bgmCtxRef.current) {
-            bgmCtxRef.current.close().catch(() => {});
-            bgmCtxRef.current = null;
-          }
-        }, totalSec * 1000);
-      } catch (e) {
-        console.warn("[BGM] 재생 실패:", e);
-      }
-    }
-
-    // ── 2. 나레이션 재생 ──
-    (async () => {
-      // 약간 딜레이 후 나레이션 시작 (BGM과 겹치도록)
-      await new Promise(r => setTimeout(r, 500));
-
-      const hasElevenLabsAudio = narrationAudios.some(Boolean);
-
-      if (hasElevenLabsAudio) {
-        for (let i = 0; i < narrationAudios.length; i++) {
-          if (cancelled) break;
-          const b64 = narrationAudios[i];
-          if (!b64) continue;
-
-          await new Promise<void>((resolve) => {
-            try {
-              const binary = atob(b64);
-              const bytes = new Uint8Array(binary.length);
-              for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
-              const blob = new Blob([bytes], { type: "audio/mpeg" });
-              const url = URL.createObjectURL(blob);
-              const a = new Audio(url);
-              narrationAudioRefs.current.push(a);
-              const timeout = setTimeout(() => resolve(), 20000);
-              a.onended = () => { clearTimeout(timeout); URL.revokeObjectURL(url); resolve(); };
-              a.onerror = () => { clearTimeout(timeout); URL.revokeObjectURL(url); resolve(); };
-              a.play().catch(() => { clearTimeout(timeout); resolve(); });
-            } catch {
-              resolve();
-            }
-          });
-          if (!cancelled) await new Promise(r => setTimeout(r, 300));
-        }
-      }
-      // ElevenLabs 오디오가 없으면 무음 재생 (Web Speech API 폴백 제거)
-    })();
-
-    return () => {
-      cancelled = true;
-      narrationAudioRefs.current.forEach(a => { a.pause(); a.src = ""; });
-      narrationAudioRefs.current = [];
-      if (bgmCtxRef.current) { bgmCtxRef.current.close().catch(() => {}); bgmCtxRef.current = null; }
-    };
-  }, [step]);
-
-  // 심플 월 영상 횟수 시스템
-  const { useVideo } = useAppStore();
+  // 월 영상 한도
   const videoUsed = subscription.videoUsed ?? 0;
   const videoLimit = subscription.maxVideo ?? 1;
   const quotaExceeded = videoUsed >= videoLimit;
 
-  const incrementVideoUsed = () => { useVideo(); };
+  // ── 파이프라인 훅 — 생성/리셋/진행률/videoUrl 전부 훅이 관리 ──
+  const pipeline = useShortsPipeline({
+    photos,
+    videoStyle,
+    bgm,
+    selectedVoice,
+    scriptMode,
+    manualScript,
+    workTopic,
+    settings,
+    user: user ? { id: user.id } : null,
+    onUsed: () => { useVideo(); },
+    onSaved: addShortsVideo,
+    toast,
+  });
+  const { step, setStep, progressText, progressPct, elapsedSec, videoUrl, remotionScenes, errorMsg, generate: handleGenerate, reset: pipelineReset } = pipeline;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -296,8 +84,9 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
   useEffect(() => {
     if (autoStart && !hasAutoStarted.current && photos.length >= 2) {
       hasAutoStarted.current = true;
-      handleGenerate();
+      startGenerate();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart]);
 
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -411,371 +200,24 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     }, 6200);
   };
 
-  const handleGenerate = useCallback(async () => {
-    // 미리듣기 중이면 정지
+  // 영상 생성 시작 — BGM 미리듣기를 정지한 뒤 훅에 위임
+  const startGenerate = useCallback(() => {
     if (previewCtxRef.current) {
       previewCtxRef.current.close().catch(() => {});
       previewCtxRef.current = null;
       setPreviewingBgm(null);
     }
-    if (photos.length < 2) {
-      toast({ title: "사진이 2장 이상 필요합니다", variant: "destructive" });
-      return;
-    }
-
-    // 필수 입력 검증 — AI 자동 모드일 때만
-    if (scriptMode === "ai") {
-      if (!workTopic.trim()) {
-        toast({
-          title: "오늘의 작업을 한 줄 입력해 주세요",
-          description: "예) 욕실 방수 시공 / 외벽 균열 보수 / 옥상 방수",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
-    if (!isRecordingSupported()) {
-      toast({ title: "이 기기에서는 영상 생성을 지원하지 않습니다", description: "최신 Chrome 또는 Safari 브라우저를 사용해 주세요.", variant: "destructive" });
-      return;
-    }
-
-    if (isIOSDevice()) {
-      setStep("ios_guide");
-      return;
-    }
-
-
-    if (bgmCtxRef.current) { bgmCtxRef.current.close().catch(() => {}); bgmCtxRef.current = null; }
-    narrationAudioRefs.current.forEach(a => { a.pause(); a.src = ""; });
-    narrationAudioRefs.current = [];
-    pendingAudioRef.current = null;
-    audioPlayedRef.current = false;
     setPlayingVoice(null);
-    setErrorMsg("");
+    void handleGenerate();
+  }, [handleGenerate]);
 
-    if (videoUrl) {
-      URL.revokeObjectURL(videoUrl);
-      setVideoUrl(null);
-    }
+  // 리셋 — 훅 리셋 + 음성 미리듣기 state 초기화
+  const handleReset = useCallback(() => {
+    setPlayingVoice(null);
+    pipelineReset();
+  }, [pipelineReset]);
 
-    // 업체 로고 프리로드 (엔딩 카드에 표시)
-    preloadLogo(settings.logoUrl || "");
-
-    setStep("generating");
-    setProgressText("📝 사진 분석 중...");
-    setProgressPct(10);
-    setElapsedSec(0);
-
-    // 경과 시간 카운터 — 진행률이 같은 값이어도 숫자가 계속 움직여 '정체' 체감 제거
-    const startedAt = Date.now();
-    const elapsedTimer = setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
-    }, 1000);
-
-    // 진행률 자동 증가 — 단계별 상한을 올려가며 끊김 없이 증가
-    // 처음부터 가동해서 "10%에서 정체" 체감 자체를 제거 (이전엔 Railway 호출 직전부터만 돌렸음)
-    let progressCeiling = 24; // 1단계: 스크립트+나레이션 생성 중
-    const progressTimer = setInterval(() => {
-      setProgressPct((prev) => {
-        if (prev >= progressCeiling) return prev;
-        const gap = progressCeiling - prev;
-        const inc = gap > 20 ? 1.5 : gap > 10 ? 0.9 : 0.4;
-        return Math.min(prev + inc, progressCeiling);
-      });
-    }, 700);
-
-    const narrationEnabled = selectedVoice !== null;
-    const voice = VOICES.find(v => v.id === selectedVoice);
-
-    try {
-      // 사진 압축 (Edge Function 6MB 제한 대응)
-      const compressedPhotos = await compressPhotos(photos.slice(0, 6));
-      const { data: scriptData, error: scriptErr } = await invokeWithRetry(supabase, "generate-shorts", {
-        photos: compressedPhotos.map((dataUrl, i) => ({ dataUrl, index: i + 1 })),
-        workType: "자동판단",
-        videoStyle,
-        narrationType: narrationEnabled ? "있음" : "없음",
-        voiceId: selectedVoice || "male_pro",
-        scriptMode,
-        manualScript: scriptMode === "manual" ? manualScript : undefined,
-        maxDurationSec: 120, // 2분 제한
-        location: settings.serviceArea || "",
-        buildingType: "",
-        constructionDate: new Date().toISOString().slice(0, 10),
-        companyName: settings.companyName,
-        phoneNumber: settings.phoneNumber,
-        workTopic: workTopic.trim(),                        // 오늘의 작업 한 줄
-      });
-
-      if (scriptErr) throw new Error(scriptErr.message);
-
-      const scenes: MirraScene[] = scriptData?.scenes || [];
-      if (scenes.length === 0) throw new Error("스크립트 생성 실패");
-
-      // Remotion 형식으로 변환
-      const rScenes = scenes.map((s, i) => mirraToRemotionScene(s, i));
-      setRemotionScenes(rScenes);
-      console.warn("[SMS] 영상 장면:", rScenes.map((s, i) => `${i}: ${s.title}`).join(" | "));
-
-      setProgressText("🎬 텍스트 애니메이션 합성 중...");
-      progressCeiling = 29;
-      setProgressPct((p) => Math.max(p, 25));
-
-      const voiceConfig = narrationEnabled && voice ? {
-        lang: voice.lang,
-        pitch: voice.pitch,
-        rate: voice.rate,
-        voiceNameHint: voice.voiceNameHint,
-      } : undefined;
-
-      const narrationAudios: (string | null)[] = scriptData?.narrationAudios || [];
-      const validAudioCount = narrationAudios.filter(Boolean).length;
-      const failedScenes: number[] = Array.isArray(scriptData?.failedScenes) ? scriptData.failedScenes : [];
-      console.warn(
-        `[SMS] 나레이션: ${validAudioCount}/${narrationAudios.length}개 ElevenLabs 오디오, 실패 씬 [${failedScenes.join(",")}], BGM: ${bgm}`
-      );
-
-      // ── 사전 게이트 ①: 나레이션 ON인데 유효 오디오 '0개'일 때만 차단. 부분 실패는 허용. ──
-      if (narrationEnabled && validAudioCount === 0) {
-        throw new Error("나레이션 음성 생성이 전부 실패했습니다 (ElevenLabs 응답 없음). 잠시 후 다시 시도해 주세요.");
-      }
-      if (narrationEnabled && failedScenes.length > 0) {
-        toast({
-          title: "일부 장면 음성 생성 실패",
-          description: `${failedScenes.length}개 장면은 음성 없이 진행합니다.`,
-        });
-      }
-
-      // ── Railway 비동기 렌더 (jobId 발급 → 3초마다 상태 폴링) ──
-      // 이전 동기 호출은 Railway 게이트웨이가 162초 전후로 504 반환하여 중도 실패했음.
-      // 짧은 HTTP 호출만 반복해서 게이트웨이 타임아웃 자체를 회피한다.
-      setProgressText("🖥️ 서버에서 영상 렌더링 중... (1~2분 소요)");
-      progressCeiling = 92;
-      setProgressPct((p) => Math.max(p, 30));
-
-      // env가 https:// 없이 도메인만 세팅된 경우 자동 보정 (CF Pages 설정 실수 방어)
-      const rawUrl =
-        (import.meta.env.VITE_VIDEO_SERVER_URL as string | undefined) ||
-        "https://bangsu-pro-67ad7d63-production-6e2e.up.railway.app";
-      const RAILWAY_URL = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
-
-      let renderData: { videoUrl?: string; error?: string; detail?: string } | null = null;
-      let renderErrMsg: string | null = null;
-      try {
-        // 1) jobId 발급 (수초 내 응답)
-        const startRes = await fetchWithRetry(`${RAILWAY_URL}/render-start`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            scenes,
-            photos: compressedPhotos,
-            narrationAudios,
-            companyName: settings.companyName,
-            phoneNumber: settings.phoneNumber,
-            bgmType: bgm,
-            narrationExpected: narrationEnabled, // 서버 검증 게이트 신호
-          }),
-          retries: 2,
-          retryDelayMs: 1500,
-          timeoutMs: 60_000,
-        });
-        const startJson = await startRes.json().catch(() => null);
-        if (!startRes.ok || !startJson?.jobId) {
-          // 구버전 서버(배포 전)면 render-start가 없을 수 있음 → /render-video 폴백
-          throw new Error(startJson?.error || `HTTP ${startRes.status}`);
-        }
-        const jobId: string = startJson.jobId;
-        console.warn(`[SMS] 렌더 jobId: ${jobId}`);
-
-        // 공통 상태 핸들러 — SSE·폴링 모두에서 진행률/stage/완료/실패 처리를 재사용
-        type StatusJson = {
-          status?: string;
-          progress?: number;
-          stage?: string;
-          videoUrl?: string;
-          error?: string;
-        };
-        const applyStatus = (s: StatusJson): "done" | "error" | "continue" => {
-          if (typeof s.progress === "number") {
-            const serverMapped = 30 + Math.round((s.progress / 100) * 62);
-            progressCeiling = Math.min(92, Math.max(progressCeiling, serverMapped));
-            setProgressPct((p) => Math.max(p, serverMapped));
-          }
-          if (s.stage) setProgressText(`🖥️ ${s.stage}... (서버)`);
-          if (s.status === "done" && s.videoUrl) {
-            renderData = { videoUrl: s.videoUrl };
-            return "done";
-          }
-          if (s.status === "error") {
-            renderErrMsg = s.error || "서버 렌더 실패";
-            return "error";
-          }
-          return "continue";
-        };
-
-        // 2a) SSE 우선 시도 — 브라우저가 EventSource 지원 시 push 기반으로 즉시 반영
-        let sseSettled = false;
-        if (typeof EventSource !== "undefined") {
-          await new Promise<void>((resolve) => {
-            let es: EventSource | null = null;
-            const hardTimeout = setTimeout(() => {
-              // 8분이면 스트림 포기. 아직 끝나지 않았으면 폴링으로 계속 시도
-              if (es) es.close();
-              resolve();
-            }, 8 * 60 * 1000);
-
-            try {
-              es = new EventSource(`${RAILWAY_URL}/render-status/${jobId}/stream`);
-            } catch (e) {
-              console.warn("[SMS] EventSource 생성 실패, 폴링으로:", e);
-              clearTimeout(hardTimeout);
-              resolve();
-              return;
-            }
-
-            es.onmessage = (ev) => {
-              let data: StatusJson | null = null;
-              try { data = JSON.parse(ev.data); } catch { /* ignore */ }
-              if (!data) return;
-              const r = applyStatus(data);
-              if (r === "done" || r === "error") {
-                sseSettled = true;
-                clearTimeout(hardTimeout);
-                es?.close();
-                resolve();
-              }
-            };
-            es.onerror = () => {
-              // 연결 중단 — 폴링으로 폴백. 이미 완료 수신 후 서버가 종료한 경우 sseSettled=true
-              clearTimeout(hardTimeout);
-              es?.close();
-              resolve();
-            };
-          });
-        }
-
-        // 2b) SSE 미완료 또는 미지원 → 3초 폴링으로 폴백
-        if (!sseSettled && !renderData && !renderErrMsg) {
-          console.warn("[SMS] SSE 미완료 → 3초 폴링 폴백");
-          const pollDeadline = Date.now() + 8 * 60 * 1000;
-          while (Date.now() < pollDeadline) {
-            await new Promise((r) => setTimeout(r, 3000));
-            let statusJson: StatusJson | null = null;
-            try {
-              const statusRes = await fetchWithRetry(`${RAILWAY_URL}/render-status/${jobId}`, {
-                method: "GET",
-                retries: 2,
-                retryDelayMs: 1500,
-                timeoutMs: 15_000,
-              });
-              statusJson = await statusRes.json().catch(() => null);
-              if (!statusRes.ok) {
-                console.warn(`[SMS] 상태 조회 ${statusRes.status} — 다음 폴링에 재시도`);
-                continue;
-              }
-            } catch (e: any) {
-              console.warn(`[SMS] 폴링 일시 오류:`, e?.message);
-              continue;
-            }
-            if (!statusJson) continue;
-            const r = applyStatus(statusJson);
-            if (r !== "continue") break;
-          }
-        }
-
-        if (!renderData && !renderErrMsg) {
-          renderErrMsg = "렌더 타임아웃 (8분 초과)";
-        }
-      } catch (e: any) {
-        renderErrMsg = e?.message || "네트워크 오류";
-      }
-
-      const serverRenderOk = !renderErrMsg && !renderData?.error && !!renderData?.videoUrl;
-
-      // ── 서버 렌더 실패 시 즉시 error 상태로 전환 (이전에는 '완성' 화면이 잘못 표시되던 버그) ──
-      // videoUrl이 없으면 플레이어에 영상/음성 모두 없음 → 사용자가 "완성"으로 오인
-      if (!serverRenderOk) {
-        throw new Error(
-          renderErrMsg ||
-            renderData?.error ||
-            "서버 렌더링에 실패했습니다. 다시 시도해 주세요."
-        );
-      }
-
-      if (serverRenderOk && renderData?.videoUrl) {
-        // 서버 렌더링 성공 → MP4에 나레이션/BGM이 이미 합쳐져 있음 (이중 재생 방지)
-        setVideoUrl(renderData.videoUrl);
-
-        // 보관함에 저장 — 나중에 다시 다운로드할 수 있도록
-        const savedVideo = {
-          id: crypto.randomUUID(),
-          title: workTopic.trim() || scenes[0]?.title || "무제 쇼츠",
-          videoUrl: renderData.videoUrl,
-          thumbnailDataUrl: compressedPhotos[0] || undefined,
-          videoStyle,
-          voiceId: selectedVoice || undefined,
-          bgmType: bgm,
-          scenesPreview: scenes.slice(0, 6).map((s) => s.title || "").filter(Boolean),
-          photoCount: photos.length,
-          createdAt: new Date().toISOString(),
-        };
-        addShortsVideo(savedVideo);
-
-        // 테이블이 이미 없음이 확인된 세션이면 네트워크 호출 skip → 콘솔 404 노이즈 방지
-        if (user && !isTableKnownMissing("shorts_videos")) {
-          void supabase.from("shorts_videos").insert({
-            id: savedVideo.id,
-            user_id: user.id,
-            title: savedVideo.title,
-            video_url: savedVideo.videoUrl,
-            thumbnail_data_url: savedVideo.thumbnailDataUrl || null,
-            video_style: savedVideo.videoStyle || null,
-            voice_id: savedVideo.voiceId || null,
-            bgm_type: savedVideo.bgmType || null,
-            scenes_preview: savedVideo.scenesPreview || null,
-            photo_count: savedVideo.photoCount,
-          }).then(({ error }) => {
-            if (!error) return;
-            if (isTableMissingError(error as { message?: string; code?: string })) {
-              markTableMissing("shorts_videos");
-              return;
-            }
-            console.warn("[shorts_videos] DB insert 실패:", error.message);
-          });
-        }
-      }
-
-      // 클라이언트 폴백 오디오 재생 완전 제거 (2026-04-20)
-      // 이전엔 서버 렌더 실패 시 narrationAudios + BGM을 클라이언트에서 자체 재생했지만,
-      // 영상 없이 소리만 나오는 UX가 더 혼란스러움. 서버 렌더 성공 시 MP4 내장 오디오
-      // 하나만 재생하고, 실패 시엔 재생 자체를 하지 않음 → "다시 만들기"로 재시도 유도.
-      audioPlayedRef.current = false;
-      pendingAudioRef.current = {
-        narrationAudios: [],
-        narrationTexts: [],
-        voiceConfig: null,
-        bgmType: "none",
-      };
-
-      setProgressPct(100);
-      setStep("done");
-      toast({ title: "영상이 완성되었습니다! 🎬" });
-      incrementVideoUsed();
-
-    } catch (err: any) {
-      console.error("Shorts generation error:", err);
-      setStep("error");
-      if (err.message === "UNSUPPORTED") {
-        setErrorMsg("이 기기에서는 영상 생성을 지원하지 않습니다. 최신 Chrome 브라우저를 사용해 주세요.");
-      } else {
-        setErrorMsg((err.message || "다시 시도해 주세요").slice(0, 200));
-      }
-    } finally {
-      clearInterval(progressTimer);
-      clearInterval(elapsedTimer);
-    }
-  }, [photos, videoStyle, selectedVoice, settings, toast, workTopic, scriptMode, manualScript, bgm, videoUrl]);
+  // ─── (옛 handleGenerate 몸통은 useShortsPipeline 훅으로 이관됨) ───
 
   const handleDownload = async () => {
     if (!videoUrl) {
@@ -816,22 +258,6 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     const target = links[platform];
     if (!target) return;
     window.open(isMobile ? target.mobile : target.pc, "_blank");
-  };
-
-  const handleReset = () => {
-    if (videoUrl) URL.revokeObjectURL(videoUrl);
-
-    if (bgmCtxRef.current) { bgmCtxRef.current.close().catch(() => {}); bgmCtxRef.current = null; }
-    narrationAudioRefs.current.forEach(a => { a.pause(); a.src = ""; });
-    narrationAudioRefs.current = [];
-    pendingAudioRef.current = null;
-    audioPlayedRef.current = false;
-    setPlayingVoice(null);
-    setStep("config");
-    setProgressPct(0);
-    setElapsedSec(0);
-    setVideoUrl(null);
-    setErrorMsg("");
   };
 
   // ─── Config ───
@@ -911,7 +337,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         <div ref={styleRef} className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold flex items-center gap-1.5"><Film className="w-4 h-4 text-primary" /> 영상 스타일</p>
           <div className="space-y-2">
-            {videoStyles.map(s => (
+            {VIDEO_STYLES.map(s => (
               <button key={s.id} onClick={() => setVideoStyle(s.id)}
                 className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${videoStyle === s.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
                 <p className="font-semibold text-sm">{s.label}</p>
@@ -990,7 +416,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
           <p className="text-sm font-semibold flex items-center gap-1.5"><Music className="w-4 h-4 text-primary" /> 배경 음악</p>
           <div className="grid grid-cols-2 gap-2">
-            {bgmOptions.map(b => (
+            {BGM_OPTIONS.map(b => (
               <div
                 key={b.id}
                 onClick={() => setBgm(b.id)}
@@ -1079,7 +505,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
                 <Button
                   size="xl"
                   className="w-full"
-                  onClick={handleGenerate}
+                  onClick={startGenerate}
                   disabled={!canGenerate}
                   style={canGenerate ? { background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white" } : {}}
                   variant={canGenerate ? "default" : "secondary"}
@@ -1281,7 +707,7 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
         <Button
           className="w-full"
           style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)", color: "white" }}
-          onClick={() => { setStep("config"); handleGenerate(); }}
+          onClick={() => { setStep("config"); startGenerate(); }}
         >
           <Film className="w-5 h-5" /> 영상 재생 시작
         </Button>
