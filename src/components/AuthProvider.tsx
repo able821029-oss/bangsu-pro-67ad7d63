@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { useAppStore, BlogPost, ContentBlock, Platform, Persona, PostStatus } from "@/stores/appStore";
-import { isDevModeActive, disableDevMode, DEV_USER } from "@/lib/devAuth";
 import { isTableKnownMissing, markTableMissing, isTableMissingError } from "@/lib/tableFlags";
 import { migratePostPhotos } from "@/lib/migratePostPhotos";
 
@@ -161,16 +160,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Dev 테스트 모드 — localhost에서만 작동. 가짜 세션 주입 후 Supabase는 건너뜀.
-    // 이중 가드: isDevModeActive()가 이미 PROD에서 false를 반환하지만, DEV_USER 주입이
-    // 프로덕션 번들에 흘러들지 않도록 PROD 체크를 한 번 더 둔다.
-    if (!import.meta.env.PROD && isDevModeActive()) {
-      setUser(DEV_USER as unknown as User);
-      setSession({ user: DEV_USER, access_token: "dev-token" } as unknown as Session);
-      setLoading(false);
-      return;
-    }
-
     // URL hash에 에러 콜백이 남아있으면 제거 (OAuth 실패 시)
     if (window.location.hash.includes("error")) {
       window.history.replaceState(null, "", window.location.pathname);
@@ -218,14 +207,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    // Dev 모드였으면 플래그 해제 (PROD에서는 절대 진입하지 않음)
-    if (!import.meta.env.PROD && isDevModeActive()) {
-      disableDevMode();
-      setUser(null);
-      setSession(null);
-      try { localStorage.removeItem("sms-app-store"); } catch { /* ignore */ }
-      return;
-    }
     await supabase.auth.signOut();
     // 로그아웃 시 로컬 영속화 데이터 정리 (다른 사용자 보호)
     try {
