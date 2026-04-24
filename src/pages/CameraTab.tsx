@@ -15,12 +15,13 @@ import {
 } from "lucide-react";
 import { KeywordRecommender } from "@/components/KeywordRecommender";
 import { PlatformChip } from "@/components/PlatformChip";
-import { useAppStore, Platform, Persona, BlogPost, ContentBlock, DraftSection, createEmptySection } from "@/stores/appStore";
+import { useAppStore, Platform, Persona, BlogPost, ContentBlock, DraftSection, createEmptySection, photoSrc } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { compressPhotos } from "@/lib/imageCompress";
+import { uploadPostPhotos } from "@/lib/uploadPostPhoto";
 import { SectionCard } from "@/pages/BlogWriterTab";
 import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent, normalizeHashtags } from "@/lib/postQuality";
 
@@ -367,13 +368,38 @@ export function CameraTab({
 
       const allPhotos = filled.map((s) => s.photo).filter((p): p is NonNullable<typeof p> => p !== null);
 
+      // post-photos 버킷 업로드 — 성공한 항목은 dataUrl 대신 url로 교체.
+      const newPostId = crypto.randomUUID();
+      const uploadedPhotos = [...allPhotos];
+      let uploadedOffline = false;
+      if (user && allPhotos.length > 0) {
+        const results = await uploadPostPhotos(
+          user.id,
+          newPostId,
+          allPhotos.map((p) => p.dataUrl || ""),
+        );
+        results.forEach((url, i) => {
+          if (url) {
+            uploadedPhotos[i] = { id: allPhotos[i].id, url, caption: allPhotos[i].caption };
+          } else if (allPhotos[i].dataUrl) {
+            uploadedOffline = true;
+          }
+        });
+      } else if (!user && allPhotos.length > 0) {
+        uploadedOffline = true;
+      }
+
       const { data: dbPost, error: dbError } = user ? await supabase
         .from("posts")
         .insert({
+          id: newPostId,
           title: safeTitle,
           blocks: blocks as any,
           hashtags: finalHashtags,
-          photos: allPhotos.map((p) => ({ id: p.id, dataUrl: p.dataUrl })) as any,
+          // Storage 전환: url 우선, 없으면 dataUrl fallback
+          photos: uploadedPhotos.map((p) =>
+            p.url ? { id: p.id, url: p.url } : { id: p.id, dataUrl: p.dataUrl ?? "" },
+          ) as any,
           work_type: "AI자동판단",
           style: "시공일지형",
           persona: selectedPersona,
@@ -391,10 +417,17 @@ export function CameraTab({
         toast({ title: "DB 저장 실패", description: dbError.message, variant: "destructive" });
       }
 
+      if (uploadedOffline) {
+        toast({
+          title: "오프라인 저장됨",
+          description: "사진 일부가 클라우드 업로드에 실패해 기기에만 보관됐어요.",
+        });
+      }
+
       const newPost: BlogPost = {
-        id: dbPost?.id || crypto.randomUUID(),
+        id: dbPost?.id || newPostId,
         title: safeTitle,
-        photos: allPhotos,
+        photos: uploadedPhotos,
         workType: "기타",
         style: "시공일지형",
         blocks,
@@ -577,7 +610,7 @@ export function CameraTab({
                 key={photo.id}
                 className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-[#161B2B]"
               >
-                <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
+                <img src={photoSrc(photo)} alt="" className="w-full h-full object-cover" />
                 <button
                   onClick={() => removePhoto(photo.id)}
                   className="absolute top-0.5 right-0.5 bg-red-500/80 rounded-full p-0.5"

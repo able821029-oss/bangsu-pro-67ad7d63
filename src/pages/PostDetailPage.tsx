@@ -20,10 +20,11 @@ import { SeoScoreBadge } from "@/components/SeoScoreBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useAppStore, BlogPost, Platform, ContentBlock } from "@/stores/appStore";
+import { useAppStore, BlogPost, Platform, ContentBlock, photoSrc } from "@/stores/appStore";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeHashtags } from "@/lib/postQuality";
+import { ensurePhotoDataUrl } from "@/lib/uploadPostPhoto";
 import type { TabId } from "@/components/BottomNav";
 import { ShortsCreator } from "@/components/ShortsCreator";
 
@@ -178,9 +179,15 @@ export function PostDetailPage({
     setIsRegenerating(true);
     toast({ title: "AI가 글을 다시 생성합니다.", description: "잠시만 기다려주세요..." });
     try {
+      // Storage url만 있는 사진은 dataURL로 변환해 Edge Function에 전달
+      const photoSlice = post.photos.slice(0, 5);
+      const dataUrls = await Promise.all(photoSlice.map((p) => ensurePhotoDataUrl(p)));
+      const photosForAi = dataUrls
+        .filter((d): d is string => !!d)
+        .map((dataUrl) => ({ dataUrl }));
       const { data, error } = await supabase.functions.invoke("generate-blog", {
         body: {
-          photos: post.photos.slice(0, 5).map((p) => ({ dataUrl: p.dataUrl })),
+          photos: photosForAi,
           persona: post.persona,
           platform: post.platforms[0],
           location: "",
@@ -442,7 +449,7 @@ export function PostDetailPage({
                 key={photo.id}
                 className="shrink-0 w-24 h-24 rounded-[--radius] overflow-hidden border-2 border-border"
               >
-                <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
+                <img src={photoSrc(photo)} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
           </div>

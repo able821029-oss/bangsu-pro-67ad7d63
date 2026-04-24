@@ -4,6 +4,7 @@ import type { User, Session } from "@supabase/supabase-js";
 import { useAppStore, BlogPost, ContentBlock, Platform, Persona, PostStatus } from "@/stores/appStore";
 import { isDevModeActive, disableDevMode, DEV_USER } from "@/lib/devAuth";
 import { isTableKnownMissing, markTableMissing, isTableMissingError } from "@/lib/tableFlags";
+import { migratePostPhotos } from "@/lib/migratePostPhotos";
 
 interface AuthContextType {
   user: User | null;
@@ -49,9 +50,10 @@ async function loadPostsIntoStore(userId: string) {
         id: row.id,
         title: row.title ?? "",
         photos: Array.isArray(row.photos)
-          ? (row.photos as Array<{ id: string; dataUrl: string }>).map((p) => ({
+          ? (row.photos as Array<{ id?: string; url?: string; dataUrl?: string }>).map((p) => ({
               id: p?.id ?? crypto.randomUUID(),
-              dataUrl: p?.dataUrl ?? "",
+              ...(p?.url ? { url: p.url } : {}),
+              ...(p?.dataUrl ? { dataUrl: p.dataUrl } : {}),
             }))
           : [],
         workType: (row.work_type ?? "기타") as BlogPost["workType"],
@@ -179,9 +181,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // 로그인 성공 시 DB에서 업체정보 + 저장된 글 로드
       if (event === "SIGNED_IN" && session?.user) {
-        loadProfileIntoStore(session.user.id);
-        loadPostsIntoStore(session.user.id);
-        loadShortsVideosIntoStore(session.user.id);
+        const uid = session.user.id;
+        loadProfileIntoStore(uid);
+        // posts 로드 후 레거시 dataUrl 사진을 Storage로 백그라운드 마이그레이션
+        loadPostsIntoStore(uid).then(() => {
+          void migratePostPhotos(uid);
+        });
+        loadShortsVideosIntoStore(uid);
       }
     });
 
@@ -195,9 +201,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // 이미 로그인된 세션이 있으면 프로필 + 글 로드
       if (session?.user) {
-        loadProfileIntoStore(session.user.id);
-        loadPostsIntoStore(session.user.id);
-        loadShortsVideosIntoStore(session.user.id);
+        const uid = session.user.id;
+        loadProfileIntoStore(uid);
+        loadPostsIntoStore(uid).then(() => {
+          void migratePostPhotos(uid);
+        });
+        loadShortsVideosIntoStore(uid);
       }
     }).catch(() => {
       setLoading(false);

@@ -9,6 +9,7 @@ import {
   BlogPost,
   ContentBlock,
   Platform,
+  photoSrc,
 } from "@/stores/appStore";
 import { IconChip } from "@/components/IconChip";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +18,7 @@ import { useAuth } from "@/components/AuthProvider";
 import type { TabId } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompress";
+import { uploadPostPhotos } from "@/lib/uploadPostPhoto";
 import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent, normalizeHashtags } from "@/lib/postQuality";
 
 // 한국 17개 시·도 + 전국
@@ -217,10 +219,33 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         companyName: settings.companyName,
       }));
 
+      const newPostId = crypto.randomUUID();
+
+      // Storage 업로드 — 각 사진을 post-photos 버킷에 올리고 url로 교체.
+      // 업로드 실패한 항목은 dataUrl이 그대로 남아 로컬 렌더는 유지된다.
+      let uploadedOffline = false;
+      const uploadedPhotos = photos;
+      if (user) {
+        const results = await uploadPostPhotos(
+          user.id,
+          newPostId,
+          photos.map((p) => p.dataUrl || ""),
+        );
+        results.forEach((url, i) => {
+          if (url) {
+            uploadedPhotos[i] = { id: photos[i].id, url, caption: photos[i].caption };
+          } else if (photos[i].dataUrl) {
+            uploadedOffline = true;
+          }
+        });
+      } else {
+        uploadedOffline = photos.length > 0;
+      }
+
       const newPost: BlogPost = {
-        id: crypto.randomUUID(),
+        id: newPostId,
         title: safeTitle,
-        photos,
+        photos: uploadedPhotos,
         workType: "기타",
         style: "시공일지형",
         blocks,
@@ -245,7 +270,10 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
             title: newPost.title,
             blocks: newPost.blocks as unknown as Record<string, unknown>[],
             hashtags: newPost.hashtags,
-            photos: newPost.photos.map((p) => ({ id: p.id, dataUrl: p.dataUrl })) as unknown as Record<string, unknown>[],
+            // Storage 전환: url이 있으면 url만, 없으면 dataUrl fallback 저장
+            photos: newPost.photos.map((p) =>
+              p.url ? { id: p.id, url: p.url } : { id: p.id, dataUrl: p.dataUrl ?? "" },
+            ) as unknown as Record<string, unknown>[],
             work_type: "기타",
             style: "시공일지형",
             persona: newPost.persona,
@@ -264,9 +292,15 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         console.warn("[BlogWriter] DB insert exception:", e);
       }
 
+      if (uploadedOffline) {
+        toast({
+          title: "오프라인 저장됨",
+          description: "사진 일부가 클라우드 업로드에 실패해 기기에만 보관됐어요.",
+        });
+      }
+
       addPost(newPost);
       resetDraft(activeIdx);
-      setStep(1);
       toast({ title: "글이 저장되었습니다 ✨" });
       onViewPost(newPost);
     } finally {
@@ -807,7 +841,7 @@ export function SectionCard({
         {section.photo ? (
           <div className="relative">
             <img
-              src={section.photo.dataUrl}
+              src={photoSrc(section.photo)}
               alt=""
               className="w-full h-40 object-cover rounded-xl"
             />

@@ -65,9 +65,14 @@ export function PublishTab({
     const firstTextBlock = post.blocks.find((b) => b.type === "text");
     const description =
       (firstTextBlock?.content || "").slice(0, 120) || "현장 사진으로 작성된 블로그 글입니다.";
-    const imageUrl = post.photos[0]?.dataUrl?.startsWith("http")
-      ? post.photos[0].dataUrl
-      : `${window.location.origin}/og-image.png`;
+    // Kakao OG 이미지는 http(s) URL만 사용 가능 — Storage url을 우선 사용하고,
+    // 로컬 dataUrl 뿐이면 기본 OG 이미지로 폴백
+    const firstPhoto = post.photos[0];
+    const imageUrl = firstPhoto?.url?.startsWith("http")
+      ? firstPhoto.url
+      : firstPhoto?.dataUrl?.startsWith("http")
+        ? firstPhoto.dataUrl
+        : `${window.location.origin}/og-image.png`;
 
     const ok = shareToKakao({
       title: post.title || "새 블로그 글",
@@ -160,7 +165,7 @@ export function PublishTab({
                 <div className="flex items-start gap-3">
                   <div className="w-12 h-12 rounded-lg bg-secondary overflow-hidden shrink-0">
                     {post.photos.length > 0 ? (
-                      <img src={post.photos[0].dataUrl} alt="" className="w-full h-full object-cover" />
+                      <img src={post.photos[0].url || post.photos[0].dataUrl || ""} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Camera className="w-5 h-5 text-muted-foreground" />

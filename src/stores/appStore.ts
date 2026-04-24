@@ -11,8 +11,17 @@ export type PlanType = "무료" | "베이직" | "프로" | "무제한";
 
 export interface PhotoItem {
   id: string;
-  dataUrl: string;
+  /** Supabase Storage 공개 URL — 저장 후 우선 사용 */
+  url?: string;
+  /** 로컬 원본(dataURL). 업로드 전·실패 시 fallback 용도로만 유지 */
+  dataUrl?: string;
   caption?: string;
+}
+
+/** <img src> 용. Storage URL이 있으면 그걸 쓰고, 없으면 로컬 dataUrl로 폴백. */
+export function photoSrc(p: { url?: string; dataUrl?: string } | null | undefined): string {
+  if (!p) return "";
+  return p.url || p.dataUrl || "";
 }
 
 export interface SiteInfo {
@@ -434,9 +443,18 @@ export const useAppStore = create<AppState>()(
       version: 1,
       storage: createJSONStorage(() => localStorage),
       // 영속화할 필드만 선택 — 일회성 UI 상태는 제외
+      // posts[].photos 중 url이 있는 항목은 dataUrl을 제거해 localStorage 부담을 줄인다.
+      // 아직 업로드 전이라 dataUrl만 있는 경우는 그대로 유지 (오프라인 보존).
       partialize: (state) => ({
         settings: state.settings,
-        posts: state.posts,
+        posts: state.posts.map((p) => ({
+          ...p,
+          photos: p.photos.map((ph) =>
+            ph.url
+              ? { id: ph.id, url: ph.url, caption: ph.caption }
+              : ph,
+          ),
+        })),
         subscription: state.subscription,
         coupons: state.coupons,
         inquiries: state.inquiries,
