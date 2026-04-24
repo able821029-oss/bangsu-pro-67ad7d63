@@ -94,7 +94,7 @@ function AppContent() {
   }, [user]);
 
   // ── 경로별 조건부 렌더링 ──
-  // /auth/naver/callback — 네이버 OAuth 콜백 처리
+  // /auth/naver/callback — 구 링크 사용자 보호용 안내 페이지 (네이버 로그인 종료)
   if (currentPath.startsWith("/auth/naver/callback")) {
     return (
       <Suspense fallback={<FullLoadingFallback />}>
