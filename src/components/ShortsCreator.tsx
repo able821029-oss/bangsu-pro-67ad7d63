@@ -1,49 +1,47 @@
-import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
-import { Film, CheckCircle2, Download, RotateCcw, X, Play, Check, Loader2, Square, Camera, ImagePlus, Music, VolumeX, Mic, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+// ShortsCreator — 쇼츠 제작 오케스트레이터
+// 2026-04-24 Phase 4 — 735줄 → ~120줄. 5개 Step 컴포넌트로 위임.
+//
+// 책임:
+//  - Config 선택 state(videoStyle/bgm/voice/scriptMode/manualScript/workTopic) 보유
+//  - useShortsPipeline 훅 호출 (generate/reset/진행률/videoUrl 전부 훅이 관리)
+//  - step에 따라 적절한 Step 컴포넌트 렌더
+//  - useAppStore/useAuth/useToast는 여기서만 호출하고 props로 전달
+//  - autoStart: 부모에서 자동으로 generate 트리거
+
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppStore } from "@/stores/appStore";
 import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { previewBgm, type BgmType } from "@/lib/bgmSynth";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import type { VideoStyle, VoiceOption } from "./shorts/types";
-import { VOICES, VIDEO_STYLES, BGM_OPTIONS, PREVIEW_TEXT, isInAppBrowser } from "./shorts/constants";
-import { UsageMeter } from "./shorts/UsageMeter";
-import { VoiceCard } from "./shorts/VoiceCard";
+import type { BgmType } from "@/lib/bgmSynth";
+import type { VideoStyle } from "./shorts/types";
 import { useShortsPipeline } from "./shorts/useShortsPipeline";
+import { ShortsConfigStep } from "./shorts/ShortsConfigStep";
+import { ShortsGeneratingStep } from "./shorts/ShortsGeneratingStep";
+import { ShortsDoneStep } from "./shorts/ShortsDoneStep";
+import { ShortsErrorStep } from "./shorts/ShortsErrorStep";
+import { ShortsIosGuideStep } from "./shorts/ShortsIosGuideStep";
 
-// Remotion Player is heavy and uses browser APIs that can fail in embedded
-// WebViews (KakaoTalk inapp). Lazy-load so opening the shorts tab never crashes
-// on module evaluation.
-const ShortsPlayer = lazy(() => import("@/components/ShortsPlayer"));
+interface ShortsCreatorProps {
+  onClose: () => void;
+  onNavigate?: (tab: string) => void;
+  autoStart?: boolean;
+}
 
-export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onClose: () => void; onNavigate?: (tab: string) => void; autoStart?: boolean }) {
+export function ShortsCreator({ onClose, onNavigate, autoStart = false }: ShortsCreatorProps) {
   const { photos, settings, subscription, addPhoto, removePhoto, addShortsVideo, useVideo } = useAppStore();
   const { user } = useAuth();
-  const hasAutoStarted = useRef(false);
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const styleRef = useRef<HTMLDivElement>(null);
+  const hasAutoStarted = useRef(false);
 
   // Config 선택 state — 훅 입력
   const [videoStyle, setVideoStyle] = useState<VideoStyle>("시공일지형");
   const [bgm, setBgm] = useState<BgmType>("upbeat");
-  const [previewingBgm, setPreviewingBgm] = useState<BgmType | null>(null);
-  const previewCtxRef = useRef<AudioContext | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string | null>("male_calm");
   const [scriptMode, setScriptMode] = useState<"ai" | "manual">("ai");
   const [manualScript, setManualScript] = useState("");
-  const [workTopic, setWorkTopic] = useState(""); // 오늘의 작업 한 줄 (AI 힌트)
-  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [workTopic, setWorkTopic] = useState("");
 
-  // 월 영상 한도
-  const videoUsed = subscription.videoUsed ?? 0;
-  const videoLimit = subscription.maxVideo ?? 1;
-  const quotaExceeded = videoUsed >= videoLimit;
-
-  // ── 파이프라인 훅 — 생성/리셋/진행률/videoUrl 전부 훅이 관리 ──
+  // 파이프라인 훅 — 생성/리셋/진행률/videoUrl 전부 훅이 관리
   const pipeline = useShortsPipeline({
     photos,
     videoStyle,
@@ -58,678 +56,95 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: { onCl
     onSaved: addShortsVideo,
     toast,
   });
-  const { step, setStep, progressText, progressPct, elapsedSec, videoUrl, remotionScenes, errorMsg, generate: handleGenerate, reset: pipelineReset } = pipeline;
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    Array.from(files).forEach((file) => {
-      if (photos.length >= 6) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        addPhoto({ id: crypto.randomUUID(), dataUrl: ev.target?.result as string });
-      };
-      reader.readAsDataURL(file);
-    });
-    e.target.value = "";
-    // Auto-scroll to style section when enough photos
-    setTimeout(() => {
-      if (photos.length >= 1 && styleRef.current) {
-        styleRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }, 300);
-  };
+  const { step, setStep, progressText, progressPct, elapsedSec, videoUrl, remotionScenes, errorMsg, generate, reset } = pipeline;
 
   // Auto-start generation when opened with autoStart prop
   useEffect(() => {
     if (autoStart && !hasAutoStarted.current && photos.length >= 2) {
       hasAutoStarted.current = true;
-      startGenerate();
+      void generate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart]);
 
-  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
-  const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const handleUpgradeNavigate = useCallback(() => {
+    sessionStorage.setItem("sms-open-settings-page", "pricing");
+    if (onNavigate) onNavigate("mypage");
+  }, [onNavigate]);
 
-  // 브라우저 내장 TTS(무료, 즉시) — 미리듣기 전용. 최종 영상은 ElevenLabs 사용.
-  const playWithWebSpeech = useCallback((voice: VoiceOption): boolean => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
-    try {
-      // 기존 재생 중이면 즉시 중단
-      window.speechSynthesis.cancel();
+  // iOS Guide → '영상 재생 시작' 클릭 시: config로 돌아간 뒤 즉시 generate
+  const handleIosStartPlayback = useCallback(() => {
+    setStep("config");
+    void generate();
+  }, [setStep, generate]);
 
-      const utter = new SpeechSynthesisUtterance(PREVIEW_TEXT);
-      utter.lang = voice.lang || "ko-KR";
-      utter.pitch = voice.pitch ?? 1;
-      utter.rate = voice.rate ?? 1;
-
-      // 사용 가능한 한국어 음성 중 성별 힌트에 맞는 것 선택
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        const koVoices = voices.filter((v) => v.lang?.startsWith("ko"));
-        const pool = koVoices.length > 0 ? koVoices : voices;
-        const byHint = pool.find((v) =>
-          voice.voiceNameHint?.some((h) => v.name?.toLowerCase().includes(h.toLowerCase())),
-        );
-        utter.voice = byHint ?? pool[0];
-      }
-
-      utter.onend = () => { setPlayingVoice(null); speechUtteranceRef.current = null; };
-      utter.onerror = () => { setPlayingVoice(null); speechUtteranceRef.current = null; };
-      speechUtteranceRef.current = utter;
-      window.speechSynthesis.speak(utter);
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const handlePreviewVoice = useCallback(async (voice: VoiceOption) => {
-    // 현재 재생 중이면 정지
-    if (previewAudioRef.current) {
-      previewAudioRef.current.pause();
-      previewAudioRef.current = null;
-    }
-    if (speechUtteranceRef.current && typeof window !== "undefined") {
-      window.speechSynthesis?.cancel();
-      speechUtteranceRef.current = null;
-    }
-
-    if (playingVoice === voice.id) {
-      setPlayingVoice(null);
-      return;
-    }
-
-    setPlayingVoice(voice.id);
-
-    // 1) ElevenLabs 우선 — 최종 영상과 동일한 음성 프로필로 미리듣기 (품질 우선)
-    try {
-      const { data, error } = await supabase.functions.invoke("tts-preview", {
-        body: { voiceId: voice.id, text: PREVIEW_TEXT },
-      });
-      if (!error && data?.ok && data?.audio) {
-        const binary = atob(data.audio);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const blob = new Blob([bytes], { type: "audio/mpeg" });
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        previewAudioRef.current = audio;
-        audio.onended = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
-        audio.onerror = () => { setPlayingVoice(null); URL.revokeObjectURL(url); previewAudioRef.current = null; };
-        await audio.play();
-        return;
-      }
-      if (data?.error) console.warn("[TTS] ElevenLabs 응답 에러:", data.error, data.detail);
-    } catch (err) {
-      console.warn("[TTS] ElevenLabs 호출 실패:", err);
-    }
-
-    // 2) 폴백: 브라우저 내장 Web Speech API — ElevenLabs 할당량 초과/네트워크 오류 시
-    if (playWithWebSpeech(voice)) return;
-
-    setPlayingVoice(null);
-    toast({
-      title: "음성 미리듣기를 사용할 수 없어요",
-      description: "최신 크롬/사파리를 사용해 주세요.",
-      variant: "destructive",
-    });
-  }, [playingVoice, toast, playWithWebSpeech]);
-
-  const handleBgmPreview = (id: BgmType) => {
-    // 이미 재생 중이면 정지
-    if (previewCtxRef.current) {
-      previewCtxRef.current.close().catch(() => {});
-      previewCtxRef.current = null;
-    }
-    if (previewingBgm === id || id === "none") {
-      setPreviewingBgm(null);
-      return;
-    }
-    setPreviewingBgm(id);
-    const ctx = previewBgm(id);
-    previewCtxRef.current = ctx;
-    // 6초 후 자동 종료
-    setTimeout(() => {
-      if (previewCtxRef.current === ctx) {
-        ctx?.close().catch(() => {});
-        previewCtxRef.current = null;
-        setPreviewingBgm(null);
-      }
-    }, 6200);
-  };
-
-  // 영상 생성 시작 — BGM 미리듣기를 정지한 뒤 훅에 위임
-  const startGenerate = useCallback(() => {
-    if (previewCtxRef.current) {
-      previewCtxRef.current.close().catch(() => {});
-      previewCtxRef.current = null;
-      setPreviewingBgm(null);
-    }
-    setPlayingVoice(null);
-    void handleGenerate();
-  }, [handleGenerate]);
-
-  // 리셋 — 훅 리셋 + 음성 미리듣기 state 초기화
-  const handleReset = useCallback(() => {
-    setPlayingVoice(null);
-    pipelineReset();
-  }, [pipelineReset]);
-
-  // ─── (옛 handleGenerate 몸통은 useShortsPipeline 훅으로 이관됨) ───
-
-  const handleDownload = async () => {
-    if (!videoUrl) {
-      toast({
-        title: "영상이 아직 준비되지 않았어요",
-        description: "서버 렌더링이 지연되거나 실패했습니다. '다시 만들기'로 재시도해 주세요.",
-        variant: "destructive",
-      });
-      return;
-    }
-    try {
-      // blob으로 다운로드 — 직접 a[download]는 크로스도메인에서 무시될 수 있음
-      const res = await fetch(videoUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `sms_shorts_${Date.now()}.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      toast({ title: "영상이 다운로드됩니다" });
-    } catch {
-      // 폴백: 새 창으로 열어 브라우저가 다운로드 처리
-      window.open(videoUrl, "_blank");
-      toast({ title: "새 창에서 영상을 저장해 주세요", description: "우클릭 → 다른 이름으로 저장" });
-    }
-  };
-
-  const handleDeeplink = (platform: string) => {
-    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-    const links: Record<string, { mobile: string; pc: string }> = {
-      tiktok: { mobile: "snssdk1233://", pc: "https://www.tiktok.com/upload" },
-      instagram: { mobile: "instagram://", pc: "https://www.instagram.com/" },
-    };
-    const target = links[platform];
-    if (!target) return;
-    window.open(isMobile ? target.mobile : target.pc, "_blank");
-  };
-
-  // ─── Config ───
   if (step === "config") {
     return (
-      <div
-        className="bg-background px-4 pt-6 pb-32 space-y-5 max-w-lg mx-auto"
-        style={{
-          minHeight: "100dvh",
-          paddingBottom: "calc(8rem + env(safe-area-inset-bottom, 0px))",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold flex items-center gap-2"><Film className="w-5 h-5 text-primary" /> 쇼츠 영상 만들기</h1>
-          <button onClick={onClose} aria-label="닫기"><X className="w-6 h-6 text-muted-foreground" /></button>
-        </div>
-
-        {/* 인앱 브라우저 경고 — KakaoTalk/Line/FB 인앱에서는 영상 기능 제한적 */}
-        {(() => {
-          const { isInApp, name } = isInAppBrowser();
-          if (!isInApp) return null;
-          return (
-            <div className="bg-amber-500/10 border border-amber-500/40 rounded-xl p-4 space-y-2">
-              <p className="text-sm font-bold text-amber-300 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                {name} 내부 브라우저 안내
-              </p>
-              <p className="text-xs text-amber-200 leading-relaxed">
-                현재 <b>{name}</b> 안에서 앱을 열고 계십니다. 내부 브라우저는 일부 영상/오디오
-                기능이 제한되어 쇼츠 제작이 정상 동작하지 않을 수 있습니다.
-              </p>
-              <p className="text-xs text-amber-200">
-                우측 상단 <b>⋮</b> 또는 <b>공유</b> 아이콘을 눌러{" "}
-                <b>Chrome · Safari 브라우저로 열기</b>를 선택해 주세요.
-              </p>
-            </div>
-          );
-        })()}
-
-        {/* Photo upload area */}
-        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold flex items-center gap-1.5"><Camera className="w-4 h-4 text-primary" /> 사진 추가하기</p>
-          {photos.length < 2 && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive flex items-center gap-1.5">
-              <AlertTriangle className="w-4 h-4 shrink-0" /> 사진이 2장 이상 필요합니다 (현재 {photos.length}장)
-            </div>
-          )}
-
-          {photos.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {photos.map((photo) => (
-                <div key={photo.id} className="relative shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-border">
-                  <img src={photo.dataUrl} alt="" className="w-full h-full object-cover" />
-                  <button onClick={() => removePhoto(photo.id)} className="absolute top-0.5 right-0.5 bg-destructive rounded-full p-0.5">
-                    <X className="w-3 h-3 text-destructive-foreground" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" size="sm" className="w-full" onClick={() => fileInputRef.current?.click()}>
-              <ImagePlus className="w-4 h-4" /> 갤러리에서 선택
-            </Button>
-            <Button variant="secondary" size="sm" className="w-full" onClick={() => cameraInputRef.current?.click()}>
-              <Camera className="w-4 h-4" /> 카메라로 촬영
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground text-center">최대 10장, 최소 2장</p>
-        </div>
-
-        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
-        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
-
-        <div ref={styleRef} className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold flex items-center gap-1.5"><Film className="w-4 h-4 text-primary" /> 영상 스타일</p>
-          <div className="space-y-2">
-            {VIDEO_STYLES.map(s => (
-              <button key={s.id} onClick={() => setVideoStyle(s.id)}
-                className={`w-full text-left px-4 py-3 rounded-[--radius] border-2 transition-all ${videoStyle === s.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}>
-                <p className="font-semibold text-sm">{s.label}</p>
-                <p className="text-xs text-muted-foreground">{s.desc}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 스크립트 작성 모드 */}
-        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: "16px" }}>edit_note</span>
-            스크립트 작성
-          </p>
-          <div className="flex gap-2">
-            <button onClick={() => setScriptMode("ai")}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${scriptMode === "ai" ? "bg-[#4C8EFF] text-[#00285C]" : "bg-[#25293A] text-[#8B90A0]"}`}>
-              🤖 AI 자동 작성
-            </button>
-            <button onClick={() => setScriptMode("manual")}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${scriptMode === "manual" ? "bg-[#4C8EFF] text-[#00285C]" : "bg-[#25293A] text-[#8B90A0]"}`}>
-              ✍️ 직접 작성
-            </button>
-          </div>
-          {scriptMode === "manual" && (
-            <div className="space-y-2">
-              <textarea
-                value={manualScript}
-                onChange={e => setManualScript(e.target.value)}
-                placeholder={"장면별 나레이션을 줄바꿈으로 구분해주세요\n\n예시:\n오늘 준비를 시작합니다\n정성껏 작업을 진행합니다\n만족스럽게 완성했습니다\n편하게 문의 주세요"}
-                rows={6}
-                className="w-full bg-[#161B2B] border border-white/5 rounded-xl p-3 text-sm text-[#DEE1F7] placeholder-[#8B90A0] focus-visible:outline-none focus:ring-1 focus:ring-[#ADC6FF]/40 resize-none"
-              />
-              <p className="text-[10px] text-[#8B90A0]">
-                최대 2분 영상 · 줄바꿈 = 장면 구분 · {manualScript.split("\n").filter(Boolean).length}개 장면
-              </p>
-            </div>
-          )}
-          {scriptMode === "ai" && (
-            <p className="text-xs text-[#8B90A0]">
-              사진과 오늘의 작업 힌트를 조합하여 AI가 시공 현장에 맞는 나레이션을 생성합니다.
-              <br />
-              <span className="text-[#AB5EBE] font-semibold">↓ 아래 &quot;오늘의 작업&quot; 입력란을 채워 주세요</span>
-            </p>
-          )}
-        </div>
-
-        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold flex items-center gap-1.5"><Mic className="w-4 h-4 text-primary" /> 나레이션 목소리</p>
-          <div className="grid grid-cols-2 gap-2">
-            {VOICES.map(v => (
-              <VoiceCard
-                key={v.id}
-                voice={v}
-                selected={selectedVoice === v.id}
-                onSelect={() => setSelectedVoice(v.id)}
-                onPreview={() => handlePreviewVoice(v)}
-                isPlaying={playingVoice === v.id}
-              />
-            ))}
-          </div>
-          <button
-            onClick={() => { setSelectedVoice(null); setPlayingVoice(null); }}
-            className="w-full text-center py-2.5 rounded-xl text-sm font-medium transition-all"
-            style={{
-              border: selectedVoice === null ? "2px solid hsl(215 100% 50%)" : "1px solid hsl(var(--border))",
-              backgroundColor: selectedVoice === null ? "hsl(var(--muted))" : "hsl(var(--card))",
-              color: selectedVoice === null ? "hsl(215 100% 50%)" : "hsl(var(--muted-foreground))",
-            }}
-          >
-            <VolumeX className="w-4 h-4 inline mr-1" /> 나레이션 없음 — BGM만
-          </button>
-        </div>
-
-        <div className="bg-card rounded-[--radius] border border-border p-4 space-y-3">
-          <p className="text-sm font-semibold flex items-center gap-1.5"><Music className="w-4 h-4 text-primary" /> 배경 음악</p>
-          <div className="grid grid-cols-2 gap-2">
-            {BGM_OPTIONS.map(b => (
-              <div
-                key={b.id}
-                onClick={() => setBgm(b.id)}
-                className="text-left p-3 rounded-xl transition-all cursor-pointer"
-                style={{
-                  border: bgm === b.id ? "2px solid #237FFF" : "1px solid rgba(255,255,255,0.12)",
-                  background: bgm === b.id ? "rgba(35,127,255,0.1)" : "hsl(var(--card))",
-                }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-base">{b.emoji}</span>
-                  {bgm === b.id && <Check className="w-3.5 h-3.5 text-primary" />}
-                </div>
-                <p className="text-xs font-semibold leading-none mb-0.5">{b.label}</p>
-                <p className="text-[10px] text-muted-foreground leading-none mb-2">{b.desc}</p>
-                {b.id !== "none" && (
-                  <button
-                    onClick={e => { e.stopPropagation(); handleBgmPreview(b.id); }}
-                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full w-full justify-center font-medium"
-                    style={{
-                      background: previewingBgm === b.id ? "#237FFF" : "rgba(35,127,255,0.15)",
-                      color: previewingBgm === b.id ? "#fff" : "#237FFF",
-                      border: "1px solid rgba(35,127,255,0.3)",
-                    }}
-                  >
-                    {previewingBgm === b.id
-                      ? <><Square className="w-2.5 h-2.5 mr-0.5" /> 정지</>
-                      : <><Play className="w-2.5 h-2.5 mr-0.5" /> 미리듣기</>}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 이번달 영상 현황 */}
-        <UsageMeter used={videoUsed} max={videoLimit} plan={subscription.plan}
-          onUpgrade={() => { sessionStorage.setItem("sms-open-settings-page", "pricing"); if (onNavigate) { onNavigate("mypage"); } }} />
-
-        {/* 오늘의 작업 — '영상 만들기' 버튼 바로 위에 강조 노출 (AI 모드에서만) */}
-        {scriptMode === "ai" && (
-          <div
-            className="rounded-2xl p-4 space-y-2 shadow-lg"
-            style={{
-              background: "linear-gradient(135deg, rgba(35,127,255,0.12), rgba(171,94,190,0.12))",
-              border: `1.5px solid ${workTopic.trim() ? "rgba(35,127,255,0.45)" : "rgba(239,68,68,0.55)"}`,
-              boxShadow: workTopic.trim()
-                ? "0 0 18px rgba(35,127,255,0.18)"
-                : "0 0 18px rgba(239,68,68,0.22)",
-            }}
-          >
-            <label className="flex items-center gap-2 text-sm font-bold text-foreground">
-              <span className="inline-flex w-6 h-6 rounded-full items-center justify-center bg-gradient-to-br from-[#237FFF] to-[#AB5EBE] text-white text-[11px] font-black">!</span>
-              오늘의 작업
-              <span className="text-[#EF4444]">*</span>
-              <span className="text-[10px] font-normal text-muted-foreground ml-auto">
-                {workTopic.length}/30
-              </span>
-            </label>
-            <input
-              type="text"
-              value={workTopic}
-              maxLength={30}
-              onChange={(e) => setWorkTopic(e.target.value)}
-              placeholder="예) 욕실 방수 시공 / 옥상 우레탄 도장 / 외벽 보수"
-              className="w-full bg-background/80 border border-white/10 rounded-xl px-4 py-3 text-[15px] font-semibold text-foreground placeholder:text-muted-foreground placeholder:font-normal focus-visible:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              짧고 구체적으로 써주세요. AI가 이 문구를 힌트로 스크립트와 나레이션을 생성합니다.
-              {!workTopic.trim() && (
-                <span className="block mt-1 text-[#EF4444] font-semibold">⚠ 비워두면 영상 생성이 안 됩니다</span>
-              )}
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          {(() => {
-            const hasPhotos = photos.length >= 2;
-            const canGenerate = hasPhotos && !quotaExceeded;
-            const message = !hasPhotos
-              ? "사진을 2장 이상 추가해 주세요"
-              : null;
-            return (
-              <>
-                <Button
-                  size="xl"
-                  className="w-full"
-                  onClick={startGenerate}
-                  disabled={!canGenerate}
-                  style={canGenerate ? { background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white" } : {}}
-                  variant={canGenerate ? "default" : "secondary"}
-                >
-                  <Film className="w-6 h-6" /> 영상 생성 시작
-                </Button>
-                {message && (
-                  <p className="text-xs text-muted-foreground text-center">{message}</p>
-                )}
-              </>
-            );
-          })()}
-          <div className="flex justify-center">
-          </div>
-        </div>
-      </div>
+      <ShortsConfigStep
+        photos={photos}
+        onAddPhoto={addPhoto}
+        onRemovePhoto={removePhoto}
+        videoStyle={videoStyle}
+        setVideoStyle={setVideoStyle}
+        bgm={bgm}
+        setBgm={setBgm}
+        selectedVoice={selectedVoice}
+        setSelectedVoice={setSelectedVoice}
+        scriptMode={scriptMode}
+        setScriptMode={setScriptMode}
+        manualScript={manualScript}
+        setManualScript={setManualScript}
+        workTopic={workTopic}
+        setWorkTopic={setWorkTopic}
+        subscription={subscription}
+        onUpgradeNavigate={handleUpgradeNavigate}
+        onClose={onClose}
+        onGenerate={() => { void generate(); }}
+        toast={toast}
+      />
     );
   }
 
-  // ─── Generating ───
   if (step === "generating") {
-    const stages = [
-      { label: "사진 분석 및 스크립트 생성", done: progressPct >= 25 },
-      { label: "나레이션 음성 합성", done: progressPct >= 30 },
-      { label: "장면 렌더링", done: progressPct >= 95 },
-      { label: "영상 완성", done: progressPct >= 100 },
-    ];
     return (
-      <div className="px-4 pt-6 pb-24 space-y-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <Film className="w-10 h-10 text-primary animate-pulse" />
-        </div>
-        <div className="text-center space-y-1">
-          <h2 className="text-xl font-bold">영상을 생성하고 있습니다</h2>
-          <p className="text-sm text-muted-foreground">{progressText}</p>
-        </div>
-        <div className="w-full max-w-xs space-y-2">
-          <div className="flex justify-between text-xs text-muted-foreground mb-1">
-            <span>진행률 · 경과 {elapsedSec}초</span>
-            <span className="font-semibold text-primary">{Math.round(progressPct)}%</span>
-          </div>
-          <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
-            <div
-              className="bg-primary rounded-full h-3 transition-all duration-700 ease-out"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-        </div>
-        <div className="w-full max-w-xs space-y-2">
-          {stages.map((s, i) => (
-            <div key={i} className="flex items-center gap-3">
-              {s.done
-                ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                : i === stages.findIndex(st => !st.done)
-                  ? <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
-                  : <div className="w-5 h-5 rounded-full border-2 border-border shrink-0" />}
-              <p className={`text-sm ${s.done ? "text-green-500" : i === stages.findIndex(st => !st.done) ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                {s.label}
-              </p>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs text-muted-foreground">사진이 많을수록 영상이 길어집니다 (15~60초 소요)</p>
-      </div>
+      <ShortsGeneratingStep
+        progressText={progressText}
+        progressPct={progressPct}
+        elapsedSec={elapsedSec}
+      />
     );
   }
 
-  // ─── Done ───
   if (step === "done") {
     return (
-      <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto flex flex-col items-center">
-        <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center">
-          <CheckCircle2 className="w-10 h-10 text-success" />
-        </div>
-        <h2 className="text-xl font-bold">영상이 완성되었습니다!</h2>
-        {/* ElevenLabs 연동 완료 시 안내 제거, 미연동 시 안내 표시 */}
-
-        {remotionScenes.length > 0 ? (
-          <div className="w-full max-w-xs rounded-xl border border-border overflow-hidden">
-            <ErrorBoundary fallbackTitle="미리보기를 표시할 수 없습니다">
-              <Suspense
-                fallback={
-                  <div className="aspect-[9/16] flex items-center justify-center bg-muted">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                }
-              >
-                <ShortsPlayer
-                  scenes={remotionScenes}
-                  photos={photos.slice(0, 6).map(p => p.dataUrl)}
-                  companyName={settings.companyName || "SMS"}
-                  phoneNumber={settings.phoneNumber || ""}
-                  logoUrl={settings.logoUrl || undefined}
-                  bgmType={bgm}
-                />
-              </Suspense>
-            </ErrorBoundary>
-          </div>
-        ) : videoUrl ? (
-          <video src={videoUrl} controls autoPlay playsInline
-            className="w-full max-w-xs rounded-xl border border-border aspect-[9/16]" />
-        ) : (
-          <div className="w-full max-w-xs rounded-xl border border-border aspect-[9/16] flex items-center justify-center bg-card">
-            <p className="text-sm text-muted-foreground">미리보기를 불러오는 중...</p>
-          </div>
-        )}
-
-        <div className="w-full max-w-xs space-y-3">
-          {/* 저장 — videoUrl이 없으면(서버 렌더 실패) 비활성화 + 설명 */}
-          {videoUrl ? (
-            <Button
-              className="w-full gap-2"
-              style={{ background: "linear-gradient(135deg,#237FFF,#AB5EBE)", color: "white" }}
-              onClick={handleDownload}
-            >
-              <Download className="w-5 h-5" /> 갤러리에 저장
-            </Button>
-          ) : (
-            <div className="w-full rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
-              <p className="text-xs text-amber-500 font-semibold">⚠️ 서버 렌더링이 실패했어요</p>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                잠시 서버가 바쁘거나 일시적 오류일 수 있습니다. 아래 <strong>다시 만들기</strong>를
-                눌러 재시도해 주세요.
-              </p>
-            </div>
-          )}
-          {/* SNS 업로드 */}
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground text-center font-medium">SNS 업로드</p>
-            <div className="grid grid-cols-3 gap-2">
-              <button onClick={() => handleDeeplink("tiktok")}
-                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-border text-xs font-medium hover:bg-secondary transition-colors">
-                <span className="text-lg">⬛</span> 틱톡
-              </button>
-              <button onClick={() => handleDeeplink("instagram")}
-                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-[#E1306C]/40 text-[#E1306C] text-xs font-medium hover:bg-[#E1306C]/5 transition-colors">
-                <span className="text-lg">🟣</span> 릴스
-              </button>
-              <button onClick={() => window.open("https://m.youtube.com/upload", "_blank")}
-                className="flex flex-col items-center gap-1 py-3 rounded-xl border border-[#FF0000]/40 text-[#FF0000] text-xs font-medium hover:bg-[#FF0000]/5 transition-colors">
-                <span className="text-lg">🔴</span> 쇼츠
-              </button>
-            </div>
-          </div>
-          <div className="border-t border-border pt-2 space-y-2">
-            <Button variant="secondary" className="w-full gap-2" onClick={handleReset}>
-              <RotateCcw className="w-4 h-4" /> 다시 만들기
-            </Button>
-            <Button variant="ghost" className="w-full text-muted-foreground" onClick={onClose}>홈으로 돌아가기</Button>
-          </div>
-        </div>
-      </div>
+      <ShortsDoneStep
+        videoUrl={videoUrl}
+        remotionScenes={remotionScenes}
+        photos={photos}
+        settings={settings}
+        bgm={bgm}
+        onReset={reset}
+        onClose={onClose}
+        toast={toast}
+      />
     );
   }
 
-  // ─── Error ───
-  if (step === "error") {
-    return (
-      <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center">
-          <X className="w-10 h-10 text-destructive" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold">영상 생성 실패</h2>
-          <p className="text-sm text-muted-foreground mt-2">{errorMsg || "다시 시도해 주세요"}</p>
-        </div>
-        <div className="space-y-2 w-full max-w-xs">
-          <Button className="w-full" onClick={handleReset}><RotateCcw className="w-4 h-4" /> 다시 시도</Button>
-          <Button variant="ghost" className="w-full" onClick={onClose}>돌아가기</Button>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── iOS Guide ───
   if (step === "ios_guide") {
     return (
-      <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[70vh] text-center">
-        <div className="text-5xl">📱</div>
-        <h2 className="text-xl font-bold">아이폰 화면 녹화 안내</h2>
-        <p className="text-sm text-muted-foreground">
-          아이폰(iOS)은 브라우저에서 영상 저장이 제한됩니다.<br/>
-          아래 순서로 화면 녹화로 저장하세요.
-        </p>
-        <div className="w-full bg-card border border-border rounded-2xl p-4 space-y-3 text-left">
-          {[
-            "아이폰 설정 → 제어 센터 → 화면 기록 추가",
-            "SMS 앱으로 돌아와 아래 '영상 재생 시작' 버튼 클릭",
-            "화면 상단 오른쪽 아래로 스와이프 → 제어 센터 열기",
-            "화면 기록 버튼(⏺) 3초 누르기 → 녹화 시작",
-            "SMS로 돌아와 영상 재생 — 완료 후 녹화 중지",
-          ].map((step, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i+1}</span>
-              <p className="text-sm">{step}</p>
-            </div>
-          ))}
-        </div>
-        <Button
-          className="w-full"
-          style={{ background: "linear-gradient(135deg, #237FFF, #AB5EBE)", color: "white" }}
-          onClick={() => { setStep("config"); startGenerate(); }}
-        >
-          <Film className="w-5 h-5" /> 영상 재생 시작
-        </Button>
-        <Button variant="ghost" className="w-full" onClick={onClose}>취소</Button>
-      </div>
+      <ShortsIosGuideStep
+        onStartPlayback={handleIosStartPlayback}
+        onClose={onClose}
+      />
     );
   }
 
-  // ─── Error ───
+  // error (기본 fallback 포함)
   return (
-    <div className="px-4 pt-6 pb-24 space-y-5 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh]">
-      <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center">
-        <X className="w-10 h-10 text-destructive" />
-      </div>
-      <h2 className="text-xl font-bold">영상 생성 실패</h2>
-      <p className="text-sm text-muted-foreground text-center">{errorMsg || "다시 시도해 주세요"}</p>
-      <div className="space-y-3 w-full max-w-xs">
-        <Button className="w-full" onClick={handleReset}>
-          <RotateCcw className="w-5 h-5" /> 다시 시도
-        </Button>
-        <Button variant="ghost" className="w-full" onClick={onClose}>돌아가기</Button>
-      </div>
-    </div>
+    <ShortsErrorStep
+      errorMsg={errorMsg}
+      onRetry={reset}
+      onClose={onClose}
+    />
   );
 }
