@@ -225,6 +225,15 @@ export async function checkMonthlyLimit(
     return { allowed: true, used: 0, max: 0, retryAfterSec: 0, plan: "unknown" };
   }
 
+  // ── MVP 단계 임시 bypass ──────────────────────────────────────
+  // 2026-04-25: 출시 직후 테스트 및 초기 사용자 확보를 우선. 한도 검사는
+  // withGuard(rate limit)와 외부 API 쿼터(ANTHROPIC·ElevenLabs)에 위임.
+  // usage_logs는 그대로 기록되므로 추후 BYPASS_QUOTA=false로 바꾸면 즉시 강제됨.
+  const BYPASS_QUOTA = true;
+  if (BYPASS_QUOTA) {
+    return { allowed: true, used: 0, max: 9999, retryAfterSec: 0, plan: "bypass-mvp" };
+  }
+
   try {
     // 관리자면 한도 검사 완전 건너뛰기 (테스트·운영 편의)
     if (await isAdminUser(url, serviceKey, userId)) {
