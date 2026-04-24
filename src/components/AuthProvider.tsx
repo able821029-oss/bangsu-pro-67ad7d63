@@ -162,7 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Dev 테스트 모드 — localhost에서만 작동. 가짜 세션 주입 후 Supabase는 건너뜀.
-    if (isDevModeActive()) {
+    // 이중 가드: isDevModeActive()가 이미 PROD에서 false를 반환하지만, DEV_USER 주입이
+    // 프로덕션 번들에 흘러들지 않도록 PROD 체크를 한 번 더 둔다.
+    if (!import.meta.env.PROD && isDevModeActive()) {
       setUser(DEV_USER as unknown as User);
       setSession({ user: DEV_USER, access_token: "dev-token" } as unknown as Session);
       setLoading(false);
@@ -216,8 +218,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    // Dev 모드였으면 플래그 해제
-    if (isDevModeActive()) {
+    // Dev 모드였으면 플래그 해제 (PROD에서는 절대 진입하지 않음)
+    if (!import.meta.env.PROD && isDevModeActive()) {
       disableDevMode();
       setUser(null);
       setSession(null);
