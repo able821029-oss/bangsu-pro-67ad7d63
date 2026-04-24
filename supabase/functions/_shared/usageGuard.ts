@@ -94,10 +94,11 @@ async function fetchUserPlan(
   serviceKey: string,
   userId: string,
 ): Promise<string> {
+  // status 컬럼 조건을 넣지 않고 최신 레코드 1건을 가져온다.
+  // status='active' 제약은 로직상 유지하되, 누락된 데이터에 취약하지 않도록 소프트하게.
   const params = new URLSearchParams({
     select: "plan,status",
     user_id: `eq.${userId}`,
-    status: "eq.active",
     order: "created_at.desc",
     limit: "1",
   });
@@ -109,9 +110,45 @@ async function fetchUserPlan(
     },
   });
   if (!res.ok) return "무료";
-  const rows = (await res.json()) as Array<{ plan?: string }>;
+  const rows = (await res.json()) as Array<{ plan?: string; status?: string }>;
   if (!Array.isArray(rows) || rows.length === 0) return "무료";
+  // status가 cancelled/expired면 무료로 강등
+  if (rows[0]?.status && rows[0].status !== "active") return "무료";
   return rows[0]?.plan || "무료";
+}
+
+/**
+ * profiles.is_admin === true 면 한도 검사를 전부 건너뛴다.
+ * 테스트·운영자 계정이 자체 한도에 걸리지 않도록 하는 예외 경로.
+ */
+async function isAdminUser(
+  url: string,
+  serviceKey: string,
+  userId: string,
+): Promise<boolean> {
+  try {
+    const params = new URLSearchParams({
+      select: "is_admin",
+      user_id: `eq.${userId}`,
+      is_admin: "eq.true",
+      limit: "1",
+    });
+    const res = await fetch(
+      `${url}/rest/v1/profiles?${params.toString()}`,
+      {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          Accept: "application/json",
+        },
+      },
+    );
+    if (!res.ok) return false;
+    const rows = (await res.json()) as Array<{ is_admin?: boolean }>;
+    return Array.isArray(rows) && rows.length > 0 && rows[0].is_admin === true;
+  } catch {
+    return false;
+  }
 }
 
 async function fetchPlanLimits(
@@ -189,6 +226,11 @@ export async function checkMonthlyLimit(
   }
 
   try {
+    // 관리자면 한도 검사 완전 건너뛰기 (테스트·운영 편의)
+    if (await isAdminUser(url, serviceKey, userId)) {
+      return { allowed: true, used: 0, max: 9999, retryAfterSec: 0, plan: "admin" };
+    }
+
     const [plan, used] = await Promise.all([
       fetchUserPlan(url, serviceKey, userId),
       fetchMonthlyOkCount(url, serviceKey, userId, fnName),
