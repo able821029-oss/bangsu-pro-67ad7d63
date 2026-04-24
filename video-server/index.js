@@ -3,6 +3,10 @@ const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const { shortsQueue, queueEvents } = require("./queue");
 
+// 단일 서비스 구조: API 프로세스 안에서 BullMQ Worker도 함께 구동
+// (Railway에서 fearless-respect worker 서비스를 삭제했으므로 통합 필요)
+require("./worker.js");
+
 const app = express();
 
 // ── CORS ──
