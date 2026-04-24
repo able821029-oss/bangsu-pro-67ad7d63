@@ -12,7 +12,6 @@ import { trackEvent } from "@/lib/analytics";
 
 // 초기 로딩엔 HomeTab만 필요 — 나머지 탭/페이지는 lazy
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
-const NaverCallbackPage = lazy(() => import("@/pages/NaverCallbackPage"));
 const CalendarTab = lazy(() => import("@/pages/CalendarTab").then(m => ({ default: m.CalendarTab })));
 const ContentTab = lazy(() => import("@/pages/ContentTab").then(m => ({ default: m.ContentTab })));
 const ShortsTab = lazy(() => import("@/pages/ShortsTab").then(m => ({ default: m.ShortsTab })));
@@ -50,14 +49,6 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("sms_onboarded"));
   const [showReviews, setShowReviews] = useState(false);
 
-  // 현재 경로 감지 (간단한 path 기반 라우팅)
-  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
-  useEffect(() => {
-    const handler = () => setCurrentPath(window.location.pathname);
-    window.addEventListener("popstate", handler);
-    return () => window.removeEventListener("popstate", handler);
-  }, []);
-
   const handleViewPost = (post: BlogPost) => setViewingPost(post);
   const handleBackFromPost = () => setViewingPost(null);
 
@@ -94,15 +85,6 @@ function AppContent() {
   }, [user]);
 
   // ── 경로별 조건부 렌더링 ──
-  // /auth/naver/callback — 구 링크 사용자 보호용 안내 페이지 (네이버 로그인 종료)
-  if (currentPath.startsWith("/auth/naver/callback")) {
-    return (
-      <Suspense fallback={<FullLoadingFallback />}>
-        <NaverCallbackPage />
-      </Suspense>
-    );
-  }
-
   if (showOnboarding) return <OnboardingSlides onComplete={handleOnboardingComplete} />;
   if (loading) return <FullLoadingFallback />;
   if (!user) return (
