@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { NotificationPanel, type NotificationItem } from "@/components/NotificationPanel";
 import {
   Camera,
@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconChip } from "@/components/IconChip";
 import { useAppStore, PostStatus, BlogPost } from "@/stores/appStore";
+import { useUsageSummary } from "@/hooks/useUsageSummary";
 import type { TabId } from "@/components/BottomNav";
 
 const statusBadgeVariant: Record<PostStatus, "default" | "info" | "success"> = {
@@ -64,34 +65,57 @@ export function HomeTab({
   const posts = useAppStore((s) => s.posts);
   const settings = useAppStore((s) => s.settings);
   const subscription = useAppStore((s) => s.subscription);
-  const published = posts.filter((p) => p.status === "게시완료").length;
-  const completed = posts.filter((p) => p.status === "완료" || p.status === "게시완료").length;
-  const videoCount = subscription.videoUsed ?? 0;
 
-  // 이번 달 사용량 — subscription.usedCount 증가 로직이 아직 백엔드에 없어서 posts 기반으로 파생.
-  // usage_counters RPC가 붙으면 이 블록을 subscription.usedCount로 되돌리면 됨.
-  const currentMonth = new Date().toISOString().slice(0, 7); // "2026-04"
-  const monthlyUsed = posts.filter(
-    (p) =>
-      (p.status === "완료" || p.status === "게시완료") &&
-      typeof p.createdAt === "string" &&
-      p.createdAt.startsWith(currentMonth),
-  ).length;
-
-  // 실제 주간 발행 데이터 계산
-  const weeklyData = (() => {
+  // ── 파생 집계 (posts 변경 시에만 재계산) ──────────────────────────────
+  // 2026-04-24: posts 배열이 커질수록 매 렌더 filter 5~7회 반복되던 문제 해결.
+  // usage_logs RPC 붙으면 monthlyUsed·weeklyData를 서버 뷰로 교체 예정.
+  const stats = useMemo(() => {
+    const currentMonth = new Date().toISOString().slice(0, 7); // "2026-04"
+    let published = 0;
+    let completed = 0;
+    let monthlyUsed = 0;
+    let naverCount = 0;
+    let instaCount = 0;
+    let tiktokCount = 0;
+    for (const p of posts) {
+      const isDone = p.status === "완료" || p.status === "게시완료";
+      if (p.status === "게시완료") published += 1;
+      if (isDone) {
+        completed += 1;
+        if (typeof p.createdAt === "string" && p.createdAt.startsWith(currentMonth)) {
+          monthlyUsed += 1;
+        }
+        if (p.platforms.includes("naver")) naverCount += 1;
+        if (p.platforms.includes("instagram")) instaCount += 1;
+        if (p.platforms.includes("tiktok")) tiktokCount += 1;
+      }
+    }
+    // 주간 발행 — 4주치 버킷
     const now = new Date();
-    return [3, 2, 1, 0].map((weeksAgo) => {
+    const weeklyData = [3, 2, 1, 0].map((weeksAgo) => {
       const weekStart = new Date(now);
       weekStart.setDate(now.getDate() - now.getDay() - weeksAgo * 7);
-      const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
-      const count = posts.filter((p) => {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      const count = posts.reduce((acc, p) => {
+        const isDone = p.status === "완료" || p.status === "게시완료";
+        if (!isDone) return acc;
         const d = new Date(p.createdAt);
-        return d >= weekStart && d <= weekEnd && (p.status === "완료" || p.status === "게시완료");
-      }).length;
+        return d >= weekStart && d <= weekEnd ? acc + 1 : acc;
+      }, 0);
       return { week: `${4 - weeksAgo}주차`, count };
     });
-  })();
+    return { published, completed, monthlyUsed, weeklyData, naverCount, instaCount, tiktokCount };
+  }, [posts]);
+
+  const { published, completed, weeklyData } = stats;
+
+  // usage_current_month 뷰 우선 — 서버 집계가 "정답".
+  // 뷰 미배포/빈 결과 시 훅 내부에서 posts 기반 파생(fallback) 자동 전환.
+  // 기존 stats.monthlyUsed / subscription.videoUsed 는 fallback 내부에서 동일한 로직 사용.
+  const usage = useUsageSummary();
+  const monthlyUsed = usage.blogCount;
+  const videoCount = usage.shortsCount;
 
   const usagePercent = subscription.maxCount > 0 ? (monthlyUsed / subscription.maxCount) * 100 : 0;
   const remaining = subscription.maxCount - monthlyUsed;
@@ -109,15 +133,7 @@ export function HomeTab({
 
   const seoScore = 74;
 
-  const naverCount = posts.filter(
-    (p) => p.platforms.includes("naver") && (p.status === "완료" || p.status === "게시완료"),
-  ).length;
-  const instaCount = posts.filter(
-    (p) => p.platforms.includes("instagram") && (p.status === "완료" || p.status === "게시완료"),
-  ).length;
-  const tiktokCount = posts.filter(
-    (p) => p.platforms.includes("tiktok") && (p.status === "완료" || p.status === "게시완료"),
-  ).length;
+  const { naverCount, instaCount, tiktokCount } = stats;
 
   return (
     <div className="px-5 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
