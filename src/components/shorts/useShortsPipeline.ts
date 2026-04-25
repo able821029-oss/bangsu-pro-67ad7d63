@@ -103,6 +103,11 @@ interface GenerateShortsResponse {
   maxDurationSec?: number;
   trimmedByCap?: boolean;
   failedScenes?: number[];
+  logoStatus?:
+    | "embedded"
+    | "skipped_empty"
+    | "skipped_invalid_format"
+    | "upload_failed";
   scenes?: Array<{ title?: string }>;
   error?: string;
 }
@@ -289,7 +294,7 @@ export function useShortsPipeline(
       }
 
       console.warn(
-        `[SMS] Shotstack renderId: ${renderId} (씬 ${sceneCount}개, 음성실패 ${failedScenes.length}개, 길이 ${scriptData?.durationSec ?? "?"}초)`,
+        `[SMS] Shotstack renderId: ${renderId} (씬 ${sceneCount}개, 음성실패 ${failedScenes.length}개, 길이 ${scriptData?.durationSec ?? "?"}초, 로고: ${scriptData?.logoStatus ?? "?"})`,
       );
 
       if (narrationEnabled && failedScenes.length > 0) {
@@ -305,6 +310,22 @@ export function useShortsPipeline(
           title: "사진 일부만 사용됩니다",
           description: `영상 ${Math.floor((scriptData.maxDurationSec || 120) / 60)}분 한도 때문에 ${scriptData.photoCount}장만 사용했어요.`,
         });
+      }
+
+      // 로고가 영상에 들어가지 못한 경우 사용자에게 원인 안내
+      if (scriptData?.logoStatus && scriptData.logoStatus !== "embedded") {
+        const reason = {
+          skipped_empty: "마이페이지 → 프로필 설정에서 업체 로고를 등록해 주세요.",
+          skipped_invalid_format: "로고 형식이 인식되지 않았습니다. 다시 업로드해 주세요.",
+          upload_failed:
+            "로고 업로드에 실패했어요. 잠시 후 다시 시도하거나 다른 이미지로 바꿔 주세요.",
+        }[scriptData.logoStatus];
+        if (reason) {
+          toast({
+            title: "엔딩 카드에 로고가 들어가지 않았어요",
+            description: reason,
+          });
+        }
       }
 
       // ── 2) generate-shorts-status 폴링 (4초 간격, 5분 타임아웃) ──

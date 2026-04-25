@@ -301,17 +301,26 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
     asset: {
       type: "html",
       html: endingHtml,
+      // flex column + gap 으로 회사명/전화번호 겹침 방지.
+      // body 와 div 의 default margin/padding 0 으로 명시 — Shotstack html 렌더 환경에서
+      // 기본 스타일이 어떻게 적용되는지 보장 못 하므로 reset 부터.
       css:
+        `* { margin: 0; padding: 0; box-sizing: border-box; } ` +
+        `body { width: 100%; height: 100%; } ` +
         `.ending { font-family: ${KO_FONT_STACK}; color: #ffffff; ` +
-        `text-align: center; padding: 80px 40px; background: linear-gradient(135deg, #001130, #1a3a6a); ` +
-        `border-radius: 24px; width: 100%; box-sizing: border-box; } ` +
-        `.logo { width: 260px; height: 260px; border-radius: 50%; ` +
-        `margin: 0 auto 36px; display: block; object-fit: cover; ` +
-        `border: 4px solid rgba(255,255,255,0.15); } ` +
-        `.company { font-size: 96px; font-weight: 800; margin-bottom: 24px; line-height: 1.2; } ` +
-        `.phone { font-size: 56px; font-weight: 500; opacity: 0.92; }`,
-      width: 980,
-      height: 1100,
+        `display: flex; flex-direction: column; justify-content: center; align-items: center; ` +
+        `gap: 40px; padding: 80px 40px; ` +
+        `background: linear-gradient(135deg, #001130 0%, #1a3a6a 100%); ` +
+        `border-radius: 24px; width: 100%; height: 100%; text-align: center; } ` +
+        `.logo { width: 280px; height: 280px; border-radius: 50%; ` +
+        `object-fit: cover; border: 5px solid rgba(255,255,255,0.2); ` +
+        `flex-shrink: 0; background: rgba(255,255,255,0.05); } ` +
+        `.company { font-size: 88px; font-weight: 800; line-height: 1.15; ` +
+        `word-break: keep-all; } ` +
+        `.phone { font-size: 52px; font-weight: 500; opacity: 0.92; ` +
+        `letter-spacing: 0.04em; line-height: 1.2; }`,
+      width: 1000,
+      height: 1400,
       background: "transparent",
     },
     start: photoTotalSec,
@@ -679,21 +688,40 @@ serve(
         // 3-2) 로고 업로드 — dataURL 이면 Storage 로 변환, 이미 https URL 이면 그대로 사용.
         // 실패해도 영상 자체는 만들어져야 하므로 null 로 fallback.
         let logoPublicUrl: string | null = null;
+        let logoStatus:
+          | "embedded"
+          | "skipped_empty"
+          | "skipped_invalid_format"
+          | "upload_failed" = "skipped_empty";
         if (typeof requestedLogoUrl === "string" && requestedLogoUrl.length > 0) {
           if (requestedLogoUrl.startsWith("data:")) {
             const { url: uploadedLogoUrl } = await uploadDataUrl(
               requestedLogoUrl,
               `${userScope}/${jobId}/logo`,
             );
-            logoPublicUrl = uploadedLogoUrl;
-            if (!uploadedLogoUrl) {
+            if (uploadedLogoUrl) {
+              logoPublicUrl = uploadedLogoUrl;
+              logoStatus = "embedded";
+              console.log(`[upload] logo 업로드 성공: ${uploadedLogoUrl}`);
+            } else {
+              logoStatus = "upload_failed";
               console.warn(
-                "[upload] logo 업로드 실패 — 엔딩 카드 텍스트만 표시됩니다.",
+                "[upload] logo 업로드 실패 — 엔딩 카드 텍스트만 표시. " +
+                  "shorts-assets 버킷의 allowed_mime_types 에 이미지 형식이 포함됐는지 확인.",
               );
             }
           } else if (/^https?:\/\//i.test(requestedLogoUrl)) {
             logoPublicUrl = requestedLogoUrl;
+            logoStatus = "embedded";
+            console.log(`[upload] logo 외부 URL 그대로 사용: ${requestedLogoUrl}`);
+          } else {
+            logoStatus = "skipped_invalid_format";
+            console.warn(
+              `[upload] logo 형식 인식 못함 (앞 30자: ${requestedLogoUrl.slice(0, 30)})`,
+            );
           }
+        } else {
+          console.log("[upload] logoUrl 클라이언트가 보내지 않음 (또는 빈 값)");
         }
 
         // 4) ElevenLabs 나레이션 → Storage 업로드
@@ -844,6 +872,7 @@ serve(
             maxDurationSec: effectiveMaxDuration,
             trimmedByCap,
             failedScenes,
+            logoStatus,
             scenes,
           }),
           {
