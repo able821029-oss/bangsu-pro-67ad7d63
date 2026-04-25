@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://sms-app-9p9.pages.dev/sitemap.xml

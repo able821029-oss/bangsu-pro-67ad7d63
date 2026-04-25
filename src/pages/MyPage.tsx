@@ -14,6 +14,7 @@ import { useAppStore } from "@/stores/appStore";
 import { PricingPlan } from "@/pages/settings/PricingPlan";
 import { ProfileSettings } from "@/pages/settings/ProfileSettings";
 import { TermsPage } from "@/pages/settings/TermsPage";
+import { PrivacyPage } from "@/pages/settings/PrivacyPage";
 import { UserSettings } from "@/pages/settings/UserSettings";
 import { ReviewsPage } from "@/pages/ReviewsPage";
 import { FieldToolsPage } from "@/pages/FieldToolsPage";
@@ -29,7 +30,7 @@ const openPricing = (from: string, setPage: (p: "pricing") => void) => {
   setPage("pricing");
 };
 
-type Page = "main" | "pricing" | "profile" | "terms" | "usersettings" | "reviews" | "fieldtools" | "faq" | "contact";
+type Page = "main" | "pricing" | "profile" | "terms" | "privacy" | "usersettings" | "reviews" | "fieldtools" | "faq" | "contact";
 
 export function MyPage() {
   const { user, signOut } = useAuth();
@@ -57,6 +58,7 @@ export function MyPage() {
   if (page === "pricing") return <PricingPlan onBack={() => setPage("main")} />;
   if (page === "profile") return <ProfileSettings onBack={() => setPage("main")} />;
   if (page === "terms") return <TermsPage onBack={() => setPage("main")} />;
+  if (page === "privacy") return <PrivacyPage onBack={() => setPage("main")} />;
   if (page === "usersettings") return <UserSettings onBack={() => setPage("main")} />;
   if (page === "reviews") return <ReviewsPage onBack={() => setPage("main")} />;
   if (page === "fieldtools") return <FieldToolsPage onBack={() => setPage("main")} />;
@@ -84,6 +86,7 @@ export function MyPage() {
     { icon: Settings, label: "앱 설정", desc: "알림·언어·개인정보", color: "slate", onClick: () => setPage("usersettings") },
     { icon: Star, label: "사용자 리뷰", desc: "실제 사장님들의 후기", color: "purple", onClick: () => setPage("reviews") },
     { icon: FileText, label: "이용약관", desc: "", color: "indigo", onClick: () => setPage("terms") },
+    { icon: Shield, label: "개인정보처리방침", desc: "정보 수집·이용·위탁", color: "slate", onClick: () => setPage("privacy") },
     { icon: MessageSquare, label: "자주 묻는 질문", desc: "FAQ", color: "green", onClick: () => setPage("faq") },
     { icon: Phone, label: "문의하기", desc: "관리자에게 메시지", color: "cyan", onClick: () => setPage("contact") },
     { icon: Shield, label: "관리자 모드", desc: "", color: "rose", onClick: () => { window.location.hash = "#/admin"; } },

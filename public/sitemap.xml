@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SMS — sitemap
+  HashRouter 사용 중이라 # 뒤 경로는 검색엔진이 동일 URL 로 인식.
+  실제 별도 인덱싱이 가능한 entry 는 루트(/) 와 reset-password 정도이며,
+  나머지 마이페이지 하위는 인증 후에만 접근.
+  도메인 변경 시 loc 일괄 교체 필요.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://sms-app-9p9.pages.dev/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://sms-app-9p9.pages.dev/#/reset-password</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>
