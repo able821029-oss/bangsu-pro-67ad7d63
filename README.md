@@ -23,7 +23,7 @@
 6. 클립보드 복사 → 네이버 블로그 앱으로 딥링크 이동 → 붙여넣기
 
 ### 🎬 쇼츠 영상 자동 생성
-- Remotion 기반 서버 렌더링 (Railway)
+- Shotstack API 기반 외부 SaaS 렌더링 (Railway/자체 렌더 서버는 v6.0에서 폐기)
 - 나레이션 TTS (ElevenLabs) + BGM + 이미지 슬라이드 합성
 - 최대 2분 MP4 출력, 나레이션/BGM/영상 속도 조절 가능
 
@@ -47,7 +47,7 @@
 | 인증 | Supabase Auth — **전화번호 + SMS OTP** |
 | DB / Storage | Supabase Postgres + RLS |
 | AI 추론 | Anthropic Claude Haiku 4.5 (Edge Function) |
-| 영상 렌더링 | Remotion (Railway 배포) |
+| 영상 렌더링 | Shotstack (외부 SaaS) |
 | TTS | ElevenLabs |
 | 분석 | GA4 + Microsoft Clarity |
 | 에러 트래킹 | Sentry (optional) |
@@ -83,7 +83,6 @@ npx tsc --noEmit   # 타입 체크
 ### Edge Function 배포
 ```bash
 npx supabase functions deploy generate-blog
-npx supabase functions deploy render-video
 # 기타: generate-shorts / tts-preview / seo-analyze / delete-account 등
 ```
 

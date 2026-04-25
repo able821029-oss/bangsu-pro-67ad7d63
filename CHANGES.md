@@ -7,6 +7,37 @@
 | 1 | v5.0 | BullMQ 큐 | 인메모리 Map → Redis, 동시성 제어, API/워커 분리 |
 | 2 | v5.1 | FFmpeg 엔진 | Remotion 우회로 렌더 시간 3~5배 단축, 엔진 이원화 |
 | 3 | v5.2 | SSE + 에러 격리 | 부분 실패 허용, 폴링 → SSE 푸시, BGM 캐싱 |
+| 4 | v6.0 | Railway 폐기, Shotstack 전환 | 자체 렌더 서버 전체 제거, 외부 SaaS 렌더로 위임 |
+
+---
+
+## Phase 4 — Railway 폐기, Shotstack 전환 (v6.0) · 2026-04-25
+
+### 목표
+자체 운영하던 Remotion/FFmpeg 렌더 파이프라인(Railway web + worker + Redis)을 전부 폐기하고, 영상 렌더링을 **Shotstack** 외부 SaaS로 위임. 운영 부담(Redis 비용, 컨테이너 OOM, ffmpeg 빌드 환경, 폰트/코덱) 일괄 해소.
+
+### 제거된 자산
+
+| 영역 | 자산 |
+|---|---|
+| 렌더 서버 | `video-server/` 전체 폴더 (index.js, worker.js, queue.js, ffmpegRenderer.js, audioMixer.js, bgm.js, renderer.js, remotion/, tests/, Dockerfile, Procfile, railway.json, railway.worker.json 등) |
+| Edge Function | `supabase/functions/render-video/` (Railway 프록시였음) |
+| 설정 | `supabase/config.toml`의 `[functions.render-video]` 섹션 |
+| 환경변수 | `.env.example`의 `VITE_VIDEO_SERVER_URL` |
+| 외부 인프라 | Railway 프로젝트 `cooperative-flow` 전체 (수동) — Redis addon 포함 |
+
+### 영향
+- Phase 1~3에서 구축한 BullMQ 큐, FFmpeg 네이티브 엔진, SSE 푸시, BGM 캐싱은 더 이상 사용하지 않음. 코드는 git history에 보존.
+- 클라이언트 영상 렌더 경로는 Shotstack API 직접 호출로 전환 (별도 PR/문서).
+- Railway 잔액($4.24)은 사용자가 직접 정산 결정 — 추가 비용 발생 없음.
+
+### Railway 수동 정리 (사용자 작업)
+- Railway Dashboard → `cooperative-flow` 프로젝트 전체 삭제
+- Redis addon, web 서비스, worker 서비스 모두 정리됨
+
+### 후속 작업
+- `npx supabase functions delete render-video` — 배포된 Edge Function 정리
+- src/ 내부 잔존 Railway 참조(`useShortsPipeline.ts`, `AdminApiKeys.tsx` 등)는 Shotstack 전환 PR에서 정리 예정
 
 ---
 

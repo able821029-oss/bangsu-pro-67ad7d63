@@ -17,9 +17,6 @@ verify_jwt = false
 [functions.seo-analyze]
 verify_jwt = false
 
-[functions.render-video]
-verify_jwt = false
-
 # 운영 알림 — 관리자 JWT 필수 (Slack webhook 호출)
 [functions.ops-alert]
 verify_jwt = true
