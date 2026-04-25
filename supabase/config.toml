@@ -8,6 +8,9 @@ verify_jwt = false
 [functions.generate-shorts]
 verify_jwt = false
 
+[functions.generate-shorts-status]
+verify_jwt = false
+
 [functions.tts-preview]
 verify_jwt = false
 

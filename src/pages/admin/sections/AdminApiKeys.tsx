@@ -14,7 +14,7 @@ const initialApis: ApiStatus[] = [
   { name: "Supabase", desc: "데이터베이스 + 인증", status: "unknown", message: "테스트 필요" },
   { name: "Claude API", desc: "AI 글작성 + 쇼츠 스크립트", status: "unknown", message: "테스트 필요" },
   { name: "ElevenLabs", desc: "TTS 나레이션 음성", status: "unknown", message: "테스트 필요" },
-  { name: "Railway (영상서버)", desc: "Remotion 영상 렌더링", status: "unknown", message: "테스트 필요" },
+  { name: "Shotstack (영상렌더)", desc: "JSON 스펙 → MP4 클라우드 렌더", status: "unknown", message: "테스트 필요" },
 ];
 
 export function AdminApiKeys() {
@@ -69,18 +69,26 @@ export function AdminApiKeys() {
       updateApi("ElevenLabs", { status: "error", message: e.message?.slice(0, 60) || "호출 실패" });
     }
 
-    // 4. Railway 영상 서버
+    // 4. Shotstack 영상 렌더 — generate-shorts-status 로 더미 ID 조회 → 키 유효성 확인
     try {
-      const videoServerUrl = import.meta.env.VITE_VIDEO_SERVER_URL || "https://bangsu-pro-67ad7d63-production-6e2e.up.railway.app";
-      const res = await fetch(`${videoServerUrl}/health`, { signal: AbortSignal.timeout(10000) });
-      const json = await res.json();
-      if (json.ok) {
-        updateApi("Railway (영상서버)", { status: "ok", message: `v${json.version} 정상 가동` });
+      const { data, error } = await supabase.functions.invoke("generate-shorts-status", {
+        body: { renderId: "healthcheck-not-a-real-id" },
+      });
+      // 정상이면 502 (Shotstack 404) 또는 400(형식 오류) 가 떨어진다.
+      // 둘 다 SHOTSTACK_API_KEY 가 살아있다는 뜻이므로 ok 처리.
+      const errStr = (error?.message || (data as { error?: string } | null)?.error || "").toLowerCase();
+      if (errStr.includes("shotstack_api_key")) {
+        updateApi("Shotstack (영상렌더)", { status: "error", message: "SHOTSTACK_API_KEY 미설정" });
+      } else if (errStr.includes("shotstack")) {
+        // Shotstack 측 응답을 받았다는 뜻 (404 등)
+        updateApi("Shotstack (영상렌더)", { status: "ok", message: "API 키 유효 (테스트 ID 응답 정상)" });
+      } else if (errStr.includes("renderid 형식")) {
+        updateApi("Shotstack (영상렌더)", { status: "ok", message: "Edge Function 정상 동작" });
       } else {
-        updateApi("Railway (영상서버)", { status: "error", message: "서버 응답 이상" });
+        updateApi("Shotstack (영상렌더)", { status: "error", message: errStr.slice(0, 60) || "응답 형식 오류" });
       }
-    } catch {
-      updateApi("Railway (영상서버)", { status: "error", message: "서버 응답 없음 (다운 또는 슬립)" });
+    } catch (e: any) {
+      updateApi("Shotstack (영상렌더)", { status: "error", message: e.message?.slice(0, 60) || "호출 실패" });
     }
 
     setTesting(false);

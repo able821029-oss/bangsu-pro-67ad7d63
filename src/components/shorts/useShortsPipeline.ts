@@ -1,27 +1,26 @@
-// useShortsPipeline — 쇼츠 생성 파이프라인 훅
-// 2026-04-24 추출 — ShortsCreator.tsx의 handleGenerate(365줄) + 재생/리셋 로직 이관.
-// 2026-04-25 Railway 제거 — Shotstack 렌더 + generate-shorts-status 폴링으로 단순화.
+// useShortsPipeline — 쇼츠 생성 파이프라인 훅 (Shotstack 전환판)
+// 2026-04-25 Railway 제거 — Shotstack 렌더 + generate-shorts-status 폴링.
 //
-// 불변 규칙 (기능 회귀 방지용 체크리스트):
-//  1. 사전 게이트 ①: narrationEnabled && validAudioCount === 0 → 차단 (throw)
-//  2. 부분 실패 허용: failedScenes.length > 0 && validAudioCount > 0 → 토스트만
-//  3. iOS 감지: isIOSDevice() → step = "ios_guide"
-//  4. 서버 렌더 실패 시 '완성' 오인 방지: serverRenderOk=false → throw (→ error step)
-//  5. shorts_videos 404 격리: isTableKnownMissing/markTableMissing 사용
-//  6. Web Speech 폴백 완전 제거 (서버 MP4 내장 오디오만 재생)
-//  7. (삭제됨 — Railway 제거)
-//  8. Shotstack 폴링: generate-shorts-status 3초 간격, 5분 타임아웃
-//  9. 서버 progress(0~100) → 클라 30~92 구간 매핑 (progressCeiling 단조 증가)
+// Edge Function 흐름:
+//   1) generate-shorts        → Claude/Gemini 스크립트 + ElevenLabs MP3 + Storage 업로드
+//                                + Shotstack POST → renderId 반환
+//   2) generate-shorts-status → renderId 폴링 → { status, url } 반환
+//
+// 불변 규칙 (기능 회귀 방지):
+//  1. 사진 < 2장 → 차단
+//  2. AI 모드인데 workTopic 비어있으면 차단
+//  3. 부분 실패 허용: failedScenes.length > 0 → 토스트만, 진행 계속
+//  4. iOS 감지: setStep("ios_guide")
+//  5. Shotstack status === "failed" 즉시 throw → error step
+//  6. 5분 폴링 타임아웃 → throw
+//  7. shorts_videos 404 격리 (markTableMissing 사용)
+//  8. ElevenLabs 전체 실패는 Edge Function 측에서 500 으로 차단되므로 클라 사전 게이트 불필요
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  previewBgm,
-  preloadLogo,
   isRecordingSupported,
   isIOSDevice,
-  type MirraScene,
-  type VoiceConfig,
   type BgmType,
 } from "@/lib/bgmSynth";
 import { compressPhotos } from "@/lib/imageCompress";
@@ -31,10 +30,9 @@ import {
   markTableMissing,
   isTableMissingError,
 } from "@/lib/tableFlags";
-import { mirraToRemotionScene, type SmsScene } from "@/remotion/types";
+import type { SmsScene } from "@/remotion/types";
 import type { PhotoItem, ShortsVideo } from "@/stores/appStore";
 import type { ShortsStep, VideoStyle } from "./types";
-import { VOICES } from "./constants";
 
 // ── 외부에서 주입하는 입력 묶음 ─────────────────────────────────
 export interface ShortsPipelineInputs {
@@ -52,21 +50,13 @@ export interface ShortsPipelineInputs {
     logoUrl: string;
   };
   user: { id: string } | null;
-  onUsed: () => void; // 사용량 증가 콜백 (useVideo)
-  onSaved: (video: ShortsVideo) => void; // 보관함 저장
+  onUsed: () => void;
+  onSaved: (video: ShortsVideo) => void;
   toast: (args: {
     title: string;
     description?: string;
     variant?: "default" | "destructive";
   }) => void;
-}
-
-// 나레이션/BGM 재생 대기 큐 (done step 진입 시 소비)
-interface PendingAudio {
-  narrationAudios: (string | null)[];
-  narrationTexts: string[];
-  voiceConfig: VoiceConfig | null;
-  bgmType: BgmType;
 }
 
 export interface ShortsPipelineReturn {
@@ -76,129 +66,100 @@ export interface ShortsPipelineReturn {
   progressPct: number;
   elapsedSec: number;
   videoUrl: string | null;
+  /**
+   * 호환성 유지용 — Shotstack 전환 후 미리보기는 항상 `<video>` 태그가 처리하므로 빈 배열.
+   * ShortsDoneStep 이 length > 0 분기에서 Remotion Player 를 띄우므로, 빈 배열 상태에서는
+   * 자동으로 video 태그 폴백이 동작한다.
+   */
   remotionScenes: SmsScene[];
   errorMsg: string;
   generate: () => Promise<void>;
   reset: () => void;
 }
 
+interface ShotstackStatusResponse {
+  renderId?: string;
+  status?:
+    | "queued"
+    | "fetching"
+    | "rendering"
+    | "saving"
+    | "done"
+    | "failed"
+    | "unknown";
+  url?: string | null;
+  poster?: string | null;
+  duration?: number | null;
+  renderTime?: number | null;
+  error?: string;
+}
+
+interface GenerateShortsResponse {
+  renderId?: string;
+  message?: string;
+  sceneCount?: number;
+  photoCount?: number;
+  durationSec?: number;
+  failedScenes?: number[];
+  scenes?: Array<{ title?: string }>;
+  error?: string;
+}
+
+const STAGE_LABEL: Record<string, string> = {
+  queued: "큐 대기",
+  fetching: "자산 가져오는 중",
+  rendering: "영상 합성 중",
+  saving: "파일 저장 중",
+  done: "완료",
+  failed: "실패",
+  unknown: "처리 중",
+};
+
+const STAGE_PCT: Record<string, number> = {
+  queued: 38,
+  fetching: 50,
+  rendering: 75,
+  saving: 88,
+  done: 92,
+  failed: 92,
+  unknown: 40,
+};
+
 export function useShortsPipeline(
   inputs: ShortsPipelineInputs,
 ): ShortsPipelineReturn {
-  // 최신 inputs를 ref로 고정 — useCallback deps를 비워도 항상 현재 값 참조
   const inputsRef = useRef(inputs);
   inputsRef.current = inputs;
 
   const [step, setStep] = useState<ShortsStep>("config");
-  const [remotionScenes, setRemotionScenes] = useState<SmsScene[]>([]);
   const [progressText, setProgressText] = useState("");
   const [progressPct, setProgressPct] = useState(0);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const pendingAudioRef = useRef<PendingAudio | null>(null);
-  const audioPlayedRef = useRef(false);
-  const bgmCtxRef = useRef<AudioContext | null>(null);
-  const narrationAudioRefs = useRef<HTMLAudioElement[]>([]);
-
-  // ── done step 진입 시 나레이션 + BGM 재생 ─────────────────────
-  // 서버 렌더 MP4에 이미 오디오가 박혀 있으므로 보통 이 effect는 무음.
-  // pendingAudioRef.current 가 채워져 있을 때만 재생(향후 클라이언트 폴백 재도입 대비).
-  useEffect(() => {
-    if (step !== "done") return;
-    const audio = pendingAudioRef.current;
-    if (!audio || audioPlayedRef.current) return;
-    audioPlayedRef.current = true;
-
-    const { narrationAudios, bgmType } = audio;
-    let cancelled = false;
-
-    if (bgmType !== "none") {
-      try {
-        const bgmCtx = previewBgm(bgmType);
-        bgmCtxRef.current = bgmCtx;
-        const totalSec =
-          remotionScenes.reduce((sum, s) => sum + s.durationInFrames, 0) / 30 + 5;
-        setTimeout(() => {
-          if (!cancelled && bgmCtxRef.current) {
-            bgmCtxRef.current.close().catch(() => {});
-            bgmCtxRef.current = null;
-          }
-        }, totalSec * 1000);
-      } catch (e) {
-        console.warn("[BGM] 재생 실패:", e);
-      }
-    }
-
-    (async () => {
-      await new Promise((r) => setTimeout(r, 500));
-      const hasElevenLabsAudio = narrationAudios.some(Boolean);
-      if (hasElevenLabsAudio) {
-        for (let i = 0; i < narrationAudios.length; i++) {
-          if (cancelled) break;
-          const b64 = narrationAudios[i];
-          if (!b64) continue;
-          await new Promise<void>((resolve) => {
-            try {
-              const binary = atob(b64);
-              const bytes = new Uint8Array(binary.length);
-              for (let j = 0; j < binary.length; j++)
-                bytes[j] = binary.charCodeAt(j);
-              const blob = new Blob([bytes], { type: "audio/mpeg" });
-              const url = URL.createObjectURL(blob);
-              const a = new Audio(url);
-              narrationAudioRefs.current.push(a);
-              const timeout = setTimeout(() => resolve(), 20000);
-              a.onended = () => {
-                clearTimeout(timeout);
-                URL.revokeObjectURL(url);
-                resolve();
-              };
-              a.onerror = () => {
-                clearTimeout(timeout);
-                URL.revokeObjectURL(url);
-                resolve();
-              };
-              a.play().catch(() => {
-                clearTimeout(timeout);
-                resolve();
-              });
-            } catch {
-              resolve();
-            }
-          });
-          if (!cancelled) await new Promise((r) => setTimeout(r, 300));
-        }
-      }
-      // ElevenLabs 오디오가 없으면 무음 재생 (Web Speech API 폴백 제거)
-    })();
-
-    return () => {
-      cancelled = true;
-      narrationAudioRefs.current.forEach((a) => {
-        a.pause();
-        a.src = "";
-      });
-      narrationAudioRefs.current = [];
-      if (bgmCtxRef.current) {
-        bgmCtxRef.current.close().catch(() => {});
-        bgmCtxRef.current = null;
-      }
-    };
-  }, [step, remotionScenes]);
-
-  // ── 메인 파이프라인 ──────────────────────────────────────────
   const generate = useCallback(async () => {
     const i = inputsRef.current;
-    const { photos, videoStyle, bgm, selectedVoice, scriptMode, manualScript, workTopic, settings, user, onUsed, onSaved, toast } = i;
+    const {
+      photos,
+      videoStyle,
+      bgm,
+      selectedVoice,
+      scriptMode,
+      manualScript,
+      workTopic,
+      settings,
+      user,
+      onUsed,
+      onSaved,
+      toast,
+    } = i;
 
     if (photos.length < 2) {
       toast({ title: "사진이 2장 이상 필요합니다", variant: "destructive" });
       return;
     }
 
-    // AI 모드일 때 workTopic 필수
     if (scriptMode === "ai" && !workTopic.trim()) {
       toast({
         title: "오늘의 작업을 한 줄 입력해 주세요",
@@ -222,40 +183,22 @@ export function useShortsPipeline(
       return;
     }
 
-    // 이전 재생 리소스 정리
-    if (bgmCtxRef.current) {
-      bgmCtxRef.current.close().catch(() => {});
-      bgmCtxRef.current = null;
-    }
-    narrationAudioRefs.current.forEach((a) => {
-      a.pause();
-      a.src = "";
-    });
-    narrationAudioRefs.current = [];
-    pendingAudioRef.current = null;
-    audioPlayedRef.current = false;
     setErrorMsg("");
-
-    if (videoUrl) {
+    if (videoUrl?.startsWith("blob:")) {
       URL.revokeObjectURL(videoUrl);
-      setVideoUrl(null);
     }
-
-    // 업체 로고 프리로드 (엔딩 카드)
-    preloadLogo(settings.logoUrl || "");
+    setVideoUrl(null);
 
     setStep("generating");
     setProgressText("📝 사진 분석 중...");
     setProgressPct(10);
     setElapsedSec(0);
 
-    // 경과 시간 카운터 — "10% 정체" 체감 제거
     const startedAt = Date.now();
     const elapsedTimer = setInterval(() => {
       setElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
     }, 1000);
 
-    // 진행률 자동 증가 — 단계별 상한 올려가며 끊김 없이
     let progressCeiling = 24;
     const progressTimer = setInterval(() => {
       setProgressPct((prev) => {
@@ -267,38 +210,50 @@ export function useShortsPipeline(
     }, 700);
 
     const narrationEnabled = selectedVoice !== null;
-    const voice = VOICES.find((v) => v.id === selectedVoice);
 
     try {
       const compressedPhotos = await compressPhotos(photos.slice(0, 6));
-      const { data: scriptData, error: scriptErr } = await invokeWithRetry(
-        supabase,
-        "generate-shorts",
-        {
-          photos: compressedPhotos.map((dataUrl, i) => ({
-            dataUrl,
-            index: i + 1,
-          })),
-          workType: "자동판단",
-          videoStyle,
-          narrationType: narrationEnabled ? "있음" : "없음",
-          voiceId: selectedVoice || "male_pro",
-          scriptMode,
-          manualScript: scriptMode === "manual" ? manualScript : undefined,
-          maxDurationSec: 120,
-          location: settings.serviceArea || "",
-          buildingType: "",
-          constructionDate: new Date().toISOString().slice(0, 10),
-          companyName: settings.companyName,
-          phoneNumber: settings.phoneNumber,
-          workTopic: workTopic.trim(),
-        },
-      );
+
+      // ── 1) generate-shorts → Shotstack render id ──
+      setProgressText("📝 스크립트·음성 생성 중...");
+      progressCeiling = 35;
+
+      const { data: scriptData, error: scriptErr } =
+        await invokeWithRetry<GenerateShortsResponse>(
+          supabase,
+          "generate-shorts",
+          {
+            photos: compressedPhotos.map((dataUrl, idx) => ({
+              dataUrl,
+              index: idx + 1,
+            })),
+            workType: "자동판단",
+            videoStyle,
+            narrationType: narrationEnabled ? "있음" : "없음",
+            voiceId: selectedVoice || "male_pro",
+            scriptMode,
+            manualScript: scriptMode === "manual" ? manualScript : undefined,
+            maxDurationSec: 120,
+            location: settings.serviceArea || "",
+            buildingType: "",
+            constructionDate: new Date().toISOString().slice(0, 10),
+            companyName: settings.companyName,
+            phoneNumber: settings.phoneNumber,
+            workTopic: workTopic.trim(),
+          },
+        );
 
       if (scriptErr) {
-        // 서버측 월 한도 초과(429)는 플랜 업그레이드 안내 메시지로 분기
-        const ctx = (scriptErr as { context?: { status?: number; json?: () => Promise<unknown>; clone?: () => { json: () => Promise<unknown> } } }).context;
-        const status = typeof ctx?.status === "number" ? ctx.status : undefined;
+        const ctx = (
+          scriptErr as {
+            context?: {
+              status?: number;
+              clone?: () => { json: () => Promise<unknown> };
+            };
+          }
+        ).context;
+        const status =
+          typeof ctx?.status === "number" ? ctx.status : undefined;
         let bodyMsg = "";
         if (ctx && typeof ctx.clone === "function") {
           try {
@@ -310,51 +265,30 @@ export function useShortsPipeline(
         }
         const combined = `${scriptErr.message} ${bodyMsg}`;
         if (status === 429 || combined.includes("한도")) {
-          throw new Error("이번 달 영상 개수를 모두 사용했습니다. 플랜을 업그레이드해 주세요.");
+          throw new Error(
+            "이번 달 영상 개수를 모두 사용했습니다. 플랜을 업그레이드해 주세요.",
+          );
         }
         throw new Error(bodyMsg || scriptErr.message);
       }
 
-      const scenes: MirraScene[] = scriptData?.scenes || [];
-      if (scenes.length === 0) throw new Error("스크립트 생성 실패");
-
-      const rScenes = scenes.map((s, idx) => mirraToRemotionScene(s, idx));
-      setRemotionScenes(rScenes);
-      console.warn(
-        "[SMS] 영상 장면:",
-        rScenes.map((s, idx) => `${idx}: ${s.title}`).join(" | "),
-      );
-
-      setProgressText("🎬 텍스트 애니메이션 합성 중...");
-      progressCeiling = 29;
-      setProgressPct((p) => Math.max(p, 25));
-
-      const voiceConfig: VoiceConfig | undefined =
-        narrationEnabled && voice
-          ? {
-              lang: voice.lang,
-              pitch: voice.pitch,
-              rate: voice.rate,
-              voiceNameHint: voice.voiceNameHint,
-            }
-          : undefined;
-
-      const narrationAudios: (string | null)[] =
-        scriptData?.narrationAudios || [];
-      const validAudioCount = narrationAudios.filter(Boolean).length;
+      const renderId = scriptData?.renderId;
       const failedScenes: number[] = Array.isArray(scriptData?.failedScenes)
         ? scriptData.failedScenes
         : [];
-      console.warn(
-        `[SMS] 나레이션: ${validAudioCount}/${narrationAudios.length}개 ElevenLabs 오디오, 실패 씬 [${failedScenes.join(",")}], BGM: ${bgm}`,
-      );
+      const sceneCount = scriptData?.sceneCount ?? 0;
 
-      // ── 사전 게이트 ①: 나레이션 ON인데 유효 오디오 0개면 차단 ──
-      if (narrationEnabled && validAudioCount === 0) {
+      if (!renderId) {
         throw new Error(
-          "나레이션 음성 생성이 전부 실패했습니다 (ElevenLabs 응답 없음). 잠시 후 다시 시도해 주세요.",
+          scriptData?.error ||
+            "Shotstack render id 를 받지 못했습니다. 다시 시도해 주세요.",
         );
       }
+
+      console.warn(
+        `[SMS] Shotstack renderId: ${renderId} (씬 ${sceneCount}개, 음성실패 ${failedScenes.length}개)`,
+      );
+
       if (narrationEnabled && failedScenes.length > 0) {
         toast({
           title: "일부 장면 음성 생성 실패",
@@ -362,154 +296,116 @@ export function useShortsPipeline(
         });
       }
 
-      // ── Shotstack 렌더 (generate-shorts-status 폴링) ──
-      setProgressText("🎬 영상 렌더링 중... (1~2분 소요)");
+      // ── 2) generate-shorts-status 폴링 (4초 간격, 5분 타임아웃) ──
+      setProgressText("🎬 Shotstack 에서 영상 렌더링 중...");
       progressCeiling = 92;
-      setProgressPct((p) => Math.max(p, 30));
+      setProgressPct((p) => Math.max(p, 35));
 
-      const renderId: string | undefined = scriptData?.renderId;
-      if (!renderId) {
-        throw new Error("렌더 ID를 받지 못했습니다. 다시 시도해 주세요.");
-      }
-      console.warn(`[SMS] Shotstack renderId: ${renderId}`);
+      const POLL_INTERVAL_MS = 4000;
+      const POLL_DEADLINE = Date.now() + 5 * 60 * 1000;
 
-      type StatusJson = {
-        status?: string; // queued | fetching | rendering | saving | done | failed | error
-        progress?: number;
-        stage?: string;
-        videoUrl?: string;
-        error?: string;
-      };
-
-      let renderData: { videoUrl?: string; error?: string } | null = null;
-      let renderErrMsg: string | null = null;
-
-      const applyStatus = (s: StatusJson): "done" | "error" | "continue" => {
-        if (typeof s.progress === "number") {
-          const serverMapped = 30 + Math.round((s.progress / 100) * 62);
-          progressCeiling = Math.min(
-            92,
-            Math.max(progressCeiling, serverMapped),
-          );
-          setProgressPct((p) => Math.max(p, serverMapped));
-        }
-        if (s.stage) setProgressText(`🎬 ${s.stage}...`);
-        if (s.status === "done" && s.videoUrl) {
-          renderData = { videoUrl: s.videoUrl };
-          return "done";
-        }
-        if (s.status === "failed" || s.status === "error") {
-          renderErrMsg = s.error || "서버 렌더 실패";
-          return "error";
-        }
-        return "continue";
-      };
-
-      // 3초 간격 폴링, 5분 타임아웃 (Shotstack은 보통 1분 내 완성)
-      const pollDeadline = Date.now() + 5 * 60 * 1000;
+      let renderUrl: string | null = null;
+      let renderErr: string | null = null;
       let consecutiveErrors = 0;
-      while (Date.now() < pollDeadline) {
-        await new Promise((r) => setTimeout(r, 3000));
-        const { data: statusJson, error: statusErr } =
-          await supabase.functions.invoke<StatusJson>(
+
+      while (Date.now() < POLL_DEADLINE) {
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+        const { data: statusData, error: statusErr } =
+          await supabase.functions.invoke<ShotstackStatusResponse>(
             "generate-shorts-status",
             { body: { renderId } },
           );
+
         if (statusErr) {
           consecutiveErrors++;
           console.warn(
             `[SMS] 상태 조회 일시 오류 (${consecutiveErrors}):`,
             statusErr.message,
           );
-          // 연속 5회 실패 시 중단
           if (consecutiveErrors >= 5) {
-            renderErrMsg = "상태 조회 실패가 반복됩니다. 다시 시도해 주세요.";
+            renderErr = "상태 조회 실패가 반복됩니다. 다시 시도해 주세요.";
             break;
           }
           continue;
         }
         consecutiveErrors = 0;
-        if (!statusJson) continue;
-        const r = applyStatus(statusJson);
-        if (r !== "continue") break;
-      }
 
-      if (!renderData && !renderErrMsg) {
-        renderErrMsg = "렌더 타임아웃 (5분 초과)";
-      }
+        const status = (statusData?.status || "unknown") as string;
+        const stage = STAGE_LABEL[status] || status;
+        setProgressText(`🎬 ${stage}... (Shotstack)`);
 
-      const serverRenderOk =
-        !renderErrMsg && !renderData?.error && !!renderData?.videoUrl;
+        const pseudoPct = STAGE_PCT[status] ?? progressCeiling;
+        progressCeiling = Math.max(progressCeiling, pseudoPct);
+        setProgressPct((p) => Math.max(p, pseudoPct));
 
-      // ── 서버 렌더 실패 시 즉시 error (완성 오인 방지) ──
-      if (!serverRenderOk) {
-        throw new Error(
-          renderErrMsg ||
-            renderData?.error ||
-            "서버 렌더링에 실패했습니다. 다시 시도해 주세요.",
-        );
-      }
-
-      if (serverRenderOk && renderData?.videoUrl) {
-        setVideoUrl(renderData.videoUrl);
-
-        // 보관함 저장
-        const savedVideo: ShortsVideo = {
-          id: crypto.randomUUID(),
-          title: workTopic.trim() || scenes[0]?.title || "무제 쇼츠",
-          videoUrl: renderData.videoUrl,
-          thumbnailDataUrl: compressedPhotos[0] || undefined,
-          videoStyle,
-          voiceId: selectedVoice || undefined,
-          bgmType: bgm,
-          scenesPreview: scenes
-            .slice(0, 6)
-            .map((s) => s.title || "")
-            .filter(Boolean),
-          photoCount: photos.length,
-          createdAt: new Date().toISOString(),
-        };
-        onSaved(savedVideo);
-
-        // shorts_videos 테이블 404 격리
-        if (user && !isTableKnownMissing("shorts_videos")) {
-          void supabase
-            .from("shorts_videos")
-            .insert({
-              id: savedVideo.id,
-              user_id: user.id,
-              title: savedVideo.title,
-              video_url: savedVideo.videoUrl,
-              thumbnail_data_url: savedVideo.thumbnailDataUrl || null,
-              video_style: savedVideo.videoStyle || null,
-              voice_id: savedVideo.voiceId || null,
-              bgm_type: savedVideo.bgmType || null,
-              scenes_preview: savedVideo.scenesPreview || null,
-              photo_count: savedVideo.photoCount,
-            })
-            .then(({ error }) => {
-              if (!error) return;
-              if (
-                isTableMissingError(
-                  error as { message?: string; code?: string },
-                )
-              ) {
-                markTableMissing("shorts_videos");
-                return;
-              }
-              console.warn("[shorts_videos] DB insert 실패:", error.message);
-            });
+        if (status === "done" && statusData?.url) {
+          renderUrl = statusData.url;
+          break;
+        }
+        if (status === "failed") {
+          renderErr = statusData?.error || "Shotstack 렌더링 실패";
+          break;
         }
       }
 
-      // 클라이언트 폴백 재생 제거된 상태 유지 (2026-04-20)
-      audioPlayedRef.current = false;
-      pendingAudioRef.current = {
-        narrationAudios: [],
-        narrationTexts: [],
-        voiceConfig: voiceConfig ?? null,
-        bgmType: "none",
+      if (renderErr) throw new Error(renderErr);
+      if (!renderUrl) {
+        throw new Error("Shotstack 렌더링 타임아웃 (5분 초과)");
+      }
+
+      setVideoUrl(renderUrl);
+
+      // ── 3) 보관함 저장 ──
+      const sceneTitles = Array.isArray(scriptData?.scenes)
+        ? scriptData.scenes
+            .slice(0, 6)
+            .map((s) => s?.title || "")
+            .filter(Boolean)
+        : [];
+
+      const savedVideo: ShortsVideo = {
+        id: crypto.randomUUID(),
+        title: workTopic.trim() || sceneTitles[0] || "무제 쇼츠",
+        videoUrl: renderUrl,
+        thumbnailDataUrl: compressedPhotos[0] || undefined,
+        videoStyle,
+        voiceId: selectedVoice || undefined,
+        bgmType: bgm,
+        scenesPreview: sceneTitles,
+        photoCount: photos.length,
+        createdAt: new Date().toISOString(),
       };
+      onSaved(savedVideo);
+
+      if (user && !isTableKnownMissing("shorts_videos")) {
+        void supabase
+          .from("shorts_videos")
+          .insert({
+            id: savedVideo.id,
+            user_id: user.id,
+            title: savedVideo.title,
+            video_url: savedVideo.videoUrl,
+            thumbnail_data_url: savedVideo.thumbnailDataUrl || null,
+            video_style: savedVideo.videoStyle || null,
+            voice_id: savedVideo.voiceId || null,
+            bgm_type: savedVideo.bgmType || null,
+            scenes_preview: savedVideo.scenesPreview || null,
+            photo_count: savedVideo.photoCount,
+          })
+          .then(({ error }) => {
+            if (!error) return;
+            if (
+              isTableMissingError(
+                error as { message?: string; code?: string },
+              )
+            ) {
+              markTableMissing("shorts_videos");
+              return;
+            }
+            console.warn("[shorts_videos] DB insert 실패:", error.message);
+          });
+      }
 
       setProgressPct(100);
       setStep("done");
@@ -532,20 +428,10 @@ export function useShortsPipeline(
     }
   }, [videoUrl]);
 
-  // ── 리셋 ──
   const reset = useCallback(() => {
-    if (videoUrl) URL.revokeObjectURL(videoUrl);
-    if (bgmCtxRef.current) {
-      bgmCtxRef.current.close().catch(() => {});
-      bgmCtxRef.current = null;
+    if (videoUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(videoUrl);
     }
-    narrationAudioRefs.current.forEach((a) => {
-      a.pause();
-      a.src = "";
-    });
-    narrationAudioRefs.current = [];
-    pendingAudioRef.current = null;
-    audioPlayedRef.current = false;
     setStep("config");
     setProgressPct(0);
     setElapsedSec(0);
@@ -560,7 +446,7 @@ export function useShortsPipeline(
     progressPct,
     elapsedSec,
     videoUrl,
-    remotionScenes,
+    remotionScenes: [],
     errorMsg,
     generate,
     reset,
