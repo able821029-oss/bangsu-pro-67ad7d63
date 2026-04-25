@@ -21,6 +21,9 @@ const SHOTSTACK_HOST_DEFAULT = "https://api.shotstack.io/edit/stage";
 // ── 영상 구성 상수 ───────────────────────────────────────────────
 const PHOTO_SECONDS = 5;       // 사진 한 장당 노출 시간
 const ENDING_SECONDS = 1;      // 마지막 엔딩 카드
+// 영상 한 편의 절대 상한 — Shotstack 분당 과금 + 무료 stage 월 한도 보호.
+// 클라이언트가 더 큰 값을 요청해도 이 값으로 강제 캡핑된다.
+const MAX_DURATION_HARD_CAP_SEC = 120;
 const OUTPUT_WIDTH = 1080;
 const OUTPUT_HEIGHT = 1920;
 
@@ -430,6 +433,7 @@ serve(
           manualScript,
           businessCategory,
           workTopic,
+          maxDurationSec: requestedMaxDuration,
         } = body;
 
         const resolvedVoiceId =
@@ -437,7 +441,26 @@ serve(
           requestedVoiceId ||
           VOICE_MAP.male_pro;
 
-        const photoSlice = (photos || []).slice(0, 6);
+        // ── 영상 길이 cap ──
+        // 클라이언트가 maxDurationSec 를 보내면 그 값을 사용하되,
+        // MAX_DURATION_HARD_CAP_SEC(120s) 을 넘을 수 없다.
+        const requestedCap =
+          typeof requestedMaxDuration === "number" && requestedMaxDuration > 0
+            ? requestedMaxDuration
+            : MAX_DURATION_HARD_CAP_SEC;
+        const effectiveMaxDuration = Math.min(
+          requestedCap,
+          MAX_DURATION_HARD_CAP_SEC,
+        );
+        // 사진 수 = floor((cap - 엔딩) / 사진당 시간). 최소 1장은 확보.
+        const maxPhotosByDuration = Math.max(
+          1,
+          Math.floor(
+            (effectiveMaxDuration - ENDING_SECONDS) / PHOTO_SECONDS,
+          ),
+        );
+
+        const photoSlice = (photos || []).slice(0, maxPhotosByDuration);
         if (photoSlice.length === 0) {
           return new Response(
             JSON.stringify({ error: "사진이 1장 이상 필요합니다." }),
@@ -750,6 +773,10 @@ serve(
           );
         }
 
+        const finalDurationSec = photoCount * PHOTO_SECONDS + ENDING_SECONDS;
+        const requestedPhotoCount = Array.isArray(photos) ? photos.length : 0;
+        const trimmedByCap = requestedPhotoCount > photoCount;
+
         void logUsage({
           user_id: ctx.userId,
           fn_name: "generate-shorts",
@@ -758,12 +785,15 @@ serve(
           extra: {
             sceneCount: scenes.length,
             photoCount,
+            requestedPhotoCount,
+            trimmedByCap,
             failedSceneCount: failedScenes.length,
             scriptMode: scriptMode || "ai",
             videoStyle,
             narrationType,
             renderId: shotstack.renderId,
-            durationSec: photoCount * PHOTO_SECONDS + ENDING_SECONDS,
+            durationSec: finalDurationSec,
+            effectiveMaxDuration,
           },
         });
 
@@ -773,7 +803,9 @@ serve(
             message: "shotstack에 위임됨",
             sceneCount: scenes.length,
             photoCount,
-            durationSec: photoCount * PHOTO_SECONDS + ENDING_SECONDS,
+            durationSec: finalDurationSec,
+            maxDurationSec: effectiveMaxDuration,
+            trimmedByCap,
             failedScenes,
             scenes,
           }),

@@ -100,6 +100,8 @@ interface GenerateShortsResponse {
   sceneCount?: number;
   photoCount?: number;
   durationSec?: number;
+  maxDurationSec?: number;
+  trimmedByCap?: boolean;
   failedScenes?: number[];
   scenes?: Array<{ title?: string }>;
   error?: string;
@@ -286,13 +288,21 @@ export function useShortsPipeline(
       }
 
       console.warn(
-        `[SMS] Shotstack renderId: ${renderId} (씬 ${sceneCount}개, 음성실패 ${failedScenes.length}개)`,
+        `[SMS] Shotstack renderId: ${renderId} (씬 ${sceneCount}개, 음성실패 ${failedScenes.length}개, 길이 ${scriptData?.durationSec ?? "?"}초)`,
       );
 
       if (narrationEnabled && failedScenes.length > 0) {
         toast({
           title: "일부 장면 음성 생성 실패",
           description: `${failedScenes.length}개 장면은 음성 없이 진행합니다.`,
+        });
+      }
+
+      // 영상 길이가 2분 cap 에 의해 사진이 잘렸을 때 사용자에게 안내
+      if (scriptData?.trimmedByCap && scriptData?.photoCount) {
+        toast({
+          title: "사진 일부만 사용됩니다",
+          description: `영상 ${Math.floor((scriptData.maxDurationSec || 120) / 60)}분 한도 때문에 ${scriptData.photoCount}장만 사용했어요.`,
         });
       }
 
