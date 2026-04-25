@@ -22,13 +22,13 @@ const plans = [
     features: { seo: true, photoAuto: false, persona3: true, admin: false },
   },
   {
-    name: "프로", price: "₩19,900", amount: 19900,
+    name: "프로", price: "₩29,900", amount: 29900,
     monthly: "150건", video: "월 20개", platforms: "전체", persona: "전체", photos: "10장",
     highlight: true,
     features: { seo: true, photoAuto: true, persona3: true, admin: false },
   },
   {
-    name: "무제한", price: "₩39,900", amount: 39900,
+    name: "무제한", price: "₩59,900", amount: 59900,
     monthly: "무제한", video: "월 50개", platforms: "전체", persona: "전체", photos: "10장",
     highlight: false,
     features: { seo: true, photoAuto: true, persona3: true, admin: true },
@@ -116,6 +116,9 @@ export function PricingPlan({ onBack }: { onBack: () => void }) {
               </span>
             </div>
             <Progress value={videoUsedPct} className="h-1.5" />
+            <p className="text-[10px] text-muted-foreground/70 pt-0.5">
+              AI 영상 생성 (Shotstack 기반 안정 렌더링)
+            </p>
           </div>
         </div>
 
