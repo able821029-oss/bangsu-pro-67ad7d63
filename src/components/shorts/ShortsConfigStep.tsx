@@ -458,7 +458,7 @@ export function ShortsConfigStep({
                 style={canGenerate ? { background: "linear-gradient(135deg, #237FFF 0%, #AB5EBE 100%)", color: "white" } : {}}
                 variant={canGenerate ? "default" : "secondary"}
               >
-                <Film className="w-6 h-6" /> 영상 생성 시작
+                <Film className="w-6 h-6" /> 자막 만들기 (영상은 다음 단계)
               </Button>
               {message && (
                 <p className="text-xs text-muted-foreground text-center">{message}</p>

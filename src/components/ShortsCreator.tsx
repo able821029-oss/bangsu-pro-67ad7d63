@@ -20,6 +20,7 @@ import { ShortsGeneratingStep } from "./shorts/ShortsGeneratingStep";
 import { ShortsDoneStep } from "./shorts/ShortsDoneStep";
 import { ShortsErrorStep } from "./shorts/ShortsErrorStep";
 import { ShortsIosGuideStep } from "./shorts/ShortsIosGuideStep";
+import { ShortsScriptReviewStep } from "./shorts/ShortsScriptReviewStep";
 
 interface ShortsCreatorProps {
   onClose: () => void;
@@ -56,13 +57,27 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: Shorts
     onSaved: addShortsVideo,
     toast,
   });
-  const { step, setStep, progressText, progressPct, elapsedSec, videoUrl, remotionScenes, errorMsg, generate, reset } = pipeline;
+  const {
+    step,
+    setStep,
+    progressText,
+    progressPct,
+    elapsedSec,
+    videoUrl,
+    remotionScenes,
+    errorMsg,
+    scenes,
+    setScenes,
+    generateScript,
+    generateVideo,
+    reset,
+  } = pipeline;
 
-  // Auto-start generation when opened with autoStart prop
+  // Auto-start: 자막 생성 단계부터 자동 시작 (검수 후 사용자 클릭으로 영상 진입)
   useEffect(() => {
     if (autoStart && !hasAutoStarted.current && photos.length >= 2) {
       hasAutoStarted.current = true;
-      void generate();
+      void generateScript();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart]);
@@ -72,11 +87,11 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: Shorts
     if (onNavigate) onNavigate("mypage");
   }, [onNavigate]);
 
-  // iOS Guide → '영상 재생 시작' 클릭 시: config로 돌아간 뒤 즉시 generate
+  // iOS Guide → '영상 재생 시작' 클릭 시: config로 돌아간 뒤 자막 단계부터 다시
   const handleIosStartPlayback = useCallback(() => {
     setStep("config");
-    void generate();
-  }, [setStep, generate]);
+    void generateScript();
+  }, [setStep, generateScript]);
 
   if (step === "config") {
     return (
@@ -99,8 +114,33 @@ export function ShortsCreator({ onClose, onNavigate, autoStart = false }: Shorts
         subscription={subscription}
         onUpgradeNavigate={handleUpgradeNavigate}
         onClose={onClose}
-        onGenerate={() => { void generate(); }}
+        onGenerate={() => { void generateScript(); }}
         toast={toast}
+      />
+    );
+  }
+
+  // 자막 생성 중 (5~10초) — generating 과 동일한 진행 화면
+  if (step === "script_loading") {
+    return (
+      <ShortsGeneratingStep
+        progressText={progressText || "📝 자막 생성 중..."}
+        progressPct={progressPct}
+        elapsedSec={elapsedSec}
+      />
+    );
+  }
+
+  // 자막 검수·수정 화면 — 사용자가 영상 만들기 전에 텍스트 점검
+  if (step === "script_review") {
+    return (
+      <ShortsScriptReviewStep
+        scenes={scenes}
+        photos={photos}
+        onChange={setScenes}
+        onBack={reset}
+        onRegenerate={() => { void generateScript(); }}
+        onConfirm={() => { void generateVideo(); }}
       />
     );
   }

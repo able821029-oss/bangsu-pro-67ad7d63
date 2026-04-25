@@ -1,10 +1,11 @@
-// useShortsPipeline — 쇼츠 생성 파이프라인 훅 (Shotstack 전환판)
-// 2026-04-25 Railway 제거 — Shotstack 렌더 + generate-shorts-status 폴링.
+// useShortsPipeline — 쇼츠 생성 파이프라인 훅 (자막 검수 분할판)
+// 2026-04-25 자막 검수 단계 분리 — generate-shorts-script + 사용자 편집 + generate-shorts.
 //
 // Edge Function 흐름:
-//   1) generate-shorts        → Claude/Gemini 스크립트 + ElevenLabs MP3 + Storage 업로드
-//                                + Shotstack POST → renderId 반환
-//   2) generate-shorts-status → renderId 폴링 → { status, url } 반환
+//   1) generate-shorts-script → Claude/Gemini 스크립트만 (5~10초)
+//   2) 사용자가 ShortsScriptReviewStep 에서 자막 편집·승인
+//   3) generate-shorts (편집된 scenes 와 함께) → ElevenLabs MP3 + Storage + Shotstack
+//   4) generate-shorts-status → renderId 폴링 → { status, url }
 //
 // 불변 규칙 (기능 회귀 방지):
 //  1. 사진 < 2장 → 차단
@@ -15,6 +16,7 @@
 //  6. 5분 폴링 타임아웃 → throw
 //  7. shorts_videos 404 격리 (markTableMissing 사용)
 //  8. ElevenLabs 전체 실패는 Edge Function 측에서 500 으로 차단되므로 클라 사전 게이트 불필요
+//  9. 자막 생성과 영상 렌더는 별도 메서드 (generateScript / generateVideo) 로 분할
 
 import { useCallback, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +34,7 @@ import {
 } from "@/lib/tableFlags";
 import type { SmsScene } from "@/remotion/types";
 import type { PhotoItem, ShortsVideo } from "@/stores/appStore";
-import type { ShortsStep, VideoStyle } from "./types";
+import type { ShortsStep, VideoStyle, SceneScript } from "./types";
 
 // ── 외부에서 주입하는 입력 묶음 ─────────────────────────────────
 export interface ShortsPipelineInputs {
@@ -73,7 +75,17 @@ export interface ShortsPipelineReturn {
    */
   remotionScenes: SmsScene[];
   errorMsg: string;
-  generate: () => Promise<void>;
+  /**
+   * 자막 검수 화면이 사용/편집할 scenes.
+   * generateScript() 가 채우고, 사용자가 ShortsScriptReviewStep 에서 편집한 뒤
+   * generateVideo() 호출 시 그대로 전달된다.
+   */
+  scenes: SceneScript[];
+  setScenes: React.Dispatch<React.SetStateAction<SceneScript[]>>;
+  /** 1단계: Claude/Gemini 가 자막만 생성 → step="script_review" */
+  generateScript: () => Promise<void>;
+  /** 2단계: 편집된 scenes 로 영상 렌더 → step="generating"→"done" */
+  generateVideo: () => Promise<void>;
   reset: () => void;
 }
 
@@ -132,6 +144,14 @@ const STAGE_PCT: Record<string, number> = {
   unknown: 40,
 };
 
+interface GenerateShortsScriptResponse {
+  scenes?: SceneScript[];
+  source?: "manual" | "gemini" | "claude" | "mock";
+  sceneCount?: number;
+  photoCount?: number;
+  error?: string;
+}
+
 export function useShortsPipeline(
   inputs: ShortsPipelineInputs,
 ): ShortsPipelineReturn {
@@ -144,21 +164,22 @@ export function useShortsPipeline(
   const [elapsedSec, setElapsedSec] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [scenes, setScenes] = useState<SceneScript[]>([]);
 
-  const generate = useCallback(async () => {
+  // 1단계에서 만든 압축 사진을 2단계가 재사용 (재압축 비용 절감)
+  const compressedPhotosRef = useRef<string[]>([]);
+
+  // ── 1단계: 자막만 생성 ─────────────────────────────────────────
+  const generateScript = useCallback(async () => {
     const i = inputsRef.current;
     const {
       photos,
       videoStyle,
-      bgm,
       selectedVoice,
       scriptMode,
       manualScript,
       workTopic,
       settings,
-      user,
-      onUsed,
-      onSaved,
       toast,
     } = i;
 
@@ -191,14 +212,9 @@ export function useShortsPipeline(
     }
 
     setErrorMsg("");
-    if (videoUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(videoUrl);
-    }
-    setVideoUrl(null);
-
-    setStep("generating");
-    setProgressText("📝 사진 분석 중...");
-    setProgressPct(10);
+    setStep("script_loading");
+    setProgressText("📝 사진을 분석해 자막을 만드는 중...");
+    setProgressPct(20);
     setElapsedSec(0);
 
     const startedAt = Date.now();
@@ -206,7 +222,104 @@ export function useShortsPipeline(
       setElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
     }, 1000);
 
-    let progressCeiling = 24;
+    const narrationEnabled = selectedVoice !== null;
+
+    try {
+      const compressedPhotos = await compressPhotos(photos.slice(0, 6));
+      compressedPhotosRef.current = compressedPhotos;
+
+      const { data: scriptData, error: scriptErr } =
+        await invokeWithRetry<GenerateShortsScriptResponse>(
+          supabase,
+          "generate-shorts-script",
+          {
+            photos: compressedPhotos.map((dataUrl, idx) => ({
+              dataUrl,
+              index: idx + 1,
+            })),
+            videoStyle,
+            narrationType: narrationEnabled ? "있음" : "없음",
+            scriptMode,
+            manualScript: scriptMode === "manual" ? manualScript : undefined,
+            location: settings.serviceArea || "",
+            companyName: settings.companyName,
+            phoneNumber: settings.phoneNumber,
+            workTopic: workTopic.trim(),
+          },
+        );
+
+      if (scriptErr) {
+        throw new Error(scriptErr.message || "자막 생성 실패");
+      }
+      const generated = Array.isArray(scriptData?.scenes)
+        ? scriptData.scenes
+        : [];
+      if (generated.length === 0) {
+        throw new Error(scriptData?.error || "자막 생성 결과가 비었습니다.");
+      }
+
+      console.warn(
+        `[SMS] 자막 생성 완료 — ${generated.length}개 씬, source=${scriptData?.source ?? "?"}`,
+      );
+
+      setScenes(generated);
+      setProgressPct(100);
+      setStep("script_review");
+    } catch (err: unknown) {
+      console.error("Script generation error:", err);
+      setStep("error");
+      setErrorMsg(
+        err instanceof Error ? err.message.slice(0, 200) : "다시 시도해 주세요",
+      );
+    } finally {
+      clearInterval(elapsedTimer);
+    }
+  }, []);
+
+  // ── 2단계: 편집된 자막으로 영상 렌더 ─────────────────────────
+  const generateVideo = useCallback(async () => {
+    const i = inputsRef.current;
+    const {
+      photos,
+      videoStyle,
+      bgm,
+      selectedVoice,
+      scriptMode,
+      manualScript,
+      workTopic,
+      settings,
+      user,
+      onUsed,
+      onSaved,
+      toast,
+    } = i;
+
+    if (scenes.length === 0) {
+      toast({
+        title: "자막이 없습니다",
+        description: "자막을 먼저 생성해 주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setErrorMsg("");
+    if (videoUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(videoUrl);
+    }
+    setVideoUrl(null);
+
+    setStep("generating");
+    setProgressText("🎙️ 음성 생성 중...");
+    setProgressPct(15);
+    setElapsedSec(0);
+
+    const startedAt = Date.now();
+    const elapsedTimer = setInterval(() => {
+      setElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+
+    let progressCeiling = 32;
     const progressTimer = setInterval(() => {
       setProgressPct((prev) => {
         if (prev >= progressCeiling) return prev;
@@ -219,11 +332,12 @@ export function useShortsPipeline(
     const narrationEnabled = selectedVoice !== null;
 
     try {
-      const compressedPhotos = await compressPhotos(photos.slice(0, 6));
-
-      // ── 1) generate-shorts → Shotstack render id ──
-      setProgressText("📝 스크립트·음성 생성 중...");
-      progressCeiling = 35;
+      // 1단계에서 압축한 사진이 없으면 (예: 새로고침 후 generateVideo 직접 호출) 다시 압축
+      const compressedPhotos =
+        compressedPhotosRef.current.length > 0
+          ? compressedPhotosRef.current
+          : await compressPhotos(photos.slice(0, 6));
+      compressedPhotosRef.current = compressedPhotos;
 
       const { data: scriptData, error: scriptErr } =
         await invokeWithRetry<GenerateShortsResponse>(
@@ -248,6 +362,8 @@ export function useShortsPipeline(
             phoneNumber: settings.phoneNumber,
             logoUrl: settings.logoUrl || "",
             workTopic: workTopic.trim(),
+            // 사용자가 검수·편집한 자막을 그대로 보낸다 — Edge Function 은 LLM 호출 스킵
+            scenes,
           },
         );
 
@@ -458,7 +574,7 @@ export function useShortsPipeline(
       clearInterval(progressTimer);
       clearInterval(elapsedTimer);
     }
-  }, [videoUrl]);
+  }, [videoUrl, scenes]);
 
   const reset = useCallback(() => {
     if (videoUrl?.startsWith("blob:")) {
@@ -469,6 +585,8 @@ export function useShortsPipeline(
     setElapsedSec(0);
     setVideoUrl(null);
     setErrorMsg("");
+    setScenes([]);
+    compressedPhotosRef.current = [];
   }, [videoUrl]);
 
   return {
@@ -480,7 +598,10 @@ export function useShortsPipeline(
     videoUrl,
     remotionScenes: [],
     errorMsg,
-    generate,
+    scenes,
+    setScenes,
+    generateScript,
+    generateVideo,
     reset,
   };
 }

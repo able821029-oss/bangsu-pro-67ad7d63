@@ -459,6 +459,9 @@ serve(
           businessCategory,
           workTopic,
           maxDurationSec: requestedMaxDuration,
+          // 자막 검수 워크플로우 — 클라이언트가 generate-shorts-script 에서 받아
+          // 사용자가 편집한 scenes 를 그대로 재사용 (LLM 호출 스킵).
+          scenes: providedScenes,
         } = body;
 
         const resolvedVoiceId =
@@ -517,8 +520,37 @@ serve(
 
         let scenes: SceneSpec[] | null = null;
 
+        // 0순위: 클라이언트가 자막 검수 화면에서 편집한 scenes 를 그대로 받은 경우.
+        // generate-shorts-script 결과를 사용자가 인라인 편집한 뒤 보내므로,
+        // LLM 호출을 스킵하고 그대로 영상 렌더링에 사용한다.
+        if (Array.isArray(providedScenes) && providedScenes.length > 0) {
+          const cleaned: SceneSpec[] = [];
+          for (let i = 0; i < providedScenes.length; i++) {
+            const s = providedScenes[i];
+            if (!s || typeof s !== "object") continue;
+            const obj = s as Record<string, unknown>;
+            cleaned.push({
+              title: typeof obj.title === "string" ? obj.title : "",
+              subtitle:
+                typeof obj.subtitle === "string" ? obj.subtitle : undefined,
+              narration:
+                typeof obj.narration === "string" ? obj.narration : "",
+              photo_index:
+                typeof obj.photo_index === "number" && obj.photo_index > 0
+                  ? Math.floor(obj.photo_index)
+                  : i + 1,
+            });
+          }
+          if (cleaned.length > 0) {
+            scenes = cleaned;
+            console.log(
+              `[generate-shorts] 클라이언트 제공 scenes 사용 (${cleaned.length}개) — LLM 스킵`,
+            );
+          }
+        }
+
         // 직접 작성 대본 우선
-        if (scriptMode === "manual" && manualScript) {
+        if (!scenes && scriptMode === "manual" && manualScript) {
           const lines = String(manualScript)
             .split("\n")
             .map((l: string) => l.trim())
