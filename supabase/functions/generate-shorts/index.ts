@@ -218,17 +218,17 @@ interface BuildTimelineParams {
   phoneNumber: string;
 }
 
-// Shotstack 의 기본 title asset 은 라틴 폰트만 내장이라 한국어가 .notdef
-// 글리프(빈 사각형) 로 렌더된다. timeline.fonts 에 한국어 woff2 를 등록하고
-// HTML asset 에서 그 family 를 참조하면 한국어 자막이 정상 출력된다.
+// Shotstack 기본 title asset 은 라틴 폰트만 내장이라 한국어가 .notdef
+// (빈 사각형) 로 렌더된다. HTML asset 으로 바꾸고 css 에서 시스템 한국어 폰트
+// fallback 체인을 사용하면, Shotstack 렌더 노드(Linux 컨테이너)에 기본 설치된
+// "Noto Sans CJK KR" / "Liberation Sans" 등이 자동으로 사용된다.
 //
-// 폰트 선정: Pretendard — Apple SD Gothic Neo / Noto Sans KR 호환의 한국어 친화 폰트.
-// jsDelivr 의 GitHub raw CDN 은 안정적이며 Shotstack 렌더 노드가 fetch 가능.
-const KO_FONT_URL_BOLD =
-  "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2";
-const KO_FONT_URL_REGULAR =
-  "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2";
-const KO_FONT_FAMILY = "Pretendard";
+// timeline.fonts 로 외부 woff2/ttf 를 등록하는 방법도 있으나, 잘못된 URL/포맷은
+// timeline 전체가 reject 되어 검정 영상이 나온다 (2026-04-25 사고). 외부 폰트
+// 의존성을 끊고 시스템 폰트 fallback 만으로 한국어 출력 시도.
+const KO_FONT_STACK =
+  `'Noto Sans CJK KR', 'Noto Sans KR', 'Apple SD Gothic Neo', ` +
+  `'Malgun Gothic', 'NanumGothic', sans-serif`;
 
 function escapeHtml(s: string): string {
   return s
@@ -263,7 +263,7 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
           type: "html",
           html: `<div class="cap">${safe}</div>`,
           css:
-            `.cap { font-family: '${KO_FONT_FAMILY}', sans-serif; font-weight: 700; ` +
+            `.cap { font-family: ${KO_FONT_STACK}; font-weight: 700; ` +
             `color: #ffffff; font-size: 56px; line-height: 1.35; text-align: center; ` +
             `padding: 18px 28px; background: rgba(0,0,0,0.62); border-radius: 14px; ` +
             `display: inline-block; }`,
@@ -293,7 +293,7 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
       type: "html",
       html: endingHtml,
       css:
-        `.ending { font-family: '${KO_FONT_FAMILY}', sans-serif; color: #ffffff; ` +
+        `.ending { font-family: ${KO_FONT_STACK}; color: #ffffff; ` +
         `text-align: center; padding: 80px 40px; background: linear-gradient(135deg, #001130, #1a3a6a); ` +
         `border-radius: 24px; width: 100%; box-sizing: border-box; } ` +
         `.company { font-size: 96px; font-weight: 800; margin-bottom: 24px; line-height: 1.2; } ` +
@@ -332,11 +332,9 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
   return {
     timeline: {
       background: "#000000",
-      // Shotstack 가 렌더 시 woff2 를 fetch → CSS 의 font-family 로 매칭
-      fonts: [
-        { src: KO_FONT_URL_BOLD },
-        { src: KO_FONT_URL_REGULAR },
-      ],
+      // timeline.fonts 는 잘못된 URL/포맷 하나만 있어도 timeline 전체가 reject 되어
+      // 검정 영상으로 나오는 부작용이 확인됨 (2026-04-25). 외부 폰트 등록은 prod 전환 후
+      // ttf URL 검증한 뒤 재도입한다. 현재는 시스템 폰트 fallback 만 사용.
       ...(p.bgmUrl
         ? {
             soundtrack: {
