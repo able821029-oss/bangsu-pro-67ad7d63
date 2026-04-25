@@ -6,17 +6,12 @@ import {
   uploadDataUrl,
   uploadPublicAsset,
 } from "../_shared/storageUpload.ts";
+import { getShotstackConfig } from "../_shared/shotstack.ts";
 
 const corsHeaders = CORS_HEADERS;
 
-// ── Shotstack 엔드포인트 ─────────────────────────────────────────
-// Shotstack 정식 호스트:
-//   - Production (결제 후): https://api.shotstack.io/edit/v1
-//   - Stage / Sandbox (무료): https://api.shotstack.io/edit/stage
-// 무료 가입 직후엔 stage 키만 발급되므로 default 를 stage 로 둔다.
-// 결제 후 prod 키로 전환하면 Supabase Secrets 에
-// `SHOTSTACK_HOST=https://api.shotstack.io/edit/v1` 추가하면 끝.
-const SHOTSTACK_HOST_DEFAULT = "https://api.shotstack.io/edit/stage";
+// Shotstack 호스트/키/모드는 _shared/shotstack.ts 단일 출처에서 가져옴.
+// 운영 전환: Supabase Secrets 에 SHOTSTACK_HOST=https://api.shotstack.io/edit/v1 + prod 키로 교체.
 
 // ── 영상 구성 상수 ───────────────────────────────────────────────
 const PHOTO_SECONDS = 5;       // 사진 한 장당 노출 시간
@@ -437,8 +432,8 @@ serve(
           );
         }
 
-        const SHOTSTACK_API_KEY = Deno.env.get("SHOTSTACK_API_KEY");
-        if (!SHOTSTACK_API_KEY) {
+        const shotstack = getShotstackConfig();
+        if (!shotstack) {
           return new Response(
             JSON.stringify({
               error:
@@ -450,8 +445,8 @@ serve(
             },
           );
         }
-        const SHOTSTACK_HOST =
-          Deno.env.get("SHOTSTACK_HOST") || SHOTSTACK_HOST_DEFAULT;
+        const SHOTSTACK_API_KEY = shotstack.apiKey;
+        const SHOTSTACK_HOST = shotstack.host;
 
         const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
         const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");

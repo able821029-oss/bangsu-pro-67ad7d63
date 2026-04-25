@@ -1,12 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { withGuard, CORS_HEADERS, logUsage } from "../_shared/guard.ts";
+import { getShotstackConfig } from "../_shared/shotstack.ts";
 
 const corsHeaders = CORS_HEADERS;
-
-// Shotstack 정식 호스트 (generate-shorts 와 일치 유지):
-//   - Production: https://api.shotstack.io/edit/v1
-//   - Stage / Sandbox (무료): https://api.shotstack.io/edit/stage
-const SHOTSTACK_HOST_DEFAULT = "https://api.shotstack.io/edit/stage";
 
 // 폴링 전용 — 클라이언트가 3~5초 간격으로 호출하므로 60초당 30회까지 허용
 serve(
@@ -14,8 +10,8 @@ serve(
     { fn: "generate-shorts-status", limit: 30, windowSec: 60 },
     async (req, ctx) => {
       try {
-        const SHOTSTACK_API_KEY = Deno.env.get("SHOTSTACK_API_KEY");
-        if (!SHOTSTACK_API_KEY) {
+        const shotstack = getShotstackConfig();
+        if (!shotstack) {
           return new Response(
             JSON.stringify({
               error: "SHOTSTACK_API_KEY 가 설정되지 않았습니다.",
@@ -26,8 +22,8 @@ serve(
             },
           );
         }
-        const SHOTSTACK_HOST =
-          Deno.env.get("SHOTSTACK_HOST") || SHOTSTACK_HOST_DEFAULT;
+        const SHOTSTACK_API_KEY = shotstack.apiKey;
+        const SHOTSTACK_HOST = shotstack.host;
 
         // renderId 는 body 또는 query string 둘 다 받는다.
         let renderId: string | null = null;

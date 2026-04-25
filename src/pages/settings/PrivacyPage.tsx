@@ -1,10 +1,14 @@
 // 개인정보처리방침 — 한국 개인정보보호법 표준 양식 기반.
-// 2026-04-25 출시 준비.
-// 회사 정보 / 처리 위탁 항목은 실제 법인 등록 후 갱신 필요.
+// 회사 정보·CS 이메일·시행일은 src/config/companyInfo.ts 단일 출처에서 가져옴.
+// 분석 도구 항목은 .env에 해당 키가 등록된 경우에만 노출(과대 고지 방지).
 
 import { ArrowLeft } from "lucide-react";
+import { COMPANY_INFO } from "@/config/companyInfo";
 
 export function PrivacyPage({ onBack }: { onBack: () => void }) {
+  const c = COMPANY_INFO;
+  const analyticsItems = buildAnalyticsItems(c.analytics);
+
   return (
     <div className="pb-24 max-w-lg mx-auto">
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center gap-3">
@@ -20,10 +24,10 @@ export function PrivacyPage({ onBack }: { onBack: () => void }) {
 
       <div className="px-4 pt-4 space-y-6 text-sm leading-relaxed text-muted-foreground">
         <p className="text-foreground">
-          SMS(셀프마케팅서비스, 이하 "회사")는 「개인정보 보호법」 등 관련 법령을
+          {c.legalName}(이하 "회사")는 「개인정보 보호법」 등 관련 법령을
           준수하며, 이용자의 개인정보를 안전하게 보호하기 위해 최선을 다합니다.
-          본 개인정보처리방침은 회사가 운영하는 SMS 모바일 앱 서비스(이하
-          "서비스")에 적용됩니다.
+          본 개인정보처리방침은 회사가 운영하는 {c.serviceName} 모바일 앱
+          서비스(이하 "서비스")에 적용됩니다.
         </p>
 
         <Section title="1. 수집하는 개인정보 항목 및 수집 방법">
@@ -135,23 +139,25 @@ export function PrivacyPage({ onBack }: { onBack: () => void }) {
           />
         </Section>
 
-        <Section title="8. 쿠키·자동수집 도구의 운영">
-          <p>회사는 서비스 품질 분석을 위해 다음 도구를 사용합니다. 이용자는
-            브라우저 설정에서 쿠키를 거부하거나 삭제할 수 있으며, 이 경우 일부
-            기능이 제한될 수 있습니다.</p>
-          <List
-            items={[
-              "Google Analytics 4 — 페이지 방문·행동 통계",
-              "Microsoft Clarity — 익명 사용자 행동 분석",
-              "Sentry — 오류 추적(개인정보 마스킹)",
-            ]}
-          />
-        </Section>
+        {analyticsItems.length > 0 && (
+          <Section title="8. 쿠키·자동수집 도구의 운영">
+            <p>회사는 서비스 품질 분석을 위해 다음 도구를 사용합니다. 이용자는
+              브라우저 설정에서 쿠키를 거부하거나 삭제할 수 있으며, 이 경우 일부
+              기능이 제한될 수 있습니다.</p>
+            <List items={analyticsItems} />
+          </Section>
+        )}
 
-        <Section title="9. 개인정보 보호책임자">
-          <div className="rounded-lg border border-border p-3 space-y-1 text-foreground">
-            <p>책임자: SMS 운영팀</p>
-            <p>이메일: support@sms-app.kr</p>
+        <Section title={analyticsItems.length > 0 ? "9. 회사 정보 및 개인정보 보호책임자" : "8. 회사 정보 및 개인정보 보호책임자"}>
+          <div className="rounded-lg border border-border p-3 space-y-1 text-foreground text-xs">
+            <p><span className="text-muted-foreground">상호:</span> {c.legalName}</p>
+            <p><span className="text-muted-foreground">대표자:</span> {c.representativeName}</p>
+            <p><span className="text-muted-foreground">사업자등록번호:</span> {c.businessRegistrationNumber}</p>
+            <p><span className="text-muted-foreground">통신판매업 신고:</span> {c.ecommerceRegistrationNumber}</p>
+            <p><span className="text-muted-foreground">주소:</span> {c.businessAddress}</p>
+            <p className="pt-2 border-t border-border mt-2"><span className="text-muted-foreground">개인정보 보호책임자:</span> {c.privacyOfficer.name}</p>
+            <p><span className="text-muted-foreground">이메일:</span> {c.privacyOfficer.email}</p>
+            <p><span className="text-muted-foreground">고객센터:</span> {c.customerService.phone} ({c.customerService.hours})</p>
           </div>
           <p className="mt-2">개인정보 침해에 대한 신고나 상담이 필요하신 경우
             아래 기관에 문의하실 수 있습니다.</p>
@@ -165,18 +171,26 @@ export function PrivacyPage({ onBack }: { onBack: () => void }) {
           />
         </Section>
 
-        <Section title="10. 처리방침의 변경">
+        <Section title={analyticsItems.length > 0 ? "10. 처리방침의 변경" : "9. 처리방침의 변경"}>
           <p>본 방침은 법령·정책 또는 보안 기술의 변경에 따라 내용 추가·삭제·수정이
             있을 수 있으며, 변경 시 시행 7일 전부터 서비스 내 공지사항을 통해
             안내합니다.</p>
         </Section>
 
         <div className="border-t border-border pt-4">
-          <p className="text-xs">시행일: 2026년 4월 25일</p>
+          <p className="text-xs">시행일: {c.privacyPolicyEffectiveDate}</p>
         </div>
       </div>
     </div>
   );
+}
+
+function buildAnalyticsItems(a: { ga4: boolean; clarity: boolean; sentry: boolean }): string[] {
+  const items: string[] = [];
+  if (a.ga4) items.push("Google Analytics 4 — 페이지 방문·행동 통계");
+  if (a.clarity) items.push("Microsoft Clarity — 익명 사용자 행동 분석");
+  if (a.sentry) items.push("Sentry — 오류 추적(개인정보 마스킹)");
+  return items;
 }
 
 function Section({
