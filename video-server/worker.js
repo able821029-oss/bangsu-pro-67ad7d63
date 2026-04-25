@@ -20,7 +20,9 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || "").trim();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-const WORKER_CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || "2", 10);
+// 기본값 1 — Railway 컨테이너 메모리 한도(Trial 기준 ~512MB) 안에서 ffmpeg + Node + Redis
+// 동시 점유 시 SIGKILL 위험 회피. 메모리 여유가 있으면 env로 2 이상 override 가능.
+const WORKER_CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || "1", 10);
 
 /** 스타일 문자열 → 사용할 렌더 엔진 */
 function selectEngine(style) {

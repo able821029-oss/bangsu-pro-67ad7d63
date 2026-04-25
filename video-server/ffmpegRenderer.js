@@ -197,8 +197,14 @@ async function renderFfmpegVideo({
     return { scene: s, frames, durationSec, photoIdx };
   });
 
-  // ffmpeg args 조립
-  const args = ["-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-y"];
+  // ffmpeg args 조립 — Railway 컨테이너 메모리 한계 안에서 안전하게 실행되도록 thread 제한.
+  //   -threads 2: 인코더 worker thread 2개로 제한 (libx264 기본은 자동 감지로 8+가 될 수 있음)
+  //   -filter_complex_threads 1: zoompan + xfade chain의 filter graph thread 1개로 직렬 처리
+  // 둘 다 SIGKILL(OOM) 방어용. 렌더 시간이 다소 늘지만 안정성 우선.
+  const args = [
+    "-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-y",
+    "-threads", "2", "-filter_complex_threads", "1",
+  ];
   const sceneFilters = [];
   const sceneLabels = [];
   let inputIdx = 0;
