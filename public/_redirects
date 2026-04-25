@@ -1,0 +1,15 @@
+# Cloudflare Pages — 정적 파일 우선 + SPA fallback
+# 2026-04-25 도입 — sitemap.xml / robots.txt 가 SPA fallback (index.html) 으로 응답되던 문제 해결.
+# 위에 명시한 정적 경로는 200 으로 그대로 응답하고, 그 밖의 모든 경로는 index.html 로 보낸다 (HashRouter).
+
+/sitemap.xml      /sitemap.xml      200
+/robots.txt       /robots.txt       200
+/manifest.json    /manifest.json    200
+/sw.js            /sw.js            200
+/favicon.svg      /favicon.svg      200
+/og-image.*       /og-image.:splat  200
+/icon-*           /icon-:splat      200
+/_headers         /_headers         200
+
+# SPA fallback — HashRouter 이므로 모든 비정적 경로는 index.html
+/*                /index.html       200
