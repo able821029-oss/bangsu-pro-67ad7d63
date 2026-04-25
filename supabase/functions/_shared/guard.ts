@@ -18,8 +18,10 @@
 
 export const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Max-Age": "86400",
 };
 
 const ALLOWED_ORIGINS = new Set([
@@ -117,7 +119,8 @@ export function withGuard(options: GuardOptions, handler: GuardedHandler) {
   const windowMs = options.windowSec * 1000;
   return async (req: Request): Promise<Response> => {
     if (req.method === "OPTIONS") {
-      return new Response(null, { headers: CORS_HEADERS });
+      // 명시적 204 — 일부 엄격 브라우저가 status 미명시(200) 응답을 reject 하는 케이스 회피
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
     if (!options.skipOriginCheck && !isAllowedOrigin(req)) {

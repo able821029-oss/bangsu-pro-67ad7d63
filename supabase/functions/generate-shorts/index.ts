@@ -285,42 +285,37 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
     })
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
-  // ── 엔딩 카드 ── (마지막 ENDING_SECONDS)
-  // 로고가 있으면 원형 이미지 + 회사명 + 전화번호. 없으면 회사명 + 전화번호만.
-  const endingHtml =
-    `<div class="ending">` +
-    (p.logoUrl
-      ? `<img class="logo" src="${escapeHtml(p.logoUrl)}" />`
-      : "") +
-    `<div class="company">${escapeHtml(p.companyName || "SMS")}</div>` +
+  // ── 엔딩 카드 ──
+  // 직전 fix(flex layout) 가 Shotstack html 렌더에서 무시되어 회사명/전화번호가 겹쳐 그려짐.
+  // 클래스 매칭 의존을 제거하기 위해 inline style 로만 작성.
+  // 로고는 html <img> 가 비동기 fetch 못 따라가 빈 화면이 되는 케이스가 있어서
+  // 별도 image clip 으로 분리한다 — Shotstack image asset 은 fetch+render 보장.
+  const hasLogo = !!p.logoUrl;
+  const endingTextHtml =
+    `<div style="font-family:${KO_FONT_STACK};color:#ffffff;text-align:center;` +
+    `padding:80px 60px;background:linear-gradient(135deg,#001130 0%,#1a3a6a 100%);` +
+    `width:100%;height:100%;box-sizing:border-box;">` +
+    // 로고 영역 자리 — image clip 이 위쪽 -0.18 offset 에 그려지므로 텍스트가 겹치지 않게 비워둠
+    (hasLogo ? `<div style="height:320px;"></div>` : "") +
+    `<div style="font-size:96px;font-weight:800;line-height:1.15;` +
+    `margin-bottom:48px;word-break:keep-all;">` +
+    `${escapeHtml(p.companyName || "SMS")}</div>` +
     (p.phoneNumber
-      ? `<div class="phone">${escapeHtml(p.phoneNumber)}</div>`
+      ? `<div style="font-size:56px;font-weight:500;opacity:0.92;` +
+        `letter-spacing:0.04em;line-height:1.2;">` +
+        `${escapeHtml(p.phoneNumber)}</div>`
       : "") +
     `</div>`;
-  const endingClip = {
+
+  const endingTextClip = {
     asset: {
       type: "html",
-      html: endingHtml,
-      // flex column + gap 으로 회사명/전화번호 겹침 방지.
-      // body 와 div 의 default margin/padding 0 으로 명시 — Shotstack html 렌더 환경에서
-      // 기본 스타일이 어떻게 적용되는지 보장 못 하므로 reset 부터.
-      css:
-        `* { margin: 0; padding: 0; box-sizing: border-box; } ` +
-        `body { width: 100%; height: 100%; } ` +
-        `.ending { font-family: ${KO_FONT_STACK}; color: #ffffff; ` +
-        `display: flex; flex-direction: column; justify-content: center; align-items: center; ` +
-        `gap: 40px; padding: 80px 40px; ` +
-        `background: linear-gradient(135deg, #001130 0%, #1a3a6a 100%); ` +
-        `border-radius: 24px; width: 100%; height: 100%; text-align: center; } ` +
-        `.logo { width: 280px; height: 280px; border-radius: 50%; ` +
-        `object-fit: cover; border: 5px solid rgba(255,255,255,0.2); ` +
-        `flex-shrink: 0; background: rgba(255,255,255,0.05); } ` +
-        `.company { font-size: 88px; font-weight: 800; line-height: 1.15; ` +
-        `word-break: keep-all; } ` +
-        `.phone { font-size: 52px; font-weight: 500; opacity: 0.92; ` +
-        `letter-spacing: 0.04em; line-height: 1.2; }`,
-      width: 1000,
-      height: 1400,
+      html: endingTextHtml,
+      // css 키는 빈 문자열로 두어도 inline style 만으로 동작. 일부 spec 은 css 필수라
+      // 안전 차원으로 reset 한 줄만.
+      css: `* { margin: 0; padding: 0; box-sizing: border-box; }`,
+      width: 1080,
+      height: 1920,
       background: "transparent",
     },
     start: photoTotalSec,
@@ -328,6 +323,22 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
     position: "center",
     transition: { in: "fade", out: "fade" },
   };
+
+  // 로고는 image asset 으로 별도 clip — html <img> 비동기 fetch 이슈 회피.
+  // position: top, offset.y -0.18 → 위쪽에 배치 (텍스트 영역과 안 겹치도록).
+  // scale 0.26 → 1080 캔버스의 26% = 약 280px 정사각형.
+  const endingLogoClip = hasLogo
+    ? {
+        asset: { type: "image", src: p.logoUrl as string },
+        start: photoTotalSec,
+        length: ENDING_SECONDS,
+        position: "top",
+        offset: { y: -0.18 },
+        scale: 0.26,
+        fit: "contain",
+        transition: { in: "fade", out: "fade" },
+      }
+    : null;
 
   // ── 나레이션 트랙 ──
   const narrationClips = p.narrationUrls
@@ -341,10 +352,13 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
     })
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
+  // 트랙 순서: 위에 있을수록 화면 상단 레이어.
+  // 로고는 텍스트 위 — 둘 다 ENDING_SECONDS 동안 동시 표시되므로 z-order 만 결정.
   const tracks: Array<{ clips: unknown[] }> = [
-    { clips: [endingClip] },     // 엔딩 (최상단)
-    { clips: subtitleClips },    // 자막
-    { clips: photoClips },       // 사진
+    ...(endingLogoClip ? [{ clips: [endingLogoClip] }] : []),  // 엔딩 로고 (이미지)
+    { clips: [endingTextClip] },                                // 엔딩 텍스트
+    { clips: subtitleClips },                                   // 사진 위 자막
+    { clips: photoClips },                                      // 사진 (배경)
   ];
   if (narrationClips.length > 0) {
     tracks.push({ clips: narrationClips });
