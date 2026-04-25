@@ -2,10 +2,23 @@
 const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 const { shortsQueue, queueEvents } = require("./queue");
+const { diagnoseFfmpeg, resolveFontPath } = require("./ffmpegRenderer");
 
 // 단일 서비스 구조: API 프로세스 안에서 BullMQ Worker도 함께 구동
 // (Railway에서 fearless-respect worker 서비스를 삭제했으므로 통합 필요)
 require("./worker.js");
+
+// 시작 시 ffmpeg 환경 진단 — "Filter not found" 에러가 나왔을 때
+// xfade/drawtext 미지원인지, 폰트 누락인지, 단순 args escape 실수인지 즉시 구분.
+try {
+  const diag = diagnoseFfmpeg();
+  const fontPath = resolveFontPath();
+  console.log(`[startup] ffmpeg 버전: ${diag.version}`);
+  console.log(`[startup] ffmpeg 필터: ${JSON.stringify(diag.filters)}`);
+  console.log(`[startup] 한국어 폰트: ${fontPath || "없음 — 영상에 텍스트 누락 위험"}`);
+} catch (e) {
+  console.error(`[startup] ffmpeg 진단 실패: ${e?.message || e}`);
+}
 
 const app = express();
 

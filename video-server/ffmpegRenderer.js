@@ -318,15 +318,54 @@ function runFfmpeg(args, totalSec, onProgress) {
 
     proc.on("error", reject);
     proc.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`ffmpeg exit ${code}: ${stderrBuf.slice(-500)}`));
+      if (code === 0) {
+        resolve();
+      } else {
+        // 실패 시 진단 정보를 stderr에 전체 덤프 — Railway 로그에서 원인 추적용.
+        // -filter_complex 인자는 단일 토큰이라 매우 길지만, escape 실수 등을 잡으려면 전체가 필요.
+        const fcIdx = args.indexOf("-filter_complex");
+        const fc = fcIdx >= 0 ? args[fcIdx + 1] : "<없음>";
+        console.error(`[ffmpeg] exit=${code} ───── stderr 전체 ─────`);
+        console.error(stderrBuf);
+        console.error(`[ffmpeg] ───── -filter_complex 인자 (${fc.length} chars) ─────`);
+        console.error(fc);
+        console.error(`[ffmpeg] ───── 끝 ─────`);
+        reject(new Error(`ffmpeg exit ${code}: ${stderrBuf.slice(-500)}`));
+      }
     });
   });
+}
+
+/**
+ * ffmpeg 바이너리의 버전 + 핵심 필터(xfade, drawtext, zoompan) 가용성 점검.
+ * startup에서 한 번 호출해 결과를 로그로 남기면 "Filter not found" 에러가 났을 때
+ * 진짜 빌드 옵션 문제인지, 아니면 args escape 문제인지 즉시 구분 가능.
+ */
+function diagnoseFfmpeg() {
+  const result = { version: "?", filters: {} };
+  try {
+    const v = spawnSync(ffmpegPath, ["-hide_banner", "-version"], { encoding: "utf8" });
+    const m = (v.stdout || "").match(/ffmpeg version (\S+)/);
+    result.version = m ? m[1] : (v.stdout || "").split("\n")[0];
+  } catch {
+    /* ignore */
+  }
+  for (const name of ["xfade", "drawtext", "zoompan", "scale", "concat"]) {
+    try {
+      const r = spawnSync(ffmpegPath, ["-hide_banner", "-h", `filter=${name}`], { encoding: "utf8" });
+      const out = (r.stdout || "") + (r.stderr || "");
+      result.filters[name] = !/Unknown filter|No such filter/i.test(out) && /Filter\s+/i.test(out);
+    } catch {
+      result.filters[name] = false;
+    }
+  }
+  return result;
 }
 
 module.exports = {
   renderFfmpegVideo,
   resolveFontPath,
+  diagnoseFfmpeg,
   FPS,
   W,
   H,
