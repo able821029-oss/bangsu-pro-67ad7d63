@@ -14,6 +14,10 @@ verify_jwt = false
 [functions.generate-shorts-status]
 verify_jwt = false
 
+# 외부 cron 으로만 호출되는 정리 함수 — Supabase JWT 검증 끄고 X-Cron-Secret 헤더로 자체 인증
+[functions.cleanup-shorts-assets]
+verify_jwt = false
+
 [functions.tts-preview]
 verify_jwt = false
 
