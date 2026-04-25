@@ -1,5 +1,6 @@
 // useShortsPipeline — 쇼츠 생성 파이프라인 훅
 // 2026-04-24 추출 — ShortsCreator.tsx의 handleGenerate(365줄) + 재생/리셋 로직 이관.
+// 2026-04-25 Railway 제거 — Shotstack 렌더 + generate-shorts-status 폴링으로 단순화.
 //
 // 불변 규칙 (기능 회귀 방지용 체크리스트):
 //  1. 사전 게이트 ①: narrationEnabled && validAudioCount === 0 → 차단 (throw)
@@ -8,8 +9,8 @@
 //  4. 서버 렌더 실패 시 '완성' 오인 방지: serverRenderOk=false → throw (→ error step)
 //  5. shorts_videos 404 격리: isTableKnownMissing/markTableMissing 사용
 //  6. Web Speech 폴백 완전 제거 (서버 MP4 내장 오디오만 재생)
-//  7. VITE_VIDEO_SERVER_URL https:// 자동 보정
-//  8. SSE 우선 시도 → 8분 hard timeout → 3초 폴링 폴백
+//  7. (삭제됨 — Railway 제거)
+//  8. Shotstack 폴링: generate-shorts-status 3초 간격, 5분 타임아웃
 //  9. 서버 progress(0~100) → 클라 30~92 구간 매핑 (progressCeiling 단조 증가)
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,7 +25,7 @@ import {
   type BgmType,
 } from "@/lib/bgmSynth";
 import { compressPhotos } from "@/lib/imageCompress";
-import { fetchWithRetry, invokeWithRetry } from "@/lib/fetchWithRetry";
+import { invokeWithRetry } from "@/lib/fetchWithRetry";
 import {
   isTableKnownMissing,
   markTableMissing,
@@ -361,158 +362,80 @@ export function useShortsPipeline(
         });
       }
 
-      // ── Railway 비동기 렌더 ──
-      setProgressText("🖥️ 서버에서 영상 렌더링 중... (1~2분 소요)");
+      // ── Shotstack 렌더 (generate-shorts-status 폴링) ──
+      setProgressText("🎬 영상 렌더링 중... (1~2분 소요)");
       progressCeiling = 92;
       setProgressPct((p) => Math.max(p, 30));
 
-      const rawUrl =
-        (import.meta.env.VITE_VIDEO_SERVER_URL as string | undefined) ||
-        "https://bangsu-pro-67ad7d63-production-6e2e.up.railway.app";
-      const RAILWAY_URL = /^https?:\/\//i.test(rawUrl)
-        ? rawUrl
-        : `https://${rawUrl}`;
+      const renderId: string | undefined = scriptData?.renderId;
+      if (!renderId) {
+        throw new Error("렌더 ID를 받지 못했습니다. 다시 시도해 주세요.");
+      }
+      console.warn(`[SMS] Shotstack renderId: ${renderId}`);
 
-      let renderData: { videoUrl?: string; error?: string; detail?: string } | null = null;
+      type StatusJson = {
+        status?: string; // queued | fetching | rendering | saving | done | failed | error
+        progress?: number;
+        stage?: string;
+        videoUrl?: string;
+        error?: string;
+      };
+
+      let renderData: { videoUrl?: string; error?: string } | null = null;
       let renderErrMsg: string | null = null;
-      try {
-        const startRes = await fetchWithRetry(`${RAILWAY_URL}/render-start`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            scenes,
-            photos: compressedPhotos,
-            narrationAudios,
-            companyName: settings.companyName,
-            phoneNumber: settings.phoneNumber,
-            bgmType: bgm,
-            narrationExpected: narrationEnabled,
-          }),
-          retries: 2,
-          retryDelayMs: 1500,
-          timeoutMs: 60_000,
-        });
-        const startJson = await startRes.json().catch(() => null);
-        if (!startRes.ok || !startJson?.jobId) {
-          throw new Error(startJson?.error || `HTTP ${startRes.status}`);
-        }
-        const jobId: string = startJson.jobId;
-        console.warn(`[SMS] 렌더 jobId: ${jobId}`);
 
-        type StatusJson = {
-          status?: string;
-          progress?: number;
-          stage?: string;
-          videoUrl?: string;
-          error?: string;
-        };
-        const applyStatus = (s: StatusJson): "done" | "error" | "continue" => {
-          if (typeof s.progress === "number") {
-            const serverMapped = 30 + Math.round((s.progress / 100) * 62);
-            progressCeiling = Math.min(
-              92,
-              Math.max(progressCeiling, serverMapped),
-            );
-            setProgressPct((p) => Math.max(p, serverMapped));
-          }
-          if (s.stage) setProgressText(`🖥️ ${s.stage}... (서버)`);
-          if (s.status === "done" && s.videoUrl) {
-            renderData = { videoUrl: s.videoUrl };
-            return "done";
-          }
-          if (s.status === "error") {
-            renderErrMsg = s.error || "서버 렌더 실패";
-            return "error";
-          }
-          return "continue";
-        };
-
-        // SSE 우선 시도
-        let sseSettled = false;
-        if (typeof EventSource !== "undefined") {
-          await new Promise<void>((resolve) => {
-            let es: EventSource | null = null;
-            const hardTimeout = setTimeout(
-              () => {
-                if (es) es.close();
-                resolve();
-              },
-              8 * 60 * 1000,
-            );
-            try {
-              es = new EventSource(
-                `${RAILWAY_URL}/render-status/${jobId}/stream`,
-              );
-            } catch (e) {
-              console.warn("[SMS] EventSource 생성 실패, 폴링으로:", e);
-              clearTimeout(hardTimeout);
-              resolve();
-              return;
-            }
-            es.onmessage = (ev) => {
-              let data: StatusJson | null = null;
-              try {
-                data = JSON.parse(ev.data);
-              } catch {
-                /* ignore */
-              }
-              if (!data) return;
-              const r = applyStatus(data);
-              if (r === "done" || r === "error") {
-                sseSettled = true;
-                clearTimeout(hardTimeout);
-                es?.close();
-                resolve();
-              }
-            };
-            es.onerror = () => {
-              clearTimeout(hardTimeout);
-              es?.close();
-              resolve();
-            };
-          });
+      const applyStatus = (s: StatusJson): "done" | "error" | "continue" => {
+        if (typeof s.progress === "number") {
+          const serverMapped = 30 + Math.round((s.progress / 100) * 62);
+          progressCeiling = Math.min(
+            92,
+            Math.max(progressCeiling, serverMapped),
+          );
+          setProgressPct((p) => Math.max(p, serverMapped));
         }
+        if (s.stage) setProgressText(`🎬 ${s.stage}...`);
+        if (s.status === "done" && s.videoUrl) {
+          renderData = { videoUrl: s.videoUrl };
+          return "done";
+        }
+        if (s.status === "failed" || s.status === "error") {
+          renderErrMsg = s.error || "서버 렌더 실패";
+          return "error";
+        }
+        return "continue";
+      };
 
-        // 폴링 폴백
-        if (!sseSettled && !renderData && !renderErrMsg) {
-          console.warn("[SMS] SSE 미완료 → 3초 폴링 폴백");
-          const pollDeadline = Date.now() + 8 * 60 * 1000;
-          while (Date.now() < pollDeadline) {
-            await new Promise((r) => setTimeout(r, 3000));
-            let statusJson: StatusJson | null = null;
-            try {
-              const statusRes = await fetchWithRetry(
-                `${RAILWAY_URL}/render-status/${jobId}`,
-                {
-                  method: "GET",
-                  retries: 2,
-                  retryDelayMs: 1500,
-                  timeoutMs: 15_000,
-                },
-              );
-              statusJson = await statusRes.json().catch(() => null);
-              if (!statusRes.ok) {
-                console.warn(
-                  `[SMS] 상태 조회 ${statusRes.status} — 다음 폴링에 재시도`,
-                );
-                continue;
-              }
-            } catch (e: unknown) {
-              const msg = e instanceof Error ? e.message : String(e);
-              console.warn(`[SMS] 폴링 일시 오류:`, msg);
-              continue;
-            }
-            if (!statusJson) continue;
-            const r = applyStatus(statusJson);
-            if (r !== "continue") break;
+      // 3초 간격 폴링, 5분 타임아웃 (Shotstack은 보통 1분 내 완성)
+      const pollDeadline = Date.now() + 5 * 60 * 1000;
+      let consecutiveErrors = 0;
+      while (Date.now() < pollDeadline) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const { data: statusJson, error: statusErr } =
+          await supabase.functions.invoke<StatusJson>(
+            "generate-shorts-status",
+            { body: { renderId } },
+          );
+        if (statusErr) {
+          consecutiveErrors++;
+          console.warn(
+            `[SMS] 상태 조회 일시 오류 (${consecutiveErrors}):`,
+            statusErr.message,
+          );
+          // 연속 5회 실패 시 중단
+          if (consecutiveErrors >= 5) {
+            renderErrMsg = "상태 조회 실패가 반복됩니다. 다시 시도해 주세요.";
+            break;
           }
+          continue;
         }
+        consecutiveErrors = 0;
+        if (!statusJson) continue;
+        const r = applyStatus(statusJson);
+        if (r !== "continue") break;
+      }
 
-        if (!renderData && !renderErrMsg) {
-          renderErrMsg = "렌더 타임아웃 (8분 초과)";
-        }
-      } catch (e: unknown) {
-        renderErrMsg = e instanceof Error ? e.message : "네트워크 오류";
+      if (!renderData && !renderErrMsg) {
+        renderErrMsg = "렌더 타임아웃 (5분 초과)";
       }
 
       const serverRenderOk =
