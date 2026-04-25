@@ -77,34 +77,38 @@ function resolvePhotoIndex(photoKey, fallbackIdx, photoCount) {
   return -1;
 }
 
-function buildPhotoSceneFilter(inputIdx, scene, frames, fontPath) {
-  const label = `v${inputIdx}`;
+/**
+ * 단일 씬용 filter chain — 입력 인덱스는 항상 0 (각 씬을 자체 ffmpeg 호출로 렌더하므로).
+ * 끝에 fade in/out을 추가해 분할 렌더 + concat 시 트랜지션 부재를 시각적으로 보정.
+ */
+function buildPhotoSceneFilter(scene, frames, durationSec, fontPath) {
   const fp = escapeFontPath(fontPath);
-  let f = `[${inputIdx}:v]`;
+  let f = `[0:v]`;
   f += `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H}`;
   // Ken Burns — 전체 씬 동안 1.0 → 1.3배까지 천천히 확대
   f += `,zoompan=z='min(zoom+0.0015\\,1.3)':d=${frames}:s=${W}x${H}:fps=${FPS}`;
   f += `,format=yuv420p`;
 
-  // 상단 타이틀 (있을 때만)
   if (scene.title) {
     f += `,drawtext=fontfile=${fp}:text='${escapeText(scene.title)}':fontcolor=white:fontsize=64:x=(w-text_w)/2:y=h*0.08:box=1:boxcolor=black@0.5:boxborderw=16`;
   }
-  // 하단 자막 (subtitle) — 하단 20% 영역 · 반투명 박스
   if (scene.subtitle) {
     f += `,drawtext=fontfile=${fp}:text='${escapeText(scene.subtitle)}':fontcolor=white:fontsize=56:x=(w-text_w)/2:y=h*0.78:box=1:boxcolor=black@0.6:boxborderw=20`;
   }
 
-  f += `,setsar=1,fps=${FPS}[${label}]`;
-  return { filter: f, label };
+  // 분할 렌더 트랜지션 보정 — 시작 0.3s fade in + 끝 0.3s fade out
+  const fadeOutStart = Math.max(0, durationSec - TRANSITION_SEC).toFixed(3);
+  f += `,fade=t=in:st=0:d=${TRANSITION_SEC}`;
+  f += `,fade=t=out:st=${fadeOutStart}:d=${TRANSITION_SEC}`;
+
+  f += `,setsar=1,fps=${FPS}[vout]`;
+  return f;
 }
 
-function buildColorSceneFilter(inputIdx, scene, fontPath) {
-  const label = `v${inputIdx}`;
+function buildColorSceneFilter(scene, durationSec, fontPath) {
   const fp = escapeFontPath(fontPath);
-  let f = `[${inputIdx}:v]format=yuv420p`;
+  let f = `[0:v]format=yuv420p`;
 
-  // photo=null 씬은 보통 인트로/엔딩 — title + subtitle 둘 다 표시
   if (scene.title) {
     f += `,drawtext=fontfile=${fp}:text='${escapeText(scene.title)}':fontcolor=white:fontsize=80:x=(w-text_w)/2:y=h*0.42:box=0`;
   }
@@ -115,28 +119,46 @@ function buildColorSceneFilter(inputIdx, scene, fontPath) {
     f += `,drawtext=fontfile=${fp}:text='${escapeText(scene.badge)}':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=h*0.32:box=1:boxcolor=#237FFF@0.9:boxborderw=14`;
   }
 
-  f += `,setsar=1,fps=${FPS}[${label}]`;
-  return { filter: f, label };
+  const fadeOutStart = Math.max(0, durationSec - TRANSITION_SEC).toFixed(3);
+  f += `,fade=t=in:st=0:d=${TRANSITION_SEC}`;
+  f += `,fade=t=out:st=${fadeOutStart}:d=${TRANSITION_SEC}`;
+
+  f += `,setsar=1,fps=${FPS}[vout]`;
+  return f;
 }
 
-function buildXfadeChain(labels, durations) {
-  if (labels.length === 0) return { filter: "", outLabel: null };
-  if (labels.length === 1) return { filter: "", outLabel: labels[0] };
+/** 단일 씬 ffmpeg args 빌드 — 사진 또는 color 소스 → drawtext + zoompan + fade → mp4 */
+function buildSingleSceneArgs(meta, photoFile, fontPath, scenePath, companyName, phoneNumber, isLast) {
+  const args = [
+    "-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-y",
+    "-threads", "2", "-filter_complex_threads", "1",
+  ];
 
-  const parts = [];
-  let currentLabel = labels[0];
-  let currentOffset = durations[0] - TRANSITION_SEC;
-
-  for (let i = 1; i < labels.length; i++) {
-    const outLabel = i === labels.length - 1 ? "vout" : `xf${i}`;
-    parts.push(
-      `[${currentLabel}][${labels[i]}]xfade=transition=fade:duration=${TRANSITION_SEC}:offset=${currentOffset.toFixed(3)}[${outLabel}]`
+  let filter;
+  if (photoFile && fs.existsSync(photoFile)) {
+    args.push("-loop", "1", "-framerate", "1", "-t", "1", "-i", photoFile);
+    filter = buildPhotoSceneFilter(meta.scene, meta.frames, meta.durationSec, fontPath);
+  } else {
+    const useBgColor = pickBgColor(meta.scene);
+    args.push(
+      "-f", "lavfi",
+      "-t", meta.durationSec.toFixed(3),
+      "-i", `color=c=${useBgColor}:s=${W}x${H}:r=${FPS}`
     );
-    currentLabel = outLabel;
-    currentOffset += durations[i] - TRANSITION_SEC;
+    const enriched = { ...meta.scene };
+    if (!enriched.title && companyName) enriched.title = companyName;
+    if (!enriched.subtitle && phoneNumber && isLast) enriched.subtitle = phoneNumber;
+    filter = buildColorSceneFilter(enriched, meta.durationSec, fontPath);
   }
 
-  return { filter: parts.join(";"), outLabel: currentLabel };
+  args.push("-filter_complex", filter);
+  args.push("-map", "[vout]");
+  args.push("-c:v", "libx264", "-preset", "veryfast", "-crf", "23");
+  args.push("-pix_fmt", "yuv420p");
+  args.push("-r", String(FPS));
+  args.push("-t", meta.durationSec.toFixed(3));
+  args.push(scenePath);
+  return args;
 }
 
 /**
@@ -197,80 +219,72 @@ async function renderFfmpegVideo({
     return { scene: s, frames, durationSec, photoIdx };
   });
 
-  // ffmpeg args 조립 — Railway 컨테이너 메모리 한계 안에서 안전하게 실행되도록 thread 제한.
-  //   -threads 2: 인코더 worker thread 2개로 제한 (libx264 기본은 자동 감지로 8+가 될 수 있음)
-  //   -filter_complex_threads 1: zoompan + xfade chain의 filter graph thread 1개로 직렬 처리
-  // 둘 다 SIGKILL(OOM) 방어용. 렌더 시간이 다소 늘지만 안정성 우선.
-  const args = [
-    "-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-y",
-    "-threads", "2", "-filter_complex_threads", "1",
-  ];
-  const sceneFilters = [];
-  const sceneLabels = [];
-  let inputIdx = 0;
-
-  for (let i = 0; i < sceneMeta.length; i++) {
-    const m = sceneMeta[i];
-    const photoFile = m.photoIdx >= 0 ? tmpPhotos[m.photoIdx] : null;
-    const useBgColor = pickBgColor(m.scene);
-
-    if (photoFile && fs.existsSync(photoFile)) {
-      // zoompan은 각 input 프레임마다 d개 출력 프레임을 만든다.
-      // 따라서 input을 1프레임으로 엄격 제한하고 씬 길이는 zoompan d/fps로 제어.
-      // `-framerate 1 -t 1` → 1 input frame 생성.
-      args.push("-loop", "1", "-framerate", "1", "-t", "1", "-i", photoFile);
-      const { filter, label } = buildPhotoSceneFilter(inputIdx, m.scene, m.frames, fontPath);
-      sceneFilters.push(filter);
-      sceneLabels.push(label);
-    } else {
-      // 사진 없는 씬 → lavfi color 소스
-      args.push(
-        "-f", "lavfi",
-        "-t", m.durationSec.toFixed(3),
-        "-i", `color=c=${useBgColor}:s=${W}x${H}:r=${FPS}`
-      );
-      const scene = { ...m.scene };
-      // 엔딩/인트로 씬에서 title이 비어있으면 업체명으로 보강
-      if (!scene.title && companyName) scene.title = companyName;
-      if (!scene.subtitle && phoneNumber && isLastScene(i, sceneMeta)) scene.subtitle = phoneNumber;
-      const { filter, label } = buildColorSceneFilter(inputIdx, scene, fontPath);
-      sceneFilters.push(filter);
-      sceneLabels.push(label);
-    }
-    inputIdx++;
-  }
-
-  const { filter: xfadeFilter, outLabel } = buildXfadeChain(
-    sceneLabels,
-    sceneMeta.map((m) => m.durationSec)
-  );
-
-  const filterComplex = [
-    ...sceneFilters,
-    ...(xfadeFilter ? [xfadeFilter] : []),
-  ].join(";");
-
-  args.push("-filter_complex", filterComplex);
-  args.push("-map", `[${outLabel}]`);
-  args.push("-c:v", "libx264", "-preset", "veryfast", "-crf", "23");
-  args.push("-pix_fmt", "yuv420p");
-  args.push("-r", String(FPS));
-  args.push("-movflags", "+faststart");
-  args.push(outputPath);
-
-  const totalSec =
-    sceneMeta.reduce((a, m) => a + m.durationSec, 0) -
-    Math.max(0, sceneMeta.length - 1) * TRANSITION_SEC;
+  // 분할 렌더 전략 — Railway 컨테이너 메모리 한계(Trial ~512MB) 안에서 안전 실행.
+  // 모든 씬 input을 한 번의 ffmpeg 호출에 담으면 zoompan + xfade chain이 모든 stream을
+  // 동시에 메모리에 올려 OOM(SIGKILL) 발생. 씬을 1개씩 따로 mp4로 만든 뒤 concat 하면
+  // 동시 메모리 사용이 1/N로 평탄화된다. 트랜지션은 각 씬 시작·끝 fade로 보정.
+  const totalSec = sceneMeta.reduce((a, m) => a + m.durationSec, 0);
   const totalFrames = Math.round(totalSec * FPS);
 
-  console.log(`[ffmpegRenderer] style=${style || "기본"} 씬=${sceneMeta.length} 총 ${totalSec.toFixed(2)}s (${totalFrames}프레임)`);
+  console.log(
+    `[ffmpegRenderer] style=${style || "기본"} 씬=${sceneMeta.length} 총 ${totalSec.toFixed(2)}s ` +
+      `(${totalFrames}프레임) 전략=분할렌더+concat`
+  );
 
-  await runFfmpeg(args, totalSec, onProgress);
+  const sceneVideos = [];
+  const cleanupPaths = [...tmpPhotos.filter(Boolean)];
 
-  // 임시 입력 파일 정리
-  for (const p of tmpPhotos) {
-    if (!p) continue;
-    try { fs.unlinkSync(p); } catch { /* ignore */ }
+  try {
+    // Step 1: 각 씬을 개별 ffmpeg 호출로 mp4 렌더 — 동시 메모리는 1개 씬 분량만
+    for (let i = 0; i < sceneMeta.length; i++) {
+      const m = sceneMeta[i];
+      const photoFile = m.photoIdx >= 0 ? tmpPhotos[m.photoIdx] : null;
+      const scenePath = path.join(tmpDir, `sms_${jobId}_scene_${i}.mp4`);
+      const isLast = i === sceneMeta.length - 1;
+
+      const args = buildSingleSceneArgs(m, photoFile, fontPath, scenePath, companyName, phoneNumber, isLast);
+
+      // 진행률 — 씬별 0~85% 구간을 N등분, concat은 85~100%
+      const sceneStartPct = (i / sceneMeta.length) * 0.85;
+      const sceneEndPct = ((i + 1) / sceneMeta.length) * 0.85;
+      await runFfmpeg(args, m.durationSec, (p) => {
+        if (onProgress) onProgress(sceneStartPct + (sceneEndPct - sceneStartPct) * p);
+      });
+
+      sceneVideos.push(scenePath);
+      cleanupPaths.push(scenePath);
+      console.log(`[ffmpegRenderer] 씬 ${i + 1}/${sceneMeta.length} 완료 (${m.durationSec.toFixed(2)}s)`);
+    }
+
+    // Step 2: concat demuxer로 합치기 — stream copy라 메모리 거의 안 씀
+    const listFile = path.join(tmpDir, `sms_${jobId}_concat.txt`);
+    const listContent = sceneVideos.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join("\n");
+    fs.writeFileSync(listFile, listContent);
+    cleanupPaths.push(listFile);
+
+    const concatArgs = [
+      "-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-y",
+      "-f", "concat", "-safe", "0",
+      "-i", listFile,
+      "-c", "copy",
+      "-movflags", "+faststart",
+      outputPath,
+    ];
+
+    await runFfmpeg(concatArgs, totalSec, (p) => {
+      if (onProgress) onProgress(0.85 + p * 0.15);
+    });
+
+    console.log(`[ffmpegRenderer] concat 완료 → ${outputPath}`);
+  } finally {
+    // 모든 임시 파일 정리 — 실패 시에도 /tmp 누수 방지
+    for (const p of cleanupPaths) {
+      try {
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   return {
@@ -286,10 +300,6 @@ function pickBgColor(scene) {
     return String(scene.bg_colors[0]);
   }
   return "#0B1535";
-}
-
-function isLastScene(i, sceneMeta) {
-  return i === sceneMeta.length - 1;
 }
 
 function runFfmpeg(args, totalSec, onProgress) {
