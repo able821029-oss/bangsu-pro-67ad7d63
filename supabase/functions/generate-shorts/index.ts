@@ -10,10 +10,13 @@ import {
 const corsHeaders = CORS_HEADERS;
 
 // ── Shotstack 엔드포인트 ─────────────────────────────────────────
-// 사용자가 명세한 URL을 기본값으로 두고 SHOTSTACK_HOST 로 오버라이드 가능.
-// 정식 prod 호스트가 다르다면 (예: https://api.shotstack.io/edit/v1) Supabase
-// Secrets 에 SHOTSTACK_HOST 를 추가하면 그 값이 우선한다.
-const SHOTSTACK_HOST_DEFAULT = "https://api.shotstack.io/v1";
+// Shotstack 정식 호스트:
+//   - Production (결제 후): https://api.shotstack.io/edit/v1
+//   - Stage / Sandbox (무료): https://api.shotstack.io/edit/stage
+// 무료 가입 직후엔 stage 키만 발급되므로 default 를 stage 로 둔다.
+// 결제 후 prod 키로 전환하면 Supabase Secrets 에
+// `SHOTSTACK_HOST=https://api.shotstack.io/edit/v1` 추가하면 끝.
+const SHOTSTACK_HOST_DEFAULT = "https://api.shotstack.io/edit/stage";
 
 // ── 영상 구성 상수 ───────────────────────────────────────────────
 const PHOTO_SECONDS = 5;       // 사진 한 장당 노출 시간
@@ -148,8 +151,9 @@ async function postToShotstack(
   host: string,
   payload: Record<string, unknown>,
 ): Promise<ShotstackRenderResult> {
+  const url = `${host.replace(/\/+$/, "")}/render`;
   try {
-    const res = await fetch(`${host.replace(/\/+$/, "")}/render`, {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "x-api-key": apiKey,
@@ -158,26 +162,42 @@ async function postToShotstack(
       },
       body: JSON.stringify(payload),
     });
-    const json = (await res.json().catch(() => null)) as
+    const text = await res.text();
+    let json:
       | { success?: boolean; message?: string; response?: { id?: string } }
-      | null;
-    if (!res.ok || !json) {
+      | null = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      /* 응답이 JSON 이 아닌 케이스 (HTML 에러 페이지 등) — text 그대로 노출 */
+    }
+    if (!res.ok) {
+      const detail =
+        json?.message ||
+        (json as { error?: string } | null)?.error ||
+        text.slice(0, 250) ||
+        res.statusText ||
+        "응답 본문 없음";
+      console.error(
+        `[Shotstack POST ${url}] ${res.status} ${res.statusText} — ${detail}`,
+      );
       return {
         renderId: null,
-        errorMessage: `Shotstack ${res.status}: ${json?.message || "응답 파싱 실패"}`,
-        raw: json,
+        errorMessage: `Shotstack ${res.status}: ${detail}`,
+        raw: json || text,
       };
     }
-    const renderId = json.response?.id || null;
+    const renderId = json?.response?.id || null;
     if (!renderId) {
       return {
         renderId: null,
-        errorMessage: json.message || "Shotstack 응답에 render id 없음",
+        errorMessage: json?.message || "Shotstack 응답에 render id 없음",
         raw: json,
       };
     }
     return { renderId, errorMessage: null, raw: json };
   } catch (e) {
+    console.error(`[Shotstack POST ${url}] 예외:`, e);
     return {
       renderId: null,
       errorMessage: e instanceof Error ? e.message : "Shotstack 호출 실패",

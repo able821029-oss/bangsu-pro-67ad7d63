@@ -3,7 +3,10 @@ import { withGuard, CORS_HEADERS, logUsage } from "../_shared/guard.ts";
 
 const corsHeaders = CORS_HEADERS;
 
-const SHOTSTACK_HOST_DEFAULT = "https://api.shotstack.io/v1";
+// Shotstack 정식 호스트 (generate-shorts 와 일치 유지):
+//   - Production: https://api.shotstack.io/edit/v1
+//   - Stage / Sandbox (무료): https://api.shotstack.io/edit/stage
+const SHOTSTACK_HOST_DEFAULT = "https://api.shotstack.io/edit/stage";
 
 // 폴링 전용 — 클라이언트가 3~5초 간격으로 호출하므로 60초당 30회까지 허용
 serve(
@@ -70,7 +73,8 @@ serve(
           },
         });
 
-        const json = (await res.json().catch(() => null)) as
+        const text = await res.text();
+        let json:
           | {
               success?: boolean;
               message?: string;
@@ -85,9 +89,22 @@ serve(
                 error?: string;
               };
             }
-          | null;
+          | null = null;
+        try {
+          json = text ? JSON.parse(text) : null;
+        } catch {
+          /* JSON 이 아닌 응답 (HTML 에러 페이지 등) — text 그대로 사용 */
+        }
 
-        if (!res.ok || !json) {
+        if (!res.ok) {
+          const detail =
+            json?.message ||
+            text.slice(0, 250) ||
+            res.statusText ||
+            "응답 본문 없음";
+          console.error(
+            `[Shotstack GET ${statusUrl}] ${res.status} ${res.statusText} — ${detail}`,
+          );
           void logUsage({
             user_id: ctx.userId,
             fn_name: "generate-shorts-status",
@@ -96,12 +113,21 @@ serve(
             extra: {
               renderId: safeId,
               shotstackStatus: res.status,
-              message: json?.message,
+              detail,
             },
           });
           return new Response(
+            JSON.stringify({ error: `Shotstack ${res.status}: ${detail}` }),
+            {
+              status: 502,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+        if (!json) {
+          return new Response(
             JSON.stringify({
-              error: `Shotstack ${res.status}: ${json?.message || "응답 파싱 실패"}`,
+              error: `Shotstack 응답 파싱 실패 (${res.status}): ${text.slice(0, 200)}`,
             }),
             {
               status: 502,
