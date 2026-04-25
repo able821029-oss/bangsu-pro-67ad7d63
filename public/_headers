@@ -16,7 +16,10 @@
   #   - data: / blob: → uploadPostPhoto가 dataUrl을 fetch→Blob 변환
   #   - nominatim.openstreetmap.org → 위치 역지오코딩
   #   - fonts.googleapis.com / fonts.gstatic.com → Service Worker의 폰트 캐싱
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com https://developers.kakao.com https://t1.kakaocdn.net https://www.googletagmanager.com https://www.clarity.ms https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://*.railway.app https://api.elevenlabs.io https://www.google-analytics.com https://*.clarity.ms https://*.sentry.io https://nominatim.openstreetmap.org https://fonts.googleapis.com https://fonts.gstatic.com https://*.kakao.com https://t1.kakaocdn.net; frame-src 'self' https://*.kakao.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'
+  #   - shotstack-api-(stage-)output.s3-ap-southeast-2.amazonaws.com
+  #     → Shotstack 렌더 결과 MP4 다운로드 (handleDownload 가 fetch 후 Blob 변환)
+  #     ※ Service Worker 가 모든 fetch 를 가로채므로 video 태그 재생도 connect-src 적용을 받는다.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com https://developers.kakao.com https://t1.kakaocdn.net https://www.googletagmanager.com https://www.clarity.ms https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://*.railway.app https://api.elevenlabs.io https://shotstack-api-stage-output.s3-ap-southeast-2.amazonaws.com https://shotstack-api-output.s3-ap-southeast-2.amazonaws.com https://www.google-analytics.com https://*.clarity.ms https://*.sentry.io https://nominatim.openstreetmap.org https://fonts.googleapis.com https://fonts.gstatic.com https://*.kakao.com https://t1.kakaocdn.net; frame-src 'self' https://*.kakao.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'
 
 # 정적 에셋은 장기 캐시
 /assets/*
