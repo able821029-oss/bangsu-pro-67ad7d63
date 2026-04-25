@@ -317,20 +317,27 @@ function runFfmpeg(args, totalSec, onProgress) {
     });
 
     proc.on("error", reject);
-    proc.on("close", (code) => {
+    proc.on("close", (code, signal) => {
       if (code === 0) {
         resolve();
       } else {
         // 실패 시 진단 정보를 stderr에 전체 덤프 — Railway 로그에서 원인 추적용.
-        // -filter_complex 인자는 단일 토큰이라 매우 길지만, escape 실수 등을 잡으려면 전체가 필요.
+        // code=null + signal!=null = 외부 시그널로 죽음 (SIGKILL은 OOM kill 가능성 높음)
         const fcIdx = args.indexOf("-filter_complex");
         const fc = fcIdx >= 0 ? args[fcIdx + 1] : "<없음>";
-        console.error(`[ffmpeg] exit=${code} ───── stderr 전체 ─────`);
-        console.error(stderrBuf);
+        const sigHint = signal === "SIGKILL"
+          ? " ← OOM kill 의심 (메모리 한도 초과)"
+          : signal === "SIGSEGV"
+          ? " ← segfault (ffmpeg 빌드 또는 인자 문제)"
+          : "";
+        console.error(`[ffmpeg] exit code=${code} signal=${signal}${sigHint}`);
+        console.error(`[ffmpeg] ───── stderr 전체 (${stderrBuf.length} chars) ─────`);
+        console.error(stderrBuf || "<비어있음>");
         console.error(`[ffmpeg] ───── -filter_complex 인자 (${fc.length} chars) ─────`);
         console.error(fc);
         console.error(`[ffmpeg] ───── 끝 ─────`);
-        reject(new Error(`ffmpeg exit ${code}: ${stderrBuf.slice(-500)}`));
+        const tail = stderrBuf.slice(-500) || `signal=${signal}${sigHint}`;
+        reject(new Error(`ffmpeg exit ${code}: ${tail}`));
       }
     });
   });
