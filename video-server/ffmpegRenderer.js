@@ -44,15 +44,20 @@ function resolveFontPath() {
 /**
  * drawtext text='...' 내부에서 안전하도록 이스케이프.
  *
- * ffmpeg filter_complex parser는 single-quoted string 안의 `\'` 이스케이프를
- * 일관되게 처리하지 못해 quote가 조기 종료되는 케이스가 있다 (관측: 타이포그래피 따옴표
- * 없이 `'` 포함 시 "Filter not found" 에러). 해결책으로 아예 입력 단계에서 `'`를
- * 유니코드 곡선 따옴표(U+2019)로 치환한다 — 시각적 거의 동일.
+ * 관측 사례:
+ *   1. `'` 포함 시 quote 조기 종료 → 곡선따옴표(U+2019) 치환으로 우회
+ *   2. `:` 포함 시 single-quote 안이라도 옵션 구분자로 해석돼 다음 토큰이 잘려나감
+ *      (예: scene.badge="시공:완료" → ffmpeg가 fontsize=40을 새 필터 이름으로 착각 → "Filter not found")
+ *   3. `%`는 drawtext 변수 expansion(%{n}, %{pts}) 트리거 — 의도치 않은 치환 방지
+ *
+ * 순서 중요: 백슬래시 이중화를 가장 먼저 수행해 후속 `\:`, `\%`가 다시 escape되는 일을 막는다.
  */
 function escapeText(text) {
   return String(text)
-    .replace(/'/g, "\u2019")
     .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\u2019")
+    .replace(/:/g, "\\:")
+    .replace(/%/g, "\\%")
     .replace(/\n/g, "\\n");
 }
 
