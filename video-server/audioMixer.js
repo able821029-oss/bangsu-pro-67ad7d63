@@ -3,7 +3,7 @@
 
 const fs = require("fs");
 const { execSync } = require("child_process");
-const ffmpegPath = require("ffmpeg-static");
+const ffmpegPath = require("./ffmpegBin");
 const { generateBgm } = require("./bgm");
 
 /**

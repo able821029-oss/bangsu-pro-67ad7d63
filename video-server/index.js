@@ -13,6 +13,7 @@ require("./worker.js");
 try {
   const diag = diagnoseFfmpeg();
   const fontPath = resolveFontPath();
+  console.log(`[startup] ffmpeg 경로: ${diag.binPath}`);
   console.log(`[startup] ffmpeg 버전: ${diag.version}`);
   console.log(`[startup] ffmpeg 필터: ${JSON.stringify(diag.filters)}`);
   console.log(`[startup] 한국어 폰트: ${fontPath || "없음 — 영상에 텍스트 누락 위험"}`);

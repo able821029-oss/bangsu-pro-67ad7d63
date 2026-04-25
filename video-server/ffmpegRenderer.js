@@ -13,7 +13,7 @@ const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const ffmpegPath = require("ffmpeg-static");
+const ffmpegPath = require("./ffmpegBin");
 
 const FPS = 24;
 const W = 1080;
@@ -342,7 +342,7 @@ function runFfmpeg(args, totalSec, onProgress) {
  * 진짜 빌드 옵션 문제인지, 아니면 args escape 문제인지 즉시 구분 가능.
  */
 function diagnoseFfmpeg() {
-  const result = { version: "?", filters: {} };
+  const result = { binPath: ffmpegPath, version: "?", filters: {} };
   try {
     const v = spawnSync(ffmpegPath, ["-hide_banner", "-version"], { encoding: "utf8" });
     const m = (v.stdout || "").match(/ffmpeg version (\S+)/);

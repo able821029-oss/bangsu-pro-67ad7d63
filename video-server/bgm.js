@@ -4,7 +4,7 @@
 const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const ffmpegPath = require("ffmpeg-static");
+const ffmpegPath = require("./ffmpegBin");
 
 const CACHE_DIR = process.env.BGM_CACHE_DIR || "/tmp/bgm-cache";
 const MASTER_DURATION_SEC = 180;
