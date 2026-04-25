@@ -241,6 +241,7 @@ export function useShortsPipeline(
             constructionDate: new Date().toISOString().slice(0, 10),
             companyName: settings.companyName,
             phoneNumber: settings.phoneNumber,
+            logoUrl: settings.logoUrl || "",
             workTopic: workTopic.trim(),
           },
         );

@@ -20,7 +20,7 @@ const SHOTSTACK_HOST_DEFAULT = "https://api.shotstack.io/edit/stage";
 
 // ── 영상 구성 상수 ───────────────────────────────────────────────
 const PHOTO_SECONDS = 5;       // 사진 한 장당 노출 시간
-const ENDING_SECONDS = 1;      // 마지막 엔딩 카드
+const ENDING_SECONDS = 3;      // 마지막 엔딩 카드 (로고 + 회사명 + 연락처)
 // 영상 한 편의 절대 상한 — Shotstack 분당 과금 + 무료 stage 월 한도 보호.
 // 클라이언트가 더 큰 값을 요청해도 이 값으로 강제 캡핑된다.
 const MAX_DURATION_HARD_CAP_SEC = 120;
@@ -216,6 +216,8 @@ interface BuildTimelineParams {
   bgmUrl: string | null;
   companyName: string;
   phoneNumber: string;
+  /** Storage public URL — Shotstack 가 fetch 가능한 https URL 이어야 함 */
+  logoUrl: string | null;
 }
 
 // Shotstack 기본 title asset 은 라틴 폰트만 내장이라 한국어가 .notdef
@@ -280,9 +282,13 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
     })
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
-  // ── 엔딩 카드 ── (마지막 1초)
+  // ── 엔딩 카드 ── (마지막 ENDING_SECONDS)
+  // 로고가 있으면 원형 이미지 + 회사명 + 전화번호. 없으면 회사명 + 전화번호만.
   const endingHtml =
     `<div class="ending">` +
+    (p.logoUrl
+      ? `<img class="logo" src="${escapeHtml(p.logoUrl)}" />`
+      : "") +
     `<div class="company">${escapeHtml(p.companyName || "SMS")}</div>` +
     (p.phoneNumber
       ? `<div class="phone">${escapeHtml(p.phoneNumber)}</div>`
@@ -296,6 +302,9 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
         `.ending { font-family: ${KO_FONT_STACK}; color: #ffffff; ` +
         `text-align: center; padding: 80px 40px; background: linear-gradient(135deg, #001130, #1a3a6a); ` +
         `border-radius: 24px; width: 100%; box-sizing: border-box; } ` +
+        `.logo { width: 260px; height: 260px; border-radius: 50%; ` +
+        `margin: 0 auto 36px; display: block; object-fit: cover; ` +
+        `border: 4px solid rgba(255,255,255,0.15); } ` +
         `.company { font-size: 96px; font-weight: 800; margin-bottom: 24px; line-height: 1.2; } ` +
         `.phone { font-size: 56px; font-weight: 500; opacity: 0.92; }`,
       width: 980,
@@ -426,6 +435,7 @@ serve(
           location,
           companyName,
           phoneNumber,
+          logoUrl: requestedLogoUrl,
           voiceId: requestedVoiceId,
           scriptMode,
           manualScript,
@@ -658,6 +668,26 @@ serve(
           `[upload] photos ${photoUrls.length}장 (${Date.now() - uploadStart}ms)`,
         );
 
+        // 3-2) 로고 업로드 — dataURL 이면 Storage 로 변환, 이미 https URL 이면 그대로 사용.
+        // 실패해도 영상 자체는 만들어져야 하므로 null 로 fallback.
+        let logoPublicUrl: string | null = null;
+        if (typeof requestedLogoUrl === "string" && requestedLogoUrl.length > 0) {
+          if (requestedLogoUrl.startsWith("data:")) {
+            const { url: uploadedLogoUrl } = await uploadDataUrl(
+              requestedLogoUrl,
+              `${userScope}/${jobId}/logo`,
+            );
+            logoPublicUrl = uploadedLogoUrl;
+            if (!uploadedLogoUrl) {
+              console.warn(
+                "[upload] logo 업로드 실패 — 엔딩 카드 텍스트만 표시됩니다.",
+              );
+            }
+          } else if (/^https?:\/\//i.test(requestedLogoUrl)) {
+            logoPublicUrl = requestedLogoUrl;
+          }
+        }
+
         // 4) ElevenLabs 나레이션 → Storage 업로드
         const narrationUrls: (string | null)[] = new Array(scenes.length).fill(
           null,
@@ -741,6 +771,7 @@ serve(
           bgmUrl: ENDING_BGM_URL || null,
           companyName: companyName || "",
           phoneNumber: phoneNumber || "",
+          logoUrl: logoPublicUrl,
         });
 
         const shotstack = await postToShotstack(
