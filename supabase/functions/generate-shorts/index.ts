@@ -215,11 +215,32 @@ interface BuildTimelineParams {
   phoneNumber: string;
 }
 
+// Shotstack 의 기본 title asset 은 라틴 폰트만 내장이라 한국어가 .notdef
+// 글리프(빈 사각형) 로 렌더된다. timeline.fonts 에 한국어 woff2 를 등록하고
+// HTML asset 에서 그 family 를 참조하면 한국어 자막이 정상 출력된다.
+//
+// 폰트 선정: Pretendard — Apple SD Gothic Neo / Noto Sans KR 호환의 한국어 친화 폰트.
+// jsDelivr 의 GitHub raw CDN 은 안정적이며 Shotstack 렌더 노드가 fetch 가능.
+const KO_FONT_URL_BOLD =
+  "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2";
+const KO_FONT_URL_REGULAR =
+  "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2";
+const KO_FONT_FAMILY = "Pretendard";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> {
   const photoCount = p.photoUrls.length;
   const photoTotalSec = photoCount * PHOTO_SECONDS;
 
-  // ── 사진 트랙 ── (가장 아래)
+  // ── 사진 트랙 ──
   const photoClips = p.photoUrls.map((src, i) => ({
     asset: { type: "image", src },
     start: i * PHOTO_SECONDS,
@@ -228,45 +249,63 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
     transition: { in: "fade", out: "fade" },
   }));
 
-  // ── 자막 트랙 ── (사진 위)
+  // ── 자막 트랙 ── HTML asset + Pretendard
+  // width/height 는 픽셀(1080×1920 캔버스 기준). 하단 16% 지점에 띄운다.
   const subtitleClips = p.subtitles
     .map((text, i) => {
       if (!text || !text.trim()) return null;
+      const safe = escapeHtml(text.trim());
       return {
         asset: {
-          type: "title",
-          text: text.trim(),
-          style: "minimal",
-          color: "#ffffff",
-          size: "medium",
-          background: "rgba(0,0,0,0.55)",
-          position: "bottom",
+          type: "html",
+          html: `<div class="cap">${safe}</div>`,
+          css:
+            `.cap { font-family: '${KO_FONT_FAMILY}', sans-serif; font-weight: 700; ` +
+            `color: #ffffff; font-size: 56px; line-height: 1.35; text-align: center; ` +
+            `padding: 18px 28px; background: rgba(0,0,0,0.62); border-radius: 14px; ` +
+            `display: inline-block; }`,
+          width: 980,
+          height: 240,
+          background: "transparent",
         },
         start: i * PHOTO_SECONDS,
         length: PHOTO_SECONDS,
+        position: "bottom",
+        offset: { y: 0.08 },
         transition: { in: "fade", out: "fade" },
       };
     })
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
-  // ── 엔딩 카드 ── (마지막 1초, 자막 트랙 위에 풀 화면 텍스트)
-  const endingText = `${p.companyName || "SMS"}\n${p.phoneNumber || ""}`.trim();
+  // ── 엔딩 카드 ── (마지막 1초)
+  const endingHtml =
+    `<div class="ending">` +
+    `<div class="company">${escapeHtml(p.companyName || "SMS")}</div>` +
+    (p.phoneNumber
+      ? `<div class="phone">${escapeHtml(p.phoneNumber)}</div>`
+      : "") +
+    `</div>`;
   const endingClip = {
     asset: {
-      type: "title",
-      text: endingText,
-      style: "future",
-      color: "#ffffff",
-      size: "x-large",
-      background: "#001130",
-      position: "center",
+      type: "html",
+      html: endingHtml,
+      css:
+        `.ending { font-family: '${KO_FONT_FAMILY}', sans-serif; color: #ffffff; ` +
+        `text-align: center; padding: 80px 40px; background: linear-gradient(135deg, #001130, #1a3a6a); ` +
+        `border-radius: 24px; width: 100%; box-sizing: border-box; } ` +
+        `.company { font-size: 96px; font-weight: 800; margin-bottom: 24px; line-height: 1.2; } ` +
+        `.phone { font-size: 56px; font-weight: 500; opacity: 0.92; }`,
+      width: 980,
+      height: 1100,
+      background: "transparent",
     },
     start: photoTotalSec,
     length: ENDING_SECONDS,
+    position: "center",
     transition: { in: "fade", out: "fade" },
   };
 
-  // ── 나레이션 트랙 ── (씬 시작점에 각각 배치, 모든 트랙은 동시 재생)
+  // ── 나레이션 트랙 ──
   const narrationClips = p.narrationUrls
     .map((src, i) => {
       if (!src) return null;
@@ -278,19 +317,23 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
     })
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
-  // 트랙은 배열 위쪽일수록 화면에서 더 위 레이어로 렌더된다.
   const tracks: Array<{ clips: unknown[] }> = [
-    { clips: [endingClip] },                 // 엔딩 (최상단)
-    { clips: subtitleClips },                // 자막
-    { clips: photoClips },                   // 사진 (배경)
+    { clips: [endingClip] },     // 엔딩 (최상단)
+    { clips: subtitleClips },    // 자막
+    { clips: photoClips },       // 사진
   ];
   if (narrationClips.length > 0) {
-    tracks.push({ clips: narrationClips });  // 오디오 (트랙 위치는 시각 무관)
+    tracks.push({ clips: narrationClips });
   }
 
   return {
     timeline: {
       background: "#000000",
+      // Shotstack 가 렌더 시 woff2 를 fetch → CSS 의 font-family 로 매칭
+      fonts: [
+        { src: KO_FONT_URL_BOLD },
+        { src: KO_FONT_URL_REGULAR },
+      ],
       ...(p.bgmUrl
         ? {
             soundtrack: {
