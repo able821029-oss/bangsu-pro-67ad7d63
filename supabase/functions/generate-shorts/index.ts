@@ -220,17 +220,20 @@ interface BuildTimelineParams {
   logoUrl: string | null;
 }
 
-// Shotstack 기본 title asset 은 라틴 폰트만 내장이라 한국어가 .notdef
-// (빈 사각형) 로 렌더된다. HTML asset 으로 바꾸고 css 에서 시스템 한국어 폰트
-// fallback 체인을 사용하면, Shotstack 렌더 노드(Linux 컨테이너)에 기본 설치된
-// "Noto Sans CJK KR" / "Liberation Sans" 등이 자동으로 사용된다.
+// Shotstack 한국어 자막 처리:
+// - 기본 title asset 은 라틴 폰트만 내장 → 한국어가 .notdef (빈 사각형)
+// - 시스템 폰트 fallback 도 실패 (렌더 노드에 NotoSansCJK 미설치 확인됨)
+// - 따라서 timeline.fonts 에 외부 한국어 폰트를 등록해야 함
 //
-// timeline.fonts 로 외부 woff2/ttf 를 등록하는 방법도 있으나, 잘못된 URL/포맷은
-// timeline 전체가 reject 되어 검정 영상이 나온다 (2026-04-25 사고). 외부 폰트
-// 의존성을 끊고 시스템 폰트 fallback 만으로 한국어 출력 시도.
-const KO_FONT_STACK =
-  `'Noto Sans CJK KR', 'Noto Sans KR', 'Apple SD Gothic Neo', ` +
-  `'Malgun Gothic', 'NanumGothic', sans-serif`;
+// 직전 시도(woff2)는 timeline 전체 reject → 검정 영상 사고.
+// Shotstack 공식 예제는 .ttf 만 보이지만, .otf 도 동일 OpenType 컨테이너이므로
+// 시도해 본다. URL 은 jsDelivr GitHub mirror (200 + 실제 바이트 검증 완료).
+const KO_FONT_FAMILY = "Pretendard";
+const KO_FONT_URL_BOLD =
+  "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@main/packages/pretendard/dist/public/static/Pretendard-Bold.otf";
+const KO_FONT_URL_REGULAR =
+  "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@main/packages/pretendard/dist/public/static/Pretendard-Regular.otf";
+const KO_FONT_STACK = `'${KO_FONT_FAMILY}', sans-serif`;
 
 function escapeHtml(s: string): string {
   return s
@@ -341,9 +344,14 @@ function buildShotstackPayload(p: BuildTimelineParams): Record<string, unknown> 
   return {
     timeline: {
       background: "#000000",
-      // timeline.fonts 는 잘못된 URL/포맷 하나만 있어도 timeline 전체가 reject 되어
-      // 검정 영상으로 나오는 부작용이 확인됨 (2026-04-25). 외부 폰트 등록은 prod 전환 후
-      // ttf URL 검증한 뒤 재도입한다. 현재는 시스템 폰트 fallback 만 사용.
+      // timeline.fonts: Pretendard otf 두 weight 등록.
+      // - 직전 woff2 시도는 검정 영상 회귀 발생 → otf 로 재시도.
+      // - URL 은 jsDelivr GitHub mirror (HEAD 200 + 1.5MB 실제 바이트 검증 완료).
+      // - css 의 font-family: 'Pretendard' 가 자동 매칭되어 한국어 글리프 출력.
+      fonts: [
+        { src: KO_FONT_URL_BOLD },
+        { src: KO_FONT_URL_REGULAR },
+      ],
       ...(p.bgmUrl
         ? {
             soundtrack: {
