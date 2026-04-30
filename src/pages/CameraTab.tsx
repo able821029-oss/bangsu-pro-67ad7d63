@@ -84,20 +84,23 @@ export function CameraTab({
   // ── 작성 중 이탈 방지 ──
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (photos.length > 0 || wizardStep === 2) {
+      // Step 2 진입 또는 현장 정보 일부 입력 상태면 임시저장 후 이탈 가드
+      const hasInputs =
+        !!location || !!siteArea || !!siteMethod || !!siteEtc || wizardStep === 2;
+      if (hasInputs) {
         saveDraft();
         e.preventDefault();
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [photos, wizardStep, location, constructionDate, siteArea, siteMethod, siteEtc, selectedPlatforms, selectedPersona]);
+  }, [wizardStep, location, constructionDate, siteArea, siteMethod, siteEtc, selectedPlatforms, selectedPersona]);
 
-  // ── 임시저장 함수 ──
+  // ── 임시저장 함수 ── (사진은 더 이상 Step 1에서 받지 않으므로 photos 의존 제거)
   const saveDraft = () => {
-    if (photos.length === 0) return;
+    const hasInputs = !!location || !!siteArea || !!siteMethod || !!siteEtc || wizardStep === 2;
+    if (!hasInputs) return;
     const draft = {
-      photos: photos.map(p => ({ id: p.id, dataUrl: p.dataUrl })),
       location,
       constructionDate,
       siteArea,
@@ -114,10 +117,10 @@ export function CameraTab({
   // ── 임시저장 복원 체크 ──
   useEffect(() => {
     const raw = localStorage.getItem(DRAFT_KEY);
-    if (!raw || photos.length > 0) return;
+    if (!raw) return;
     try {
       const draft = JSON.parse(raw);
-      if (draft.photos?.length > 0) {
+      if (draft.location || draft.siteArea || draft.siteMethod || draft.siteEtc || draft.wizardStep === 2) {
         setShowDraftBanner(true);
       }
     } catch {}
@@ -128,6 +131,7 @@ export function CameraTab({
     if (!raw) return;
     try {
       const draft = JSON.parse(raw);
+      // legacy: 과거 draft에 photos 배열이 있으면 store에 복원 (호환성)
       draft.photos?.forEach((p: any) => addPhoto(p));
       if (draft.location) setLocation(draft.location);
       if (draft.constructionDate) setConstructionDate(draft.constructionDate);
@@ -198,28 +202,30 @@ export function CameraTab({
   };
 
   const handleNext = () => {
-    if (photos.length === 0) {
-      toast({ title: "사진을 먼저 촬영해주세요", variant: "destructive" });
-      return;
-    }
-    // Step 1의 사진들을 섹션으로 자동 배치 (소제목/글은 비워둠 → 사용자가 직접 or AI로 채움)
-    const initial: DraftSection[] = photos.map((p) => ({
-      id: crypto.randomUUID(),
-      subtitle: "",
-      photo: { id: p.id, dataUrl: p.dataUrl },
-      text: "",
-    }));
-    setEditSections(initial.length > 0 ? initial : [createEmptySection()]);
+    // Step 1에서 사진을 받지 않음 — Step 2의 각 섹션 카드에서 개별 첨부.
+    // 빈 섹션 1개로 시작해 사용자가 소제목+사진+키워드를 입력 후 AI 작성/저장.
+    setEditSections([createEmptySection()]);
     setWizardStep(2);
   };
 
   const handleStartAI = async () => {
-    if (photos.length === 0) {
-      toast({ title: "사진을 먼저 촬영해주세요", variant: "destructive" });
-      return;
-    }
     if (selectedPlatforms.length === 0) {
       toast({ title: "게시 플랫폼을 선택해주세요", variant: "destructive" });
+      return;
+    }
+
+    // Step 2의 각 섹션 카드에 첨부된 사진들을 모아 Vision 입력으로 사용.
+    // (Step 1에서는 더 이상 사진을 받지 않음 — 2026-04-30 흐름 변경)
+    const sectionPhotos = editSections
+      .map((s) => (s.photo?.dataUrl ? { dataUrl: s.photo.dataUrl } : null))
+      .filter((p): p is { dataUrl: string } => p !== null);
+
+    if (sectionPhotos.length === 0) {
+      toast({
+        title: "사진이 없어요",
+        description: "각 섹션 카드에 사진을 1장 이상 첨부한 뒤 시도해 주세요.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -242,11 +248,11 @@ export function CameraTab({
 
       // Claude Vision에 보낼 대표 사진 1장만 더 공격적으로 압축 (400px/q=0.5) —
       // 나머지는 로컬에만 유지해 DB에 저장. Edge Function 6MB · 150s 한계 회피.
-      const primaryCompressed = await compressPhotos(photos.slice(0, 1), 400);
+      const primaryCompressed = await compressPhotos(sectionPhotos.slice(0, 1), 400);
       const { data, error } = await supabase.functions.invoke("generate-blog", {
         body: {
           photos: primaryCompressed.map((dataUrl, i) => ({ dataUrl, index: i + 1 })),
-          photoCount: photos.length,
+          photoCount: sectionPhotos.length,
           persona: selectedPersona,
           platform: primaryPlatform,
           location,
@@ -330,12 +336,12 @@ export function CameraTab({
     for (const b of blocks) {
       if (b.type === "subtitle") {
         pushCurrent();
-        current = { id: crypto.randomUUID(), subtitle: b.content || "", photo: null, text: "" };
+        current = { id: crypto.randomUUID(), subtitle: b.content || "", photo: null, keywords: "", text: "" };
       } else if (b.type === "text") {
-        if (!current) current = { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
+        if (!current) current = { id: crypto.randomUUID(), subtitle: "", photo: null, keywords: "", text: "" };
         current.text = current.text ? `${current.text}\n${b.content || ""}` : b.content || "";
       } else if (b.type === "photo") {
-        if (!current) current = { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
+        if (!current) current = { id: crypto.randomUUID(), subtitle: "", photo: null, keywords: "", text: "" };
         const match = String(b.content || "").match(/photo-(\d+)/);
         const idx = match ? parseInt(match[1], 10) - 1 : -1;
         const pick = photoPool[idx] || photoPool[out.length] || null;
@@ -571,7 +577,7 @@ export function CameraTab({
             <ArrowLeft className="w-4 h-4" /> 홈
           </button>
           <h1 className="text-xl font-bold flex items-center gap-2 text-foreground font-[Manrope]">
-            <Camera className="w-5 h-5 text-primary" /> 사진 + 현장 정보
+            <Camera className="w-5 h-5 text-primary" /> 현장 정보
           </h1>
           {/* Wizard progress dots */}
           <div className="flex gap-1.5 items-center">
@@ -580,74 +586,14 @@ export function CameraTab({
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            className="w-full h-[52px] rounded-full bg-gradient-to-r from-[#4C8EFF] to-[#6BA4FF] text-white font-bold text-sm flex items-center justify-center gap-2"
-            onClick={() => cameraInputRef.current?.click()}
-          >
-            <Camera className="w-5 h-5" />
-            사진 촬영
-          </button>
-          <button
-            className="w-full h-[52px] rounded-full bg-secondary text-primary font-bold text-sm flex items-center justify-center gap-2"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <ImagePlus className="w-5 h-5" />
-            갤러리 선택
-          </button>
-        </div>
-
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-
-        {/* Photo grid */}
-        <div>
-          <p className="text-sm text-muted-foreground mb-2 font-[Inter]">
-            현장 사진 <span className="font-semibold text-foreground">{photos.length}</span>/10장{" "}
-            {photos.length === 0 ? "— 많을수록 좋아요!" : photos.length >= 3 ? "✓ 충분해요" : "— 3장 이상 권장"}
-          </p>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                className="relative shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-[#161B2B]"
-              >
-                <img src={photoSrc(photo)} alt="" className="w-full h-full object-cover" />
-                <button
-                  onClick={() => removePhoto(photo.id)}
-                  className="absolute top-0.5 right-0.5 bg-red-500/80 rounded-full p-0.5"
-                >
-                  <X className="w-3 h-3 text-white" />
-                </button>
-              </div>
-            ))}
-            {photos.length === 0 && (
-              <>
-                {[0, 1, 2].map(i => (
-                  <div key={i} className="w-20 h-20 rounded-xl border-2 border-dashed border-border bg-[#161B2B] flex items-center justify-center">
-                    <Camera className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                ))}
-                <div className="flex items-center ml-2">
-                  <p className="text-xs text-muted-foreground whitespace-nowrap font-[Inter]">사진을<br/>추가해요</p>
-                </div>
-              </>
-            )}
+        {/* 안내 카피 — 사진은 다음 단계 섹션(소제목)부터 첨부 */}
+        <div className="glass-card-glow p-4 flex items-start gap-3">
+          <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">사진은 다음 단계에서 섹션별로 추가</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              현장 정보를 먼저 입력하면, 다음 화면의 각 소제목 카드에서 사진을 개별로 첨부할 수 있어요.
+            </p>
           </div>
         </div>
 
