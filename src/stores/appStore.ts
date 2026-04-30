@@ -212,28 +212,48 @@ export const useAppStore = create<AppState>()(
       version: 2,
       storage: createJSONStorage(() => localStorage),
       // 기존 사용자(version 1)의 drafts에는 mode/siteSpecial/keywords 필드가 없음.
-      // version 2 이후 새 mode/siteSpecial/keywords 도입에 맞춰 1회성 마이그레이션.
-      // - drafts[].mode: 현재 작성 중인 글이 비어있으면 undefined로 리셋해 TypePicker 노출,
-      //   내용이 있으면 expert로 보존 (사용자가 작성 중인 글을 잃지 않도록)
-      // - drafts[].siteSpecial: ""
-      // - drafts[].sections[].keywords: ""
+      // version 2 이후 1회성 마이그레이션 + 모든 신규/누락 필드를 안전 기본값으로 보강해
+      // legacy draft 접근 시 발생하던 `Cannot read properties of undefined (reading 'trim')` 방지.
       migrate: (persisted, fromVersion) => {
         const state = (persisted as Partial<AppState>) || {};
-        if (fromVersion < 2 && Array.isArray(state.drafts)) {
-          state.drafts = state.drafts.map((d: BlogDraft) => {
+        if (Array.isArray(state.drafts)) {
+          state.drafts = state.drafts.map((d) => {
+            const draft = (d ?? {}) as Partial<BlogDraft>;
             const hasContent =
-              !!d.title?.trim() ||
-              (Array.isArray(d.sections) && d.sections.some((s) => s.subtitle || s.text || s.photo));
+              !!draft.title?.trim() ||
+              (Array.isArray(draft.sections) &&
+                draft.sections.some((s) => s?.subtitle || s?.text || s?.photo));
+            const sections: DraftSection[] = (draft.sections ?? []).map((s) => {
+              const sec = (s ?? {}) as Partial<DraftSection>;
+              return {
+                id: sec.id ?? crypto.randomUUID(),
+                subtitle: sec.subtitle ?? "",
+                photo: sec.photo ?? null,
+                keywords: sec.keywords ?? "",
+                text: sec.text ?? "",
+              };
+            });
             return {
-              ...d,
-              // 새 글이면 모드 미선택으로 → TypePicker 노출
-              mode: hasContent ? (d.mode ?? "expert") : undefined,
-              siteSpecial: d.siteSpecial ?? "",
-              sections: (d.sections ?? []).map((s) => ({
-                ...s,
-                keywords: (s as DraftSection).keywords ?? "",
-              })),
-            };
+              id: draft.id ?? crypto.randomUUID(),
+              // version 1 → 2: 빈 글이면 모드 미선택으로 리셋해 TypePicker 노출,
+              // 내용이 있으면 expert로 보존 (작성 중인 글 손실 방지)
+              mode:
+                fromVersion < 2
+                  ? hasContent
+                    ? draft.mode ?? "expert"
+                    : undefined
+                  : draft.mode,
+              title: draft.title ?? "",
+              location: draft.location ?? "",
+              locationSigu: draft.locationSigu ?? "",
+              locationDong: draft.locationDong ?? "",
+              siteArea: draft.siteArea ?? "",
+              siteMethod: draft.siteMethod ?? "",
+              siteSpecial: draft.siteSpecial ?? "",
+              siteEtc: draft.siteEtc ?? "",
+              sections: sections.length > 0 ? sections : [createEmptySection()],
+              createdAt: draft.createdAt ?? new Date().toISOString(),
+            } satisfies BlogDraft;
           });
         }
         return state as AppState;

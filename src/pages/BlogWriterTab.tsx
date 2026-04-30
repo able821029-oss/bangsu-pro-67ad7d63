@@ -158,7 +158,7 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
   };
 
   // "현장 정보"만 있고 실제 섹션이 비어있는 부실 글 저장 방지 (2026-04-20)
-  const canSave = !!draft.title.trim() && hasMinimumContent(draft.sections);
+  const canSave = !!(draft.title ?? "").trim() && hasMinimumContent(draft.sections);
 
   const handleSave = async () => {
     if (!canSave) {
@@ -180,9 +180,9 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         .map((s) => s.photo)
         .filter((p): p is NonNullable<typeof p> => p !== null);
 
-      // 풀 주소 조합: "서울 강남구 역삼동" 형태
+      // 풀 주소 조합: "서울 강남구 역삼동" 형태 (legacy draft 호환을 위해 ?? "" 폴백)
       const fullLocation = [draft.location, draft.locationSigu, draft.locationDong]
-        .map((v) => v.trim())
+        .map((v) => (v ?? "").trim())
         .filter(Boolean)
         .join(" ");
 
@@ -763,12 +763,12 @@ function SectionsBlock({
           mode={mode}
           location={
             [draft.location, draft.locationSigu, draft.locationDong]
-              .map((v) => v.trim())
+              .map((v) => (v ?? "").trim())
               .filter(Boolean)
               .join(" ") || undefined
           }
-          siteMethod={draft.siteMethod || undefined}
-          siteArea={draft.siteArea || undefined}
+          siteMethod={(draft.siteMethod ?? "") || undefined}
+          siteArea={(draft.siteArea ?? "") || undefined}
           onUpdate={(patch) => onUpdateSection(s.id, patch)}
           onRemove={() => onRemoveSection(s.id)}
           onInsertAfter={() => onInsertAfter(s.id)}
