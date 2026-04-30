@@ -84,14 +84,20 @@ export interface DraftSection {
   text: string;
 }
 
+/** 작성 모드 — 전문가형(현장정보+섹션) / 브이로그형(섹션만, 자유 형식) */
+export type BlogMode = "expert" | "vlog";
+
 export interface BlogDraft {
   id: string;
+  /** undefined = 미선택(=TypePicker 노출). 한 번 고른 뒤에는 유지 */
+  mode?: BlogMode;
   title: string;
   location: string;        // 시/도 (예: 서울)
   locationSigu: string;    // 시·군·구 (예: 강남구)
   locationDong: string;    // 동/읍/면 (예: 역삼동)
   siteArea: string;        // 시공면적
   siteMethod: string;      // 공법
+  siteSpecial: string;     // 특가 항목 (전문가형 전용 — 가격·할인·프로모션)
   siteEtc: string;         // 기타
   sections: DraftSection[];
   createdAt: string;
@@ -103,15 +109,17 @@ export function createEmptySection(): DraftSection {
   return { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
 }
 
-export function createEmptyDraft(): BlogDraft {
+export function createEmptyDraft(mode?: BlogMode): BlogDraft {
   return {
     id: crypto.randomUUID(),
+    mode,
     title: "",
     location: "",
     locationSigu: "",
     locationDong: "",
     siteArea: "",
     siteMethod: "",
+    siteSpecial: "",
     siteEtc: "",
     sections: [createEmptySection()],
     createdAt: new Date().toISOString(),

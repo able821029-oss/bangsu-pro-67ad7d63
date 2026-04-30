@@ -11,6 +11,8 @@ export interface DraftSlice {
   setActiveDraft: (idx: number) => void;
   updateDraft: (idx: number, patch: Partial<BlogDraft>) => void;
   addSection: (draftIdx: number) => void;
+  /** 특정 섹션 바로 아래에 빈 섹션 1개 삽입 (블록별 + 버튼용) */
+  insertSectionAfter: (draftIdx: number, sectionId: string) => void;
   /**
    * 여러 장의 사진을 한 번에 섹션에 추가 (갤러리 다중 선택용).
    * - 빈 사진 섹션이 있으면 먼저 채움
@@ -77,6 +79,18 @@ export const createDraftSlice: StateCreator<
             }
           : d,
       ),
+    })),
+  insertSectionAfter: (draftIdx, sectionId) =>
+    set((state) => ({
+      drafts: state.drafts.map((d, i) => {
+        if (i !== draftIdx) return d;
+        const idx = d.sections.findIndex((s) => s.id === sectionId);
+        const empty = { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
+        if (idx === -1) return { ...d, sections: [...d.sections, empty] };
+        const next = [...d.sections];
+        next.splice(idx + 1, 0, empty);
+        return { ...d, sections: next };
+      }),
     })),
   addPhotosAsSections: (draftIdx, photos) => {
     let placed = 0;

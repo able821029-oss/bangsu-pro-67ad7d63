@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import {
   Plus, X, Camera, ImagePlus, Sparkles, Trash2,
   MapPin, Ruler, Wrench, FileText as NoteIcon, Type, Loader2,
+  Tag, Briefcase, Video,
 } from "lucide-react";
 import {
   useAppStore,
@@ -10,6 +11,7 @@ import {
   ContentBlock,
   Platform,
   photoSrc,
+  BlogMode,
 } from "@/stores/appStore";
 import { IconChip } from "@/components/IconChip";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +22,8 @@ import { cn } from "@/lib/utils";
 import { compressImage } from "@/lib/imageCompress";
 import { uploadPostPhotos } from "@/lib/uploadPostPhoto";
 import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent, normalizeHashtags } from "@/lib/postQuality";
+import { useImagePaste } from "@/hooks/useImagePaste";
+import { generateSection } from "@/lib/generateSection";
 
 // 한국 17개 시·도 + 전국
 const REGIONS = [
@@ -109,6 +113,7 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
   const setActiveDraft = useAppStore((s) => s.setActiveDraft);
   const updateDraft = useAppStore((s) => s.updateDraft);
   const addSection = useAppStore((s) => s.addSection);
+  const insertSectionAfter = useAppStore((s) => s.insertSectionAfter);
   const addPhotosAsSections = useAppStore((s) => s.addPhotosAsSections);
   const updateSection = useAppStore((s) => s.updateSection);
   const removeSection = useAppStore((s) => s.removeSection);
@@ -145,6 +150,7 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
       target.location ||
       target.siteArea ||
       target.siteMethod ||
+      target.siteSpecial ||
       target.siteEtc ||
       target.sections.length > 0;
     if (hasContent && !window.confirm("작성 중인 내용이 삭제됩니다. 계속할까요?")) return;
@@ -180,15 +186,18 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         .filter(Boolean)
         .join(" ");
 
-      // 현장 정보를 첫 블록에 자동 삽입 (지역/면적/공법/기타)
-      const siteBits: string[] = [];
-      if (fullLocation) siteBits.push(`지역: ${fullLocation}`);
-      if (draft.siteArea) siteBits.push(`시공면적: ${draft.siteArea}`);
-      if (draft.siteMethod) siteBits.push(`공법: ${draft.siteMethod}`);
-      if (draft.siteEtc) siteBits.push(`기타: ${draft.siteEtc}`);
-      if (siteBits.length > 0) {
-        blocks.push({ type: "subtitle", content: "현장 정보" });
-        blocks.push({ type: "text", content: siteBits.join(" · ") });
+      // 현장 정보를 첫 블록에 자동 삽입 (전문가형만 — 브이로그형은 현장정보 자체가 비어있음)
+      if (draft.mode !== "vlog") {
+        const siteBits: string[] = [];
+        if (fullLocation) siteBits.push(`지역: ${fullLocation}`);
+        if (draft.siteArea) siteBits.push(`시공면적: ${draft.siteArea}`);
+        if (draft.siteMethod) siteBits.push(`공법: ${draft.siteMethod}`);
+        if (draft.siteSpecial) siteBits.push(`특가: ${draft.siteSpecial}`);
+        if (draft.siteEtc) siteBits.push(`기타: ${draft.siteEtc}`);
+        if (siteBits.length > 0) {
+          blocks.push({ type: "subtitle", content: "현장 정보" });
+          blocks.push({ type: "text", content: siteBits.join(" · ") });
+        }
       }
 
       filledSections.forEach((s, i) => {
@@ -247,7 +256,7 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         title: safeTitle,
         photos: uploadedPhotos,
         workType: "기타",
-        style: "시공일지형",
+        style: draft.mode === "vlog" ? "후기강조형" : "시공일지형",
         blocks,
         hashtags: defaultTags,
         status: "완료",
@@ -258,7 +267,9 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         siteInfo: {
           area: draft.siteArea,
           method: draft.siteMethod,
-          etc: draft.siteEtc,
+          etc: [draft.siteSpecial && `특가: ${draft.siteSpecial}`, draft.siteEtc]
+            .filter(Boolean)
+            .join(" / "),
         },
       };
 
@@ -351,25 +362,146 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
         )}
       </div>
 
-      {/* 1) 현장 정보 — 항시 고정 */}
-      <FieldsBlock
-        draft={draft}
-        onChange={(patch) => updateDraft(activeIdx, patch)}
-        selectedPlatforms={selectedPlatforms}
-        onTogglePlatform={togglePlatform}
-      />
+      {/* 모드 미선택 → 타입 선택 화면 */}
+      {!draft.mode ? (
+        <TypePicker onPick={(m) => updateDraft(activeIdx, { mode: m })} />
+      ) : (
+        <>
+          {/* 모드 표시 + 변경 버튼 */}
+          <ModeBanner
+            mode={draft.mode}
+            onChange={() => {
+              if (window.confirm("작성 유형을 다시 선택할까요? (현재 입력 내용은 유지됩니다)")) {
+                updateDraft(activeIdx, { mode: undefined });
+              }
+            }}
+          />
 
-      {/* 2) 섹션 영역 + 3) + 글쓰기 추가 — 항시 고정 */}
-      <SectionsBlock
-        sections={draft.sections}
-        onAddSection={() => addSection(activeIdx)}
-        onAddPhotosAsSections={(photos) => addPhotosAsSections(activeIdx, photos)}
-        onUpdateSection={(id, patch) => updateSection(activeIdx, id, patch)}
-        onRemoveSection={(id) => removeSection(activeIdx, id)}
-        onSave={handleSave}
-        canSave={canSave}
-        saving={saving}
+          {/* 1) 현장 정보 — 전문가형 전용 */}
+          {draft.mode === "expert" && (
+            <FieldsBlock
+              draft={draft}
+              onChange={(patch) => updateDraft(activeIdx, patch)}
+              selectedPlatforms={selectedPlatforms}
+              onTogglePlatform={togglePlatform}
+            />
+          )}
+
+          {/* 브이로그형 — 제목·발행 채널만 (현장정보 없이) */}
+          {draft.mode === "vlog" && (
+            <VlogHeaderBlock
+              title={draft.title}
+              onTitleChange={(v) => updateDraft(activeIdx, { title: v })}
+              selectedPlatforms={selectedPlatforms}
+              onTogglePlatform={togglePlatform}
+            />
+          )}
+
+          {/* 2) 섹션 영역 + 3) + 글쓰기 추가 */}
+          <SectionsBlock
+            mode={draft.mode}
+            draft={draft}
+            sections={draft.sections}
+            onAddSection={() => addSection(activeIdx)}
+            onInsertAfter={(id) => insertSectionAfter(activeIdx, id)}
+            onAddPhotosAsSections={(photos) => addPhotosAsSections(activeIdx, photos)}
+            onUpdateSection={(id, patch) => updateSection(activeIdx, id, patch)}
+            onRemoveSection={(id) => removeSection(activeIdx, id)}
+            onSave={handleSave}
+            canSave={canSave}
+            saving={saving}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── 0) 타입 선택 — 전문가형 / 브이로그형 ──
+function TypePicker({ onPick }: { onPick: (m: BlogMode) => void }) {
+  return (
+    <div className="space-y-4">
+      <div className="glass-card p-5 text-center space-y-1.5">
+        <h2 className="text-base font-bold text-foreground">어떤 글을 쓰시나요?</h2>
+        <p className="text-xs text-muted-foreground">
+          유형에 따라 작성 흐름이 달라져요. 작성 중에도 변경할 수 있어요.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-3">
+        <button
+          type="button"
+          onClick={() => onPick("expert")}
+          className="glass-card-glow p-5 text-left flex items-start gap-4 hover:bg-white/5 transition-colors"
+        >
+          <IconChip icon={Briefcase} color="blue" size="lg" />
+          <div className="space-y-1.5">
+            <p className="text-sm font-bold text-foreground">전문가형</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              현장 정보(지역·면적·공법·특가)를 입력하고, 소제목+사진+본문 구조로 시공 블로그를 씁니다. SEO에 유리해요.
+            </p>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => onPick("vlog")}
+          className="glass-card p-5 text-left flex items-start gap-4 hover:bg-white/5 transition-colors"
+        >
+          <IconChip icon={Video} color="purple" size="lg" />
+          <div className="space-y-1.5">
+            <p className="text-sm font-bold text-foreground">브이로그형</p>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              현장 정보 없이 자유 형식으로 텍스트+사진+본문을 자유롭게 이어갑니다. 일상 기록에 좋아요.
+            </p>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ModeBanner({ mode, onChange }: { mode: BlogMode; onChange: () => void }) {
+  const label = mode === "expert" ? "전문가형" : "브이로그형";
+  const Icon = mode === "expert" ? Briefcase : Video;
+  return (
+    <div className="flex items-center justify-between glass-card px-4 py-2.5">
+      <div className="flex items-center gap-2">
+        <IconChip icon={Icon} color={mode === "expert" ? "blue" : "purple"} size="sm" />
+        <p className="text-xs font-semibold text-foreground">{label}으로 작성 중</p>
+      </div>
+      <button
+        type="button"
+        onClick={onChange}
+        className="text-[11px] font-semibold text-primary hover:underline"
+      >
+        유형 변경
+      </button>
+    </div>
+  );
+}
+
+function VlogHeaderBlock({
+  title,
+  onTitleChange,
+  selectedPlatforms,
+  onTogglePlatform,
+}: {
+  title: string;
+  onTitleChange: (v: string) => void;
+  selectedPlatforms: Platform[];
+  onTogglePlatform: (p: Platform) => void;
+}) {
+  return (
+    <div className="glass-card p-5 space-y-4">
+      <FormField
+        icon={Type}
+        iconColor="purple"
+        label="제목"
+        required
+        placeholder="예) 오늘 다녀온 카페"
+        value={title}
+        onChange={onTitleChange}
       />
+      <PlatformPicker selected={selectedPlatforms} onToggle={onTogglePlatform} />
     </div>
   );
 }
@@ -423,6 +555,14 @@ function FieldsBlock({
           compact
         />
       </div>
+      <FormField
+        icon={Tag}
+        iconColor="rose"
+        label="특가 항목"
+        placeholder="예) 평당 8만원·5월 한정 -10%"
+        value={draft.siteSpecial}
+        onChange={(v) => onChange({ siteSpecial: v })}
+      />
       <FormField
         icon={NoteIcon}
         iconColor="slate"
@@ -620,8 +760,11 @@ const MAX_BULK_PHOTOS = 6;
 
 // ── 2) 섹션 영역 + 3) + 글쓰기 추가 (항시 고정) ──
 function SectionsBlock({
+  mode,
+  draft,
   sections,
   onAddSection,
+  onInsertAfter,
   onAddPhotosAsSections,
   onUpdateSection,
   onRemoveSection,
@@ -629,8 +772,11 @@ function SectionsBlock({
   canSave,
   saving,
 }: {
+  mode: BlogMode;
+  draft: ReturnType<typeof useAppStore.getState>["drafts"][number];
   sections: ReturnType<typeof useAppStore.getState>["drafts"][number]["sections"];
   onAddSection: () => void;
+  onInsertAfter: (sectionId: string) => void;
   onAddPhotosAsSections: (photos: { id: string; dataUrl: string }[]) => number;
   onUpdateSection: (
     id: string,
@@ -738,8 +884,18 @@ function SectionsBlock({
           key={s.id}
           section={s}
           index={i}
+          mode={mode}
+          location={
+            [draft.location, draft.locationSigu, draft.locationDong]
+              .map((v) => v.trim())
+              .filter(Boolean)
+              .join(" ") || undefined
+          }
+          siteMethod={draft.siteMethod || undefined}
+          siteArea={draft.siteArea || undefined}
           onUpdate={(patch) => onUpdateSection(s.id, patch)}
           onRemove={() => onRemoveSection(s.id)}
+          onInsertAfter={() => onInsertAfter(s.id)}
         />
       ))}
 
@@ -765,16 +921,79 @@ function SectionsBlock({
 export function SectionCard({
   section,
   index,
+  mode = "expert",
+  location,
+  siteMethod,
+  siteArea,
   onUpdate,
   onRemove,
+  onInsertAfter,
 }: {
   section: ReturnType<typeof useAppStore.getState>["drafts"][number]["sections"][number];
   index: number;
+  /** 작성 모드 — placeholder/AI 컨텍스트 결정. 미지정 시 expert 기본 */
+  mode?: BlogMode;
+  /** AI 호출용 컨텍스트 (전문가형에서 활용) */
+  location?: string;
+  siteMethod?: string;
+  siteArea?: string;
   onUpdate: (patch: Partial<ReturnType<typeof useAppStore.getState>["drafts"][number]["sections"][number]>) => void;
   onRemove: () => void;
+  /** 이 블록 바로 아래에 새 빈 블록 삽입 ([+] 버튼). 미지정 시 + 버튼 비표시 */
+  onInsertAfter?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const isVlog = mode === "vlog";
+
+  // 텍스트 입력 영역에서 클립보드 이미지를 paste 했을 때 사진으로 흡수
+  const handleImagePaste = useImagePaste({
+    onImage: (img) => {
+      onUpdate({ photo: { id: img.id, dataUrl: img.dataUrl } });
+      toast({ title: "붙여넣은 사진이 추가됐어요 📎" });
+    },
+  });
+
+  // 이 섹션에서 AI 글쓰기 — 소제목+사진→본문 자동 생성
+  const handleAIWrite = async () => {
+    const subtitle = section.subtitle.trim();
+    const photoUrl = section.photo?.dataUrl || "";
+    if (!subtitle && !photoUrl) {
+      toast({
+        title: "소제목 또는 사진 중 하나는 입력해 주세요",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (section.text.trim() && !window.confirm("기존 본문을 AI 결과로 덮어쓸까요?")) return;
+
+    setAiLoading(true);
+    try {
+      const res = await generateSection({
+        subtitle,
+        photoDataUrl: photoUrl,
+        location,
+        siteMethod,
+        siteArea,
+        mode,
+      });
+      if (res.error || !res.text) {
+        toast({
+          title: "AI 글쓰기에 실패했어요",
+          description: res.error || "잠시 후 다시 시도해 주세요",
+          variant: "destructive",
+        });
+        return;
+      }
+      onUpdate({ text: res.text });
+      toast({ title: res.isMock ? "AI 예시로 채웠어요 (테스트 모드)" : "AI가 본문을 작성했어요 ✨" });
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -811,26 +1030,39 @@ export function SectionCard({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary">
-            섹션 {index + 1}
+            {isVlog ? `장면 ${index + 1}` : `섹션 ${index + 1}`}
           </span>
         </div>
-        <button
-          onClick={onRemove}
-          aria-label={`섹션 ${index + 1} 삭제`}
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="flex items-center gap-1">
+          {onInsertAfter && (
+            <button
+              onClick={onInsertAfter}
+              aria-label="아래에 블록 추가"
+              title="아래에 블록 추가"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10"
+            >
+              <Plus size={14} />
+            </button>
+          )}
+          <button
+            onClick={onRemove}
+            aria-label={`${isVlog ? "장면" : "섹션"} ${index + 1} 삭제`}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
-      {/* 소제목 */}
+      {/* 소제목 / 텍스트 입력 */}
       <div className="space-y-1">
-        <label className="text-[11px] text-muted-foreground">소제목</label>
+        <label className="text-[11px] text-muted-foreground">{isVlog ? "텍스트 입력" : "소제목"}</label>
         <input
           type="text"
-          placeholder="예) 시공 전 상태"
+          placeholder={isVlog ? "예) 카페에 들어선 첫 인상" : "예) 시공 전 상태"}
           value={section.subtitle}
           onChange={(e) => onUpdate({ subtitle: e.target.value })}
+          onPaste={handleImagePaste}
           className="w-full h-11 rounded-xl bg-background/60 border border-white/10 px-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-primary/40"
         />
       </div>
@@ -890,12 +1122,29 @@ export function SectionCard({
 
       {/* 글 */}
       <div className="space-y-1">
-        <label className="text-[11px] text-muted-foreground">글</label>
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] text-muted-foreground">{isVlog ? "새 글 작성" : "글 (5줄 권장)"}</label>
+          <button
+            type="button"
+            onClick={handleAIWrite}
+            disabled={aiLoading}
+            className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-label="AI 글쓰기"
+          >
+            {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+            {aiLoading ? "AI 작성 중…" : "AI 글쓰기"}
+          </button>
+        </div>
         <textarea
-          placeholder="이 섹션의 본문을 입력해주세요"
+          placeholder={
+            isVlog
+              ? "오늘 있었던 일을 자유롭게 적어보세요. 사진은 직접 붙여넣기도 가능해요."
+              : "이 섹션의 본문을 입력해주세요. 5줄 이내가 잘 읽혀요. (사진 붙여넣기 가능)"
+          }
           value={section.text}
           onChange={(e) => onUpdate({ text: e.target.value })}
-          rows={4}
+          onPaste={handleImagePaste}
+          rows={isVlog ? 6 : 5}
           className="w-full rounded-xl bg-background/60 border border-white/10 p-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-primary/40 resize-none"
         />
       </div>

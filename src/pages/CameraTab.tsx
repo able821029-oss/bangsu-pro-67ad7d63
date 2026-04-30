@@ -767,6 +767,14 @@ export function CameraTab({
     setEditSections((prev) => prev.filter((s) => s.id !== id));
   const addEmptySection = () =>
     setEditSections((prev) => [...prev, createEmptySection()]);
+  const insertSectionAfter = (id: string) =>
+    setEditSections((prev) => {
+      const idx = prev.findIndex((s) => s.id === id);
+      if (idx === -1) return [...prev, createEmptySection()];
+      const next = [...prev];
+      next.splice(idx + 1, 0, createEmptySection());
+      return next;
+    });
 
   return (
     <div className="px-4 pt-6 pb-28 space-y-4 max-w-lg mx-auto">
@@ -852,8 +860,13 @@ export function CameraTab({
           key={s.id}
           section={s}
           index={i}
+          mode="expert"
+          location={location || undefined}
+          siteMethod={siteMethod || undefined}
+          siteArea={siteArea || undefined}
           onUpdate={(patch) => updateSection(s.id, patch)}
           onRemove={() => removeSection(s.id)}
+          onInsertAfter={() => insertSectionAfter(s.id)}
         />
       ))}
 
