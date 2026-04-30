@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { AppState, BlogDraft, DraftSection } from "../appStore";
-import { MAX_DRAFTS, createEmptyDraft } from "../appStore";
+import { MAX_DRAFTS, createEmptyDraft, createEmptySection } from "../appStore";
 
 export interface DraftSlice {
   drafts: BlogDraft[];
@@ -70,13 +70,7 @@ export const createDraftSlice: StateCreator<
     set((state) => ({
       drafts: state.drafts.map((d, i) =>
         i === draftIdx
-          ? {
-              ...d,
-              sections: [
-                ...d.sections,
-                { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" },
-              ],
-            }
+          ? { ...d, sections: [...d.sections, createEmptySection()] }
           : d,
       ),
     })),
@@ -85,7 +79,7 @@ export const createDraftSlice: StateCreator<
       drafts: state.drafts.map((d, i) => {
         if (i !== draftIdx) return d;
         const idx = d.sections.findIndex((s) => s.id === sectionId);
-        const empty = { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
+        const empty = createEmptySection();
         if (idx === -1) return { ...d, sections: [...d.sections, empty] };
         const next = [...d.sections];
         next.splice(idx + 1, 0, empty);
@@ -110,12 +104,7 @@ export const createDraftSlice: StateCreator<
         // 2) 남은 사진은 새 섹션으로 생성
         while (queue.length > 0) {
           const next = queue.shift()!;
-          updatedSections.push({
-            id: crypto.randomUUID(),
-            subtitle: "",
-            photo: next,
-            text: "",
-          });
+          updatedSections.push({ ...createEmptySection(), photo: next });
           placed += 1;
         }
         return { ...d, sections: updatedSections };

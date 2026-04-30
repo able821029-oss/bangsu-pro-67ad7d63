@@ -114,7 +114,6 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
   const updateDraft = useAppStore((s) => s.updateDraft);
   const addSection = useAppStore((s) => s.addSection);
   const insertSectionAfter = useAppStore((s) => s.insertSectionAfter);
-  const addPhotosAsSections = useAppStore((s) => s.addPhotosAsSections);
   const updateSection = useAppStore((s) => s.updateSection);
   const removeSection = useAppStore((s) => s.removeSection);
   const resetDraft = useAppStore((s) => s.resetDraft);
@@ -404,7 +403,6 @@ export function BlogWriterTab({ onNavigate, onViewPost }: Props) {
             sections={draft.sections}
             onAddSection={() => addSection(activeIdx)}
             onInsertAfter={(id) => insertSectionAfter(activeIdx, id)}
-            onAddPhotosAsSections={(photos) => addPhotosAsSections(activeIdx, photos)}
             onUpdateSection={(id, patch) => updateSection(activeIdx, id, patch)}
             onRemoveSection={(id) => removeSection(activeIdx, id)}
             onSave={handleSave}
@@ -756,7 +754,6 @@ function FormField({
 }
 
 // ── Step 2: 섹션 (소제목 + 사진 + 글) 동적 추가 ──
-const MAX_BULK_PHOTOS = 6;
 
 // ── 2) 섹션 영역 + 3) + 글쓰기 추가 (항시 고정) ──
 function SectionsBlock({
@@ -765,7 +762,6 @@ function SectionsBlock({
   sections,
   onAddSection,
   onInsertAfter,
-  onAddPhotosAsSections,
   onUpdateSection,
   onRemoveSection,
   onSave,
@@ -777,7 +773,6 @@ function SectionsBlock({
   sections: ReturnType<typeof useAppStore.getState>["drafts"][number]["sections"];
   onAddSection: () => void;
   onInsertAfter: (sectionId: string) => void;
-  onAddPhotosAsSections: (photos: { id: string; dataUrl: string }[]) => number;
   onUpdateSection: (
     id: string,
     patch: Partial<ReturnType<typeof useAppStore.getState>["drafts"][number]["sections"][number]>,
@@ -787,85 +782,8 @@ function SectionsBlock({
   canSave: boolean;
   saving: boolean;
 }) {
-  const bulkFileRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-  const [bulkLoading, setBulkLoading] = useState(false);
-
-  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = "";
-    if (files.length === 0) return;
-
-    if (files.length > MAX_BULK_PHOTOS) {
-      toast({
-        title: `한 번에 최대 ${MAX_BULK_PHOTOS}장까지 업로드할 수 있어요`,
-        description: `처음 ${MAX_BULK_PHOTOS}장만 추가됩니다.`,
-      });
-    }
-    const picked = files.slice(0, MAX_BULK_PHOTOS);
-
-    setBulkLoading(true);
-    try {
-      const compressed = await Promise.all(
-        picked.map(
-          (file) =>
-            new Promise<string | null>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = async (ev) => {
-                const raw = (ev.target?.result as string) || "";
-                if (!raw) return resolve(null);
-                try {
-                  resolve(await compressImage(raw, 800, 0.7));
-                } catch {
-                  resolve(raw);
-                }
-              };
-              reader.onerror = () => resolve(null);
-              reader.readAsDataURL(file);
-            }),
-        ),
-      );
-
-      const photos = compressed
-        .filter((d): d is string => !!d)
-        .map((dataUrl) => ({ id: crypto.randomUUID(), dataUrl }));
-
-      if (photos.length === 0) {
-        toast({ title: "사진을 읽지 못했어요", variant: "destructive" });
-        return;
-      }
-
-      const placed = onAddPhotosAsSections(photos);
-      toast({ title: `사진 ${placed}장이 섹션으로 추가되었어요 ✨` });
-    } finally {
-      setBulkLoading(false);
-    }
-  };
-
   return (
     <div className="space-y-3">
-      {/* 사진 일괄 업로드 (최대 6장) */}
-      <button
-        onClick={() => bulkFileRef.current?.click()}
-        disabled={bulkLoading}
-        className="w-full flex items-center justify-center gap-2 btn-power disabled:opacity-60"
-      >
-        {bulkLoading ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <ImagePlus className="w-5 h-5" />
-        )}
-        {bulkLoading ? "사진 압축 중…" : `갤러리에서 사진 여러장 추가 (최대 ${MAX_BULK_PHOTOS}장)`}
-      </button>
-      <input
-        ref={bulkFileRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={handleBulkUpload}
-      />
-
       {sections.length === 0 && (
         <div className="glass-card p-6 text-center space-y-2">
           <div className="icon-chip icon-chip-lg mx-auto">
@@ -873,8 +791,7 @@ function SectionsBlock({
           </div>
           <p className="text-sm font-semibold text-foreground">아직 작성된 글이 없어요</p>
           <p className="text-xs text-muted-foreground">
-            위 버튼으로 <strong>사진 여러장 한번에 추가</strong>하거나,{" "}
-            <strong>+ 글쓰기 추가</strong>로 수동 작성해 주세요
+            아래 <strong>+ 글쓰기 추가</strong> 버튼으로 첫 섹션을 만들어 주세요
           </p>
         </div>
       )}
@@ -957,13 +874,14 @@ export function SectionCard({
     },
   });
 
-  // 이 섹션에서 AI 글쓰기 — 소제목+사진→본문 자동 생성
+  // 이 섹션에서 AI 글쓰기 — 소제목+사진+키워드→본문 자동 생성
   const handleAIWrite = async () => {
     const subtitle = section.subtitle.trim();
+    const keywords = section.keywords.trim();
     const photoUrl = section.photo?.dataUrl || "";
-    if (!subtitle && !photoUrl) {
+    if (!subtitle && !photoUrl && !keywords) {
       toast({
-        title: "소제목 또는 사진 중 하나는 입력해 주세요",
+        title: "소제목·키워드·사진 중 하나는 입력해 주세요",
         variant: "destructive",
       });
       return;
@@ -974,6 +892,7 @@ export function SectionCard({
     try {
       const res = await generateSection({
         subtitle,
+        keywords,
         photoDataUrl: photoUrl,
         location,
         siteMethod,
@@ -1120,10 +1039,31 @@ export function SectionCard({
         />
       </div>
 
-      {/* 글 */}
+      {/* 키워드 — AI 글쓰기 컨텍스트 */}
+      <div className="space-y-1">
+        <label className="text-[11px] text-muted-foreground">
+          키워드 <span className="text-muted-foreground/60">(쉼표로 구분 · AI가 이 키워드 중심으로 작성)</span>
+        </label>
+        <input
+          type="text"
+          placeholder={
+            isVlog
+              ? "예) 분위기, 음료, 추천메뉴"
+              : "예) 우레탄 도막, 누수 차단, 마감 깔끔"
+          }
+          value={section.keywords}
+          onChange={(e) => onUpdate({ keywords: e.target.value })}
+          onPaste={handleImagePaste}
+          className="w-full h-11 rounded-xl bg-background/60 border border-white/10 px-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-primary/40"
+        />
+      </div>
+
+      {/* 글 — 2~3줄 권장 */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <label className="text-[11px] text-muted-foreground">{isVlog ? "새 글 작성" : "글 (5줄 권장)"}</label>
+          <label className="text-[11px] text-muted-foreground">
+            {isVlog ? "새 글 작성 (2~3줄 권장)" : "글 (2~3줄 권장)"}
+          </label>
           <button
             type="button"
             onClick={handleAIWrite}
@@ -1138,13 +1078,13 @@ export function SectionCard({
         <textarea
           placeholder={
             isVlog
-              ? "오늘 있었던 일을 자유롭게 적어보세요. 사진은 직접 붙여넣기도 가능해요."
-              : "이 섹션의 본문을 입력해주세요. 5줄 이내가 잘 읽혀요. (사진 붙여넣기 가능)"
+              ? "오늘 있었던 일을 짧게 적어보세요. 2~3줄이 잘 읽혀요. (사진 붙여넣기 가능)"
+              : "이 섹션의 본문을 짧게 입력해주세요. 2~3줄이 가장 잘 읽혀요. (사진 붙여넣기 가능)"
           }
           value={section.text}
           onChange={(e) => onUpdate({ text: e.target.value })}
           onPaste={handleImagePaste}
-          rows={isVlog ? 6 : 5}
+          rows={3}
           className="w-full rounded-xl bg-background/60 border border-white/10 p-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus:ring-1 focus:ring-primary/40 resize-none"
         />
       </div>

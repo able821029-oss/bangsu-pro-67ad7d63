@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface GenerateSectionParams {
   subtitle: string;
+  /** 쉼표 구분 키워드 — AI가 이 키워드만을 핵심 축으로 사용해 중복/순서 어긋남 방지 */
+  keywords?: string;
   photoDataUrl?: string;
   location?: string;
   siteMethod?: string;

@@ -81,6 +81,8 @@ export interface DraftSection {
   id: string;
   subtitle: string;
   photo: PhotoItem | null;
+  /** 섹션별 키워드 — AI 글쓰기 컨텍스트로 사용. 쉼표 구분 자유 입력 */
+  keywords: string;
   text: string;
 }
 
@@ -106,7 +108,7 @@ export interface BlogDraft {
 export const MAX_DRAFTS = 4;
 
 export function createEmptySection(): DraftSection {
-  return { id: crypto.randomUUID(), subtitle: "", photo: null, text: "" };
+  return { id: crypto.randomUUID(), subtitle: "", photo: null, keywords: "", text: "" };
 }
 
 export function createEmptyDraft(mode?: BlogMode): BlogDraft {
@@ -207,8 +209,35 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "sms-app-store", // localStorage 키
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
+      // 기존 사용자(version 1)의 drafts에는 mode/siteSpecial/keywords 필드가 없음.
+      // version 2 이후 새 mode/siteSpecial/keywords 도입에 맞춰 1회성 마이그레이션.
+      // - drafts[].mode: 현재 작성 중인 글이 비어있으면 undefined로 리셋해 TypePicker 노출,
+      //   내용이 있으면 expert로 보존 (사용자가 작성 중인 글을 잃지 않도록)
+      // - drafts[].siteSpecial: ""
+      // - drafts[].sections[].keywords: ""
+      migrate: (persisted, fromVersion) => {
+        const state = (persisted as Partial<AppState>) || {};
+        if (fromVersion < 2 && Array.isArray(state.drafts)) {
+          state.drafts = state.drafts.map((d: BlogDraft) => {
+            const hasContent =
+              !!d.title?.trim() ||
+              (Array.isArray(d.sections) && d.sections.some((s) => s.subtitle || s.text || s.photo));
+            return {
+              ...d,
+              // 새 글이면 모드 미선택으로 → TypePicker 노출
+              mode: hasContent ? (d.mode ?? "expert") : undefined,
+              siteSpecial: d.siteSpecial ?? "",
+              sections: (d.sections ?? []).map((s) => ({
+                ...s,
+                keywords: (s as DraftSection).keywords ?? "",
+              })),
+            };
+          });
+        }
+        return state as AppState;
+      },
       // 영속화할 필드만 선택 — 일회성 UI 상태는 제외
       // posts[].photos 중 url이 있는 항목은 dataUrl을 제거해 localStorage 부담을 줄인다.
       // 아직 업로드 전이라 dataUrl만 있는 경우는 그대로 유지 (오프라인 보존).
