@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { KeywordRecommender } from "@/components/KeywordRecommender";
 import { PlatformChip } from "@/components/PlatformChip";
-import { useAppStore, Platform, Persona, BlogPost, ContentBlock, DraftSection, createEmptySection, photoSrc } from "@/stores/appStore";
+import { useAppStore, Platform, Persona, BlogPost, ContentBlock, DraftSection, BlogMode, createEmptySection, photoSrc } from "@/stores/appStore";
 import type { TabId } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,7 @@ import { compressPhotos } from "@/lib/imageCompress";
 import { uploadPostPhotos } from "@/lib/uploadPostPhoto";
 import { SectionCard } from "@/pages/BlogWriterTab";
 import { buildSafeTitle, buildDefaultHashtags, hasMinimumContent, normalizeHashtags } from "@/lib/postQuality";
+import { TypePicker } from "@/components/TypePicker";
 
 const platformIds: Platform[] = ["naver", "instagram", "tiktok"];
 
@@ -59,6 +60,8 @@ export function CameraTab({
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // 모드 — 진입 첫 화면에서 TypePicker로 선택. undefined면 Picker 노출.
+  const [mode, setMode] = useState<BlogMode | undefined>(undefined);
   const [wizardStep, setWizardStep] = useState<WizardStep>(1);
   const [title, setTitle] = useState("");            // 제목 (Step 1에서 입력 or Step 2에서 편집)
   const [location, setLocation] = useState("");
@@ -545,7 +548,28 @@ export function CameraTab({
     );
   }
 
-  // ─── Step 1: 사진 + 현장 정보 (Stitch Dark) ───
+  // ─── 진입 첫 화면: 모드 선택 ───
+  if (!mode) {
+    return (
+      <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => onNavigate("home")}
+            className="flex items-center gap-1 text-sm text-primary font-medium font-[Inter]"
+          >
+            <ArrowLeft className="w-4 h-4" /> 홈
+          </button>
+          <h1 className="text-xl font-bold flex items-center gap-2 text-foreground font-[Manrope]">
+            <Sparkles className="w-5 h-5 text-primary" /> AI 글쓰기
+          </h1>
+          <span className="w-12" />
+        </div>
+        <TypePicker hint="AI 글쓰기는 선택한 유형에 맞춰 본문을 자동 작성해 드려요." onPick={(m) => setMode(m)} />
+      </div>
+    );
+  }
+
+  // ─── Step 1: 현장 정보 (Stitch Dark) ───
   if (wizardStep === 1) {
     return (
       <div className="px-4 pt-6 pb-28 space-y-5 max-w-lg mx-auto">
@@ -577,7 +601,20 @@ export function CameraTab({
             <ArrowLeft className="w-4 h-4" /> 홈
           </button>
           <h1 className="text-xl font-bold flex items-center gap-2 text-foreground font-[Manrope]">
-            <Camera className="w-5 h-5 text-primary" /> 현장 정보
+            <Camera className="w-5 h-5 text-primary" />
+            {mode === "vlog" ? "기본 정보" : "현장 정보"}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("작성 유형을 다시 선택할까요? (입력 내용은 유지됩니다)")) {
+                  setMode(undefined);
+                }
+              }}
+              className="ml-1 text-[10px] font-semibold text-primary px-1.5 py-0.5 rounded-full bg-primary/10 hover:bg-primary/15"
+              aria-label="작성 유형 변경"
+            >
+              {mode === "vlog" ? "브이로그형" : "전문가형"} ▾
+            </button>
           </h1>
           {/* Wizard progress dots */}
           <div className="flex gap-1.5 items-center">
@@ -597,7 +634,8 @@ export function CameraTab({
           </div>
         </div>
 
-        {/* Location & Date card — glass-card with glow */}
+        {/* Location & Date card — 전문가형 전용 */}
+        {mode === "expert" && (
         <div className="glass-card p-4 space-y-3">
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground flex items-center gap-1 font-[Inter]">
@@ -674,6 +712,7 @@ export function CameraTab({
             />
           </div>
         </div>
+        )}
 
         {/* 제목 — 비워두면 다음 화면에서 AI가 자동 생성 */}
         <div className="glass-card p-4 space-y-1">
@@ -688,12 +727,14 @@ export function CameraTab({
           />
         </div>
 
-        <KeywordRecommender
-          location={location}
-          onSelectKeyword={(kw) => {
-            toast({ title: `"${kw}" 키워드가 반영됩니다` });
-          }}
-        />
+        {mode === "expert" && (
+          <KeywordRecommender
+            location={location}
+            onSelectKeyword={(kw) => {
+              toast({ title: `"${kw}" 키워드가 반영됩니다` });
+            }}
+          />
+        )}
 
         {/* CTA button — Stitch brand gradient */}
         <button

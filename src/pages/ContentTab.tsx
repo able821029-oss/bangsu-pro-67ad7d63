@@ -81,9 +81,9 @@ function matchesDate(createdAt: string, filter: DateFilter): boolean {
 export function ContentTab({ onNavigate, onViewPost, initialSubTab }: ContentTabProps) {
   const [subTab, setSubTab] = useState<SubTab>(() => {
     if (initialSubTab === "publish") return "publish";
-    if (initialSubTab === "write") return "write";
+    if (initialSubTab === "ai") return "ai";
     if (initialSubTab === "list") return "list";
-    return "ai"; // 기본값: AI 글쓰기를 최우선 노출
+    return "write"; // 기본값: 직접 글쓰기(=TypePicker가 첫 화면) 우선 노출
   });
 
   return (
